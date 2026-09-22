@@ -5,5 +5,6 @@ export async function registerHealthRoutes(app: FastifyInstance) {
     ok: true,
     service: 'resume-server',
     phase: 'scaffold',
+    persistence: 'sqlite-file',
   }));
 }

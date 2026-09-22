@@ -1,6 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
+
+/** Monorepo root: apps/server/src/db → ../../../../ */
+function monorepoRoot(): string {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
+}
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS profile (
@@ -68,7 +74,10 @@ export function openDatabase(dbPath: string): Db {
   const dir = path.dirname(dbPath);
   fs.mkdirSync(dir, { recursive: true });
   const db = new DatabaseSync(dbPath);
+  // Durable local file — survive process restarts (not in-memory).
   db.exec('PRAGMA foreign_keys = ON;');
+  db.exec('PRAGMA journal_mode = WAL;');
+  db.exec('PRAGMA synchronous = NORMAL;');
   db.exec(SCHEMA);
   migrateProfileColumns(db);
   return db;
@@ -101,10 +110,11 @@ function migrateProfileColumns(db: Db): void {
 
 export function defaultDbPath(): string {
   // Optional override for advanced/dev only — normal users never set this.
-  // Desktop shell always injects OS app-data path; browser launcher uses ./data/.
+  // Desktop shell always injects OS app-data path.
   const override = process.env.RESUME_DB_PATH?.trim();
   if (override) return path.resolve(override);
-  return path.resolve(process.cwd(), 'data', 'resume.db');
+  // Stable path under monorepo root — NOT process.cwd() (cwd varies by how you launch).
+  return path.join(monorepoRoot(), 'data', 'resume.db');
 }
 
 /** Photos live next to the SQLite file: <dbDir>/photos/ */

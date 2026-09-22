@@ -40,8 +40,8 @@ npm run app
 ```
 
 会：构建 Web → 启动 API（同进程托管静态页）→ 打开浏览器。  
-SQLite 默认自动落在 `./data/resume.db`（**首次启动自动创建，无需用户配置**）。高级场景可用 `RESUME_DB_PATH` / `RESUME_DATA_DIR` 覆盖。  
-**该目录已 gitignore，重启/重建不会清空**；Tauri 安装包使用系统 app data 下的独立库，不携带开发者数据，首次打开同样自动建库。
+本地数据持久化在仓库根目录 `data/resume.db`（**路径固定，不随启动目录变化**；首次启动自动创建）。高级场景可用 `RESUME_DB_PATH` 覆盖。  
+**重启服务 / 重建前端不会清空该库**；桌面安装包使用系统 App Data 下的独立库，同样自动持久化。
 
 ### 桌面安装包（Mac / Windows）
 
