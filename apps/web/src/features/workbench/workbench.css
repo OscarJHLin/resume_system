@@ -59,6 +59,31 @@
   min-height: 0;
 }
 
+.workbench__banner {
+  padding: 0.65rem 1.5rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.workbench__banner--info {
+  background: #eef5f7;
+  color: var(--ink);
+}
+
+.workbench__banner--warn {
+  background: #f7f1e4;
+  color: #5c4a22;
+}
+
+.workbench__banner--error {
+  background: #f8ecec;
+  color: #7a2e2e;
+}
+
+.workbench__banner--ok {
+  background: #e8f5ee;
+}
+
 @media (max-width: 800px) {
   .workbench__body {
     grid-template-columns: 1fr;

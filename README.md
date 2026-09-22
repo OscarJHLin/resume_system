@@ -1,8 +1,8 @@
 # 模块化简历组装系统
 
-本地优先的简历组装系统：**S1–S3 已打通**「资料 / 标签库 / 快照组装 / TipTap 投影 / 模板 IR / DOCX」。
+本地优先的简历组装系统：**S1–S4 MVP 主路径已打通**（资料 / 标签库 / 快照 / TipTap 投影 / 删除排序 / DOCX）。
 
-> 当前状态：**S3 Ready**（TipTap 文档壳 = 投影；导出仍走 placements → ResumeIR）。
+> 当前状态：**S4 Ready**。验收见 [docs/05-acceptance.md](docs/05-acceptance.md)。
 
 ## 文档入口
 
@@ -13,6 +13,7 @@
 | [docs/02-architecture.md](docs/02-architecture.md) | 架构、数据模型、流水线 |
 | [docs/03-modules.md](docs/03-modules.md) | 模块边界与构建顺序 |
 | [docs/04-roadmap.md](docs/04-roadmap.md) | 阶段与垂直切片 |
+| [docs/05-acceptance.md](docs/05-acceptance.md) | S1–S4 验收清单 |
 | [docs/adr/](docs/adr/) | 技术决策（栈 / 编辑器 / 导出 / 桌面路径） |
 | [docs/contracts/](docs/contracts/) | 跨模块合同 |
 
@@ -41,6 +42,14 @@ npm run dev:web
 
 健康检查：`curl http://127.0.0.1:8787/health`  
 元信息：`curl http://127.0.0.1:8787/api/meta`
+
+## S4 演示与验收
+
+完整步骤见 **[docs/05-acceptance.md](docs/05-acceptance.md)**。摘要：
+
+1. `npm run dev:server` + `npm run dev:web`
+2. **写入演示数据** → 主区已有可读条目  
+3. 标签过滤 / 拖入 / ↑↓删 / **导出 DOCX**
 
 ## S3 TipTap 演示
 
@@ -133,7 +142,7 @@ npm run test -w @resume/server
 ## 开发约定
 
 1. 改行为前先看对应 `docs/contracts/*`。
-2. 下一切片：**S4** 打磨与演示验收（见 [docs/04-roadmap.md](docs/04-roadmap.md)）。
+2. MVP 主路径已完成。后续可选：多模板 / PDF / Tauri（见路线图）。
 3. 不要在未实现层假装 Done；证据绑定命令与产物。
 
 ## 已锁定决策

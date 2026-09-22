@@ -10,6 +10,14 @@ import { DropHintView } from './nodes/DropHintView';
 
 export interface ResumeEditorCallbacks {
   onDropModule?: (section: SectionId, moduleId: string) => void | Promise<void>;
+  onDeletePlacement?: (placementId: string) => void | Promise<void>;
+  onMovePlacement?: (
+    section: SectionId,
+    placementId: string,
+    direction: 'up' | 'down',
+  ) => void | Promise<void>;
+  /** Current ordered placement ids per section (for enable/disable move buttons). */
+  getSectionPlacementIds?: (section: SectionId) => string[];
   onStatus?: (message: string) => void;
 }
 
@@ -75,14 +83,23 @@ export const ResumeSection = Node.create<ResumeEditorCallbacks>({
   },
 });
 
-export const PlacementItem = Node.create({
+export const PlacementItem = Node.create<ResumeEditorCallbacks>({
   name: 'placementItem',
   group: 'block',
   atom: true,
   selectable: false,
+  addOptions() {
+    return {
+      onDeletePlacement: undefined,
+      onMovePlacement: undefined,
+      getSectionPlacementIds: undefined,
+      onStatus: undefined,
+    };
+  },
   addAttributes() {
     return {
       placementId: { default: '' },
+      sectionId: { default: 'skills' },
       title: { default: '' },
       subtitle: { default: '' },
       projectType: { default: '' },

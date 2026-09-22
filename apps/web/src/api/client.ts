@@ -108,6 +108,22 @@ export const api = {
       body: JSON.stringify({ section, moduleId }),
     }),
 
+  deletePlacement: (resumeId: string, placementId: string) =>
+    request<void>(`/api/resumes/${resumeId}/placements/${placementId}`, {
+      method: 'DELETE',
+    }),
+
+  reorderPlacements: (
+    resumeId: string,
+    section: SectionId,
+    orderedPlacementIds: string[],
+  ) =>
+    request<ResumeDocument>(`/api/resumes/${resumeId}/placements/reorder`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ section, orderedPlacementIds }),
+    }),
+
   exportDocx: async (resumeId: string): Promise<Blob> => {
     const res = await fetch(`/api/resumes/${resumeId}/export`, {
       method: 'POST',

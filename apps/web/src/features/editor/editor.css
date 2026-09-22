@@ -127,3 +127,47 @@
   white-space: pre-wrap;
   color: var(--ink);
 }
+
+.editor__placement-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.editor__icon-btn {
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  padding: 0.2rem 0.4rem;
+  cursor: pointer;
+}
+
+.editor__icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.editor__icon-btn--danger {
+  color: #7a2e2e;
+  border-color: #d4a8a8;
+}
+
+.editor__empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.editor__empty h2 {
+  margin: 0 0 0.5rem;
+  color: var(--ink);
+  font-size: 1.25rem;
+}
+
+.editor__empty code {
+  font-size: 0.85em;
+}

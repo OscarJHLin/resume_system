@@ -3,17 +3,17 @@
 - as_of: 2026-09-23
 - repository: `/Users/linyunhe/ai_project/resume_system`
 - branch / HEAD: 尚未初始化 git（或未 commit）
-- worktree: **S3 已实现**（TipTap 投影壳 + S2 DnD + snapshot 导出）
+- worktree: **S4 已实现**（空态/种子、placement 删排、验收清单）
 - 环境目标: 近端本地 Web + API + SQLite；长期 Win/Mac 桌面（ADR-0004）
 
 ## 当前能力分层
 
 | 类别 | 现状 |
 |---|---|
-| 已验证（本机） | S1–S3：API/导出、标签 DnD、TipTap 投影桥接；`npm test` |
-| 仅设计 / 未做 | 多模板、桌面壳、PDF、JD、placement 排序删除 UI |
+| 已验证（本机） | S1–S4 MVP；`npm test`；[05-acceptance.md](./05-acceptance.md) |
+| 仅设计 / 未做 | 多模板、桌面壳、PDF、JD、从库刷新快照 |
 | 持久化 | `node:sqlite` 文件（默认 `./data/resume.db`） |
-| 被阻塞 | 无；下一步 S4 |
+| 被阻塞 | 无；MVP 闭环，增强项按需开立 |
 
 ## 已锁定产品决策（摘要）
 

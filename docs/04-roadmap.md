@@ -13,7 +13,7 @@
 | P3 模板 | `default-v1` → ResumeIR | IR 测试 | Done（并入 S1） |
 | P4 导出 | DOCX 下载 | 真实 `.docx` | Done（并入 S1） |
 | P5 编辑器+DnD | TipTap 壳 + 拖入 | 浏览器主路径 | Done（S2 DnD + S3 TipTap 投影） |
-| P6 打磨 | 空态/错误、演示数据 | 验收清单 | Partial（有 seed 脚本） |
+| P6 打磨 | 空态/错误、演示数据 | 验收清单 | Done（S4） |
 
 ## 垂直切片卡片
 
@@ -47,8 +47,10 @@
 
 ### S4 — 打磨与演示数据
 
-- **可观察结果**：种子数据一键载入；导出样例简历可读。
-- **依赖**：S3。
+- **状态**: Done（2026-09-23）
+- **可观察结果**：一键种子生成**可读**样例简历；空态/API 错误横幅；placement **删除/同 section 排序**；验收清单见 [05-acceptance.md](./05-acceptance.md)。
+- **证据**：`npm test`（server delete/reorder + web banner/order helpers）。
+- **不做**：多模板、桌面壳、PDF、JD、TipTap 作导出 SoT。
 
 ## 影响矩阵（需求 → 处置）
 
@@ -65,4 +67,4 @@
 
 ## 建议下一步（唯一）
 
-**S3 已完成。** 开工 **S4**：演示数据打磨、空态/错误提示、验收清单（可选 placement 删除/排序）。
+**S4 已完成（MVP 主路径可演示）。** 后续可选增强：从库刷新快照、多模板、PDF、Tauri 桌面壳（ADR-0004）——择一单独立项，勿并行发散。

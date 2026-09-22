@@ -73,7 +73,7 @@ function buildSectionNode(
   if (placeable) {
     const placements = placementsForSection(resume, sectionId);
     for (const p of placements) {
-      content.push(buildPlacementNode(p));
+      content.push(buildPlacementNode(p, sectionId));
     }
     content.push({
       type: 'dropHint',
@@ -131,12 +131,16 @@ function buildProfileEducationNode(profile: Profile | null): JSONContent {
   };
 }
 
-function buildPlacementNode(p: SectionPlacement): JSONContent {
+function buildPlacementNode(
+  p: SectionPlacement,
+  sectionId: SectionId,
+): JSONContent {
   const s = p.snapshot;
   return {
     type: 'placementItem',
     attrs: {
       placementId: p.id,
+      sectionId,
       title: s.title,
       subtitle: s.subtitle ?? '',
       projectType: s.projectType ?? '',

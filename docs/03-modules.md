@@ -77,8 +77,8 @@
 
 - **责任**：页面骨架、种子数据、导出按钮、串联 library + TipTap editor。
 - **依赖**：上述 UI 模块。
-- **状态**：S3 Ready
-- **DoD**：单页可完成「搜 → 拖 → 导出」主路径。
+- **状态**：S4 Ready
+- **DoD**：单页可完成「搜 → 拖 → 删/排 → 导出」；空态与 API 错误可感知。
 
 ---
 
@@ -93,9 +93,7 @@
 6. export-docx              ← S1
 7. library-ui + DnD         ← S2
 8. TipTap editor-shell      ← S3 Done
-9. workbench 打磨           ← S4
+9. workbench 打磨           ← S4 Done
 ```
 
-**并行建议**：`template-engine` 与 `content-library` 在合同冻结后可并行；`export-docx` 必须等 IR 合同稳定。
-
-**S1–S3** 已完成；**S4** 打磨与演示验收。
+**S1–S4 MVP 主路径已完成。** 增强项见路线图「建议下一步」。

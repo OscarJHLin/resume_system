@@ -122,3 +122,15 @@
   padding: 0.1rem 0.4rem;
   cursor: pointer;
 }
+
+.library--disabled {
+  opacity: 0.72;
+}
+
+.library__empty {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
