@@ -24,12 +24,12 @@ export interface TemplateMeta {
   description: string;
 }
 
-/** Single shipped template (lin-v1 / 林氏简历版式). */
+/** Single shipped template (lin-v1 layout; display name 蓝黑简洁简历). */
 export const TEMPLATES: readonly TemplateMeta[] = [
   {
     id: DEFAULT_TEMPLATE_ID,
-    label: '林氏简历 lin-v1',
-    description: '对齐参考简历模板：教育→技术→项目→实习→获奖；无证件照栏',
+    label: '蓝黑简洁简历',
+    description: '蓝黑简洁版式：教育→技术→项目→实习→获奖；无证件照栏',
   },
 ] as const;
 

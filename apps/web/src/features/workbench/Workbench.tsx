@@ -231,7 +231,7 @@ export function Workbench() {
 
   const templateLabel =
     templates.find((t) => t.id === (resume?.templateId ?? DEFAULT_TEMPLATE_ID))
-      ?.label ?? '林氏简历 lin-v1';
+      ?.label ?? '蓝黑简洁简历';
 
   return (
     <div className="workbench">
@@ -257,7 +257,7 @@ export function Workbench() {
                   : [
                       {
                         id: DEFAULT_TEMPLATE_ID,
-                        label: '林氏简历 lin-v1',
+                        label: '蓝黑简洁简历',
                         description: '',
                       },
                     ]

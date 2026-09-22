@@ -1,7 +1,8 @@
-# Template notes: default-v1 (lin-v1)
+# Template notes: default-v1 (蓝黑简洁简历)
 
 - as_of: 2026-09-23
-- Template id（合同）: `default-v1`
+- Template id（合同）: `default-v1`（内部亦称 lin-v1）
+- 用户可见名称: **蓝黑简洁简历**
 - 视觉参考: `~/(local-resume-sample)/参考简历模板.docx`（不入库二进制）
 - 工作台：顶栏「选择简历模板」初始化空白稿；**无证件照栏**
 
@@ -26,7 +27,7 @@
 - **超链接**（邮箱/GitHub）：导出为纯文本。
 - **编号列表**：参考为 Word numbering；我们用 `•` 悬挂缩进近似。
 - **字体**：写入 eastAsia=`黑体`/`宋体` + ascii=`Arial`。若宿主缺字体，Word/Pages 会回退。
-- **多模板**：仅 `default-v1`（林氏）一套；选择器已预留扩展。
+- **多模板**：仅 `default-v1`（蓝黑简洁简历）一套；选择器已预留扩展。
 
 ## 工作台字段映射
 
