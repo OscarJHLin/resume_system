@@ -12,7 +12,6 @@ import type {
 import {
   DEFAULT_TEMPLATE_ID,
   educationTimeRange,
-  isTemplateId,
   validateProfileRequired,
 } from '@resume/domain';
 import fs from 'node:fs';
@@ -21,6 +20,7 @@ import type { Db } from './client.js';
 import { defaultDbPath, photosDir } from './client.js';
 import { newId, nowIso } from '../util.js';
 import { badRequest, notFound } from '../errors.js';
+import { isRegisteredTemplateId } from '../modules/template/registry.js';
 
 function parseJson<T>(raw: string | null | undefined, fallback: T): T {
   if (!raw) return fallback;
@@ -494,7 +494,7 @@ export class Store {
     profileId?: string;
   } = {}): ResumeDocument {
     const templateId = input.templateId ?? DEFAULT_TEMPLATE_ID;
-    if (!isTemplateId(templateId)) {
+    if (!isRegisteredTemplateId(templateId)) {
       throw badRequest(`unknown template: ${templateId}`);
     }
     if (input.profileId) {
@@ -571,7 +571,7 @@ export class Store {
         .run(input.title.trim(), nowIso(), id);
     }
     if (input.templateId !== undefined) {
-      if (!isTemplateId(input.templateId)) {
+      if (!isRegisteredTemplateId(input.templateId)) {
         throw badRequest(`unknown template: ${input.templateId}`);
       }
       this.db

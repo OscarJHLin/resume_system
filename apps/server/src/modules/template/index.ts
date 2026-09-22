@@ -9,21 +9,17 @@ import type {
   SectionPlacement,
   TextStyle,
 } from '@resume/domain';
+import { DEFAULT_TEMPLATE_ID, SECTION_LABELS } from '@resume/domain';
 import {
-  DEFAULT_TEMPLATE_ID,
-  SECTION_LABELS,
-} from '@resume/domain';
+  getTemplate,
+  type TemplateDefinition,
+  type TemplateStyles,
+} from './registry.js';
 
 /**
- * `default-v1` typography from 参考简历模板.docx (lin-v1):
- * - Name 22pt 黑体 bold centered
- * - Tagline 11pt 黑体 centered
- * - Contact 9.5pt 宋体 centered (phone | email | wechat | location)
- * - Section 13pt 黑体 bold + bottom rule
- * - Entry 10.5pt 黑体 title + 宋体 meta/time (tab columns)
- * - Skills from Profile.skills as bold「标题：正文」
- * - Body 10.5pt 宋体 bullets
- * Photo column removed from template + DOCX export.
+ * Template-driven IR renderer. Typography and section order come from
+ * templates/<slug>/manifest.json (see docs/07-template-packs.md).
+ * Photo column is controlled by photoInTemplate (blue-black-simple: false).
  */
 export class UnknownTemplateError extends Error {
   constructor(templateId: string) {
@@ -32,48 +28,16 @@ export class UnknownTemplateError extends Error {
   }
 }
 
-const HEITI = '黑体';
-const SONG = '宋体';
-
-const STYLE = {
-  name: { bold: true, fontSizePt: 22, fontEastAsia: HEITI } satisfies TextStyle,
-  tagline: { fontSizePt: 11, fontEastAsia: HEITI } satisfies TextStyle,
-  contact: { fontSizePt: 9.5, fontEastAsia: SONG } satisfies TextStyle,
-  sectionHeading: {
-    bold: true,
-    fontSizePt: 13,
-    fontEastAsia: HEITI,
-  } satisfies TextStyle,
-  entryTitle: {
-    bold: true,
-    fontSizePt: 10.5,
-    fontEastAsia: HEITI,
-  } satisfies TextStyle,
-  entryMeta: { fontSizePt: 10.5, fontEastAsia: SONG } satisfies TextStyle,
-  skillLine: {
-    bold: true,
-    fontSizePt: 10.5,
-    fontEastAsia: SONG,
-  } satisfies TextStyle,
-  body: { fontSizePt: 10.5, fontEastAsia: SONG } satisfies TextStyle,
-} as const;
-
-/** Module sections after profile header (matches reference DOCX order). */
-const SECTION_ORDER: SectionId[] = [
-  'skills',
-  'projects',
-  'internships',
-  'awards',
-];
-
 export function renderToIR(
   input: RenderInput,
   clock: () => string = () => new Date().toISOString(),
 ): ResumeIR {
-  if (input.templateId !== DEFAULT_TEMPLATE_ID) {
+  const def = getTemplate(input.templateId);
+  if (!def) {
     throw new UnknownTemplateError(input.templateId);
   }
 
+  const STYLE = def.styles;
   const blocks: IrBlock[] = [];
   const { profile, placements } = input;
 
@@ -112,13 +76,17 @@ export function renderToIR(
   }
 
   if (profile.education.length > 0) {
-    blocks.push(sectionHeading(SECTION_LABELS.education));
+    blocks.push(sectionHeading(SECTION_LABELS.education, STYLE));
     for (const edu of profile.education) {
       const major = [edu.degree, edu.major].filter(Boolean).join(' · ');
       blocks.push(
-        entryLine(edu.school || '学校', major || undefined, edu.timeRange, {
-          spacingAfterPt: 0.8,
-        }),
+        entryLine(
+          STYLE,
+          edu.school || '学校',
+          major || undefined,
+          edu.timeRange,
+          { spacingAfterPt: 0.8 },
+        ),
       );
       const detail = [
         edu.gpa ? `GPA：${edu.gpa}` : null,
@@ -138,9 +106,8 @@ export function renderToIR(
     }
   }
 
-  // 技术能力 from profile.skills (not placements)
   if (profile.skills.length > 0) {
-    blocks.push(sectionHeading(SECTION_LABELS.skills));
+    blocks.push(sectionHeading(SECTION_LABELS.skills, STYLE));
     for (const skill of profile.skills) {
       const line = skill.body.trim()
         ? `${skill.title}：${skill.body.trim().replace(/\n/g, '；')}`
@@ -155,22 +122,22 @@ export function renderToIR(
     }
   }
 
-  for (const section of SECTION_ORDER) {
-    if (section === 'skills') continue; // rendered from profile
+  for (const section of def.sectionOrder) {
+    if (section === 'skills') continue;
     const items = placements
       .filter((p) => p.section === section)
       .sort((a, b) => a.sortOrder - b.sortOrder);
     if (items.length === 0) continue;
 
-    blocks.push(sectionHeading(SECTION_LABELS[section]));
+    blocks.push(sectionHeading(SECTION_LABELS[section], STYLE));
     for (const item of items) {
-      blocks.push(...renderSnapshot(item, section));
+      blocks.push(...renderSnapshot(STYLE, item, section));
     }
   }
 
   return {
-    templateId: DEFAULT_TEMPLATE_ID,
-    templateVersion: '1.2-lin',
+    templateId: def.id,
+    templateVersion: def.version,
     blocks,
     meta: {
       title: profile.name || 'resume',
@@ -179,7 +146,7 @@ export function renderToIR(
   };
 }
 
-function sectionHeading(text: string): IrBlock {
+function sectionHeading(text: string, STYLE: TemplateStyles): IrBlock {
   return {
     kind: 'heading',
     level: 2,
@@ -191,6 +158,7 @@ function sectionHeading(text: string): IrBlock {
 }
 
 function renderSnapshot(
+  STYLE: TemplateStyles,
   placement: SectionPlacement,
   section: SectionId,
 ): IrBlock[] {
@@ -210,10 +178,9 @@ function renderSnapshot(
     return out;
   }
 
-  // projects / internships: entry row + body bullets
   const meta = [s.subtitle, s.projectType].filter(Boolean).join(' · ');
   out.push(
-    entryLine(s.title, meta || undefined, s.timeRange, {
+    entryLine(STYLE, s.title, meta || undefined, s.timeRange, {
       spacingAfterPt: 0.8,
       spacingBeforePt: placement.sortOrder > 0 ? 6.5 : 0,
     }),
@@ -234,6 +201,7 @@ function renderSnapshot(
 }
 
 function entryLine(
+  STYLE: TemplateStyles,
   title: string,
   middle: string | undefined,
   time: string | undefined,
@@ -278,17 +246,49 @@ function para(
   };
 }
 
-/** Exported for tests — style constants derived from reference DOCX. */
-export const LIN_V1_STYLE_PROBE = {
-  namePt: STYLE.name.fontSizePt,
-  sectionPt: STYLE.sectionHeading.fontSizePt,
-  bodyPt: STYLE.body.fontSizePt,
-  contactPt: STYLE.contact.fontSizePt,
-  heiti: HEITI,
-  song: SONG,
-  sectionOrder: SECTION_ORDER,
-  photoInTemplate: false,
-} as const;
+/** Exported for tests — probe default pack styles from registry. */
+export function styleProbeFor(
+  templateId: string = DEFAULT_TEMPLATE_ID,
+): {
+  namePt: number;
+  sectionPt: number;
+  bodyPt: number;
+  contactPt: number;
+  heiti: string;
+  song: string;
+  sectionOrder: readonly SectionId[];
+  photoInTemplate: boolean;
+} {
+  const def = requireTemplate(templateId);
+  return {
+    namePt: def.styles.name.fontSizePt ?? 0,
+    sectionPt: def.styles.sectionHeading.fontSizePt ?? 0,
+    bodyPt: def.styles.body.fontSizePt ?? 0,
+    contactPt: def.styles.contact.fontSizePt ?? 0,
+    heiti: def.styles.name.fontEastAsia ?? '',
+    song: def.styles.body.fontEastAsia ?? '',
+    sectionOrder: def.sectionOrder,
+    photoInTemplate: def.photoInTemplate,
+  };
+}
+
+/** @deprecated use styleProbeFor — kept for existing tests */
+export const LIN_V1_STYLE_PROBE = new Proxy(
+  {} as ReturnType<typeof styleProbeFor>,
+  {
+    get(_t, prop) {
+      return styleProbeFor(DEFAULT_TEMPLATE_ID)[
+        prop as keyof ReturnType<typeof styleProbeFor>
+      ];
+    },
+  },
+);
+
+function requireTemplate(id: string): TemplateDefinition {
+  const def = getTemplate(id);
+  if (!def) throw new UnknownTemplateError(id);
+  return def;
+}
 
 /** Placeholder profile when resume has no applied 基本信息 card. */
 export function placeholderProfile(): Profile {
@@ -303,3 +303,6 @@ export function placeholderProfile(): Profile {
     updatedAt: '',
   };
 }
+
+/** Re-export TextStyle for callers that need style typing. */
+export type { TextStyle };

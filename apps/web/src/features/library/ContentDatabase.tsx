@@ -163,7 +163,20 @@ export function ContentDatabase({
           {profiles.map((p) => (
             <li key={p.id} className="cdb__card cdb__card--profile">
               <div className="cdb__card-row">
-                <span className="cdb__field cdb__title">{p.name}</span>
+                <div className="cdb__profile-head">
+                  {p.hasPhoto ? (
+                    <img
+                      className="cdb__photo-thumb"
+                      src={api.profilePhotoUrl(p.id, p.updatedAt)}
+                      alt=""
+                    />
+                  ) : (
+                    <span className="cdb__photo-thumb cdb__photo-thumb--empty">
+                      无
+                    </span>
+                  )}
+                  <span className="cdb__field cdb__title">{p.name}</span>
+                </div>
                 {appliedProfileId === p.id && (
                   <span className="cdb__badge">已应用</span>
                 )}

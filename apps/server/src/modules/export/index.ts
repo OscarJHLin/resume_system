@@ -10,20 +10,27 @@ import {
   TextRun,
 } from 'docx';
 import type { IrBlock, IrHeading, IrParagraph, IrRun, ResumeIR } from '@resume/domain';
-
-/** A4 + margins from 参考简历模板.docx sectPr (twips). */
-const PAGE = {
-  width: 11906,
-  height: 16838,
-  margin: { top: 680, right: 1020, bottom: 680, left: 1020 },
-} as const;
+import { DEFAULT_TEMPLATE_ID } from '@resume/domain';
+import { getTemplate } from '../template/registry.js';
 
 /** Content width ≈ 9866; reference tabs at 4933 / 9866. */
 const ENTRY_TAB_CENTER = 4933;
 const ENTRY_TAB_RIGHT = 9866;
 
+function pageForTemplate(templateId: string) {
+  const def = getTemplate(templateId) ?? getTemplate(DEFAULT_TEMPLATE_ID);
+  if (!def) {
+    return {
+      width: 11906,
+      height: 16838,
+      margin: { top: 680, right: 1020, bottom: 680, left: 1020 },
+    };
+  }
+  return def.page;
+}
+
 export interface ExportOptions {
-  /** Optional portrait bytes for header (lin-v1 photo). */
+  /** Optional portrait bytes for header (when template allows photo). */
   photo?: { buffer: Buffer; mime: string } | null;
 }
 
@@ -31,9 +38,9 @@ export async function exportDocx(
   ir: ResumeIR,
   options: ExportOptions = {},
 ): Promise<Buffer> {
+  const PAGE = pageForTemplate(ir.templateId);
   const children: Paragraph[] = [];
   if (options.photo?.buffer?.length) {
-    // docx ImageRun supports jpg/png/gif/bmp/svg — coerce webp to jpg type label if needed
     const type =
       options.photo.mime.includes('png')
         ? 'png'
@@ -198,5 +205,5 @@ export const exportModule = {
   status: 'ready' as const,
 };
 
-/** Test probe for page geometry. */
-export const LIN_V1_PAGE = PAGE;
+/** Test probe for page geometry (default pack). */
+export const LIN_V1_PAGE = pageForTemplate(DEFAULT_TEMPLATE_ID);

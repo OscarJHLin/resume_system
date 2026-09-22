@@ -72,10 +72,27 @@
   place-items: center;
 }
 
-.cdb__meta {
-  margin: 0;
-  font-size: 0.78rem;
-  color: #6a757e;
+.cdb__profile-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.cdb__photo-thumb {
+  width: 2.25rem;
+  height: 2.75rem;
+  object-fit: cover;
+  border: 1px solid #c5d0d7;
+  background: #e8eef2;
+  flex-shrink: 0;
+}
+
+.cdb__photo-thumb--empty {
+  display: grid;
+  place-items: center;
+  font-size: 0.65rem;
+  color: #8a959e;
 }
 
 .cdb__list {

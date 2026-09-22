@@ -27,7 +27,7 @@
 - **超链接**（邮箱/GitHub）：导出为纯文本。
 - **编号列表**：参考为 Word numbering；我们用 `•` 悬挂缩进近似。
 - **字体**：写入 eastAsia=`黑体`/`宋体` + ascii=`Arial`。若宿主缺字体，Word/Pages 会回退。
-- **多模板**：仅 `default-v1`（蓝黑简洁简历）一套；选择器已预留扩展。
+- **多模板**：运行时从仓库根目录 `templates/*/manifest.json` 加载；当前仅 `blue-black-simple`（id=`default-v1`，显示名「蓝黑简洁简历」）。新增模板见 [07-template-packs.md](./07-template-packs.md)。
 
 ## 工作台字段映射
 

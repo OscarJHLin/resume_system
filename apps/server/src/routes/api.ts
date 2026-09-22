@@ -5,9 +5,7 @@ import {
   isCategory,
   isPlaceableSection,
   isSectionId,
-  isTemplateId,
   snapshotFromModule,
-  TEMPLATES,
   validateProfileRequired,
 } from '@resume/domain';
 import type { Store } from '../db/store.js';
@@ -16,6 +14,7 @@ import {
   placeholderProfile,
   renderToIR,
 } from '../modules/template/index.js';
+import { listTemplateMeta, isRegisteredTemplateId } from '../modules/template/registry.js';
 import { exportDocx } from '../modules/export/index.js';
 
 type ProfileBody = {
@@ -85,15 +84,24 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
         .code(err.statusCode)
         .send({ error: err.code, message: err.message });
     }
+    const code = (err as { code?: string }).code;
+    if (code === 'FST_ERR_CTP_BODY_TOO_LARGE') {
+      return reply.code(413).send({
+        error: 'PayloadTooLarge',
+        message: '上传内容过大（照片请小于 5MB）',
+      });
+    }
     app.log.error(err);
     return reply
       .code(500)
       .send({ error: 'InternalError', message: 'Unexpected server error' });
   });
 
+  const templates = listTemplateMeta();
+
   app.get('/api/meta', async () => ({
     templateId: DEFAULT_TEMPLATE_ID,
-    templates: TEMPLATES,
+    templates,
     phase: 'S5',
     modules: [
       'profile-cards',
@@ -105,7 +113,7 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
     status: 'ready',
   }));
 
-  app.get('/api/templates', async () => TEMPLATES);
+  app.get('/api/templates', async () => listTemplateMeta());
 
   // —— Profile cards (基本信息) ——
   app.get<{
@@ -262,7 +270,7 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
     Body: { title?: string; templateId?: string; profileId?: string };
   }>('/api/resumes', async (req, reply) => {
     const body = req.body ?? {};
-    if (body.templateId && !isTemplateId(body.templateId)) {
+    if (body.templateId && !isRegisteredTemplateId(body.templateId)) {
       throw badRequest(`unknown template: ${body.templateId}`);
     }
     const created = store.createResume({

@@ -16,7 +16,8 @@ export type SectionId =
 
 export const DEFAULT_TEMPLATE_ID = 'default-v1' as const;
 
-export type TemplateId = typeof DEFAULT_TEMPLATE_ID;
+/** Template ids are stable strings (see templates/<slug>/manifest.json). */
+export type TemplateId = string;
 
 export interface TemplateMeta {
   id: TemplateId;
@@ -24,7 +25,10 @@ export interface TemplateMeta {
   description: string;
 }
 
-/** Single shipped template (lin-v1 layout; display name 蓝黑简洁简历). */
+/**
+ * Fallback meta when API is unavailable. Runtime source of truth is
+ * templates/<slug>/manifest.json loaded by the server (docs/07-template-packs.md).
+ */
 export const TEMPLATES: readonly TemplateMeta[] = [
   {
     id: DEFAULT_TEMPLATE_ID,
@@ -331,7 +335,7 @@ export function isDegreeOption(value: string): value is DegreeOption {
 }
 
 export function isTemplateId(value: string): value is TemplateId {
-  return value === DEFAULT_TEMPLATE_ID;
+  return typeof value === 'string' && /^[a-z][a-z0-9._-]*$/i.test(value.trim());
 }
 
 /** Build display timeRange from optional date pickers. */

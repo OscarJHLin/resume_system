@@ -95,4 +95,36 @@ describe('profile photo storage (DOCX omits photo)', () => {
     const buf = Buffer.from(await exportRes.arrayBuffer());
     assert.equal(buf.subarray(0, 2).toString(), 'PK');
   });
+
+  it('accepts ~1.5MB base64 photo payloads (bodyLimit > Fastify default 1MB)', async () => {
+    const profile = await fetch(`${baseUrl}/api/profiles`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ...FULL_PROFILE,
+        email: 'bigphoto@example.com',
+        phone: '13900000001',
+      }),
+    }).then(async (r) => {
+      assert.equal(r.status, 201);
+      return r.json() as Promise<{ id: string }>;
+    });
+
+    // ~1.2MB binary → ~1.6MB JSON (exceeds old 1MB Fastify default)
+    const raw = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      Buffer.alloc(1_200_000, 0),
+    ]);
+    const put = await fetch(`${baseUrl}/api/profiles/${profile.id}/photo`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        dataBase64: raw.toString('base64'),
+        mime: 'image/png',
+      }),
+    });
+    assert.equal(put.status, 200);
+    const updated = (await put.json()) as { hasPhoto: boolean };
+    assert.equal(updated.hasPhoto, true);
+  });
 });

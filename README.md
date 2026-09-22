@@ -2,7 +2,7 @@
 
 本地优先的简历组装系统：**S5 工作台（模板选择 + 四标签内容库 + 多基本信息卡）+ lin-v1 导出**。
 
-> 当前状态：**可验收**。清单 [docs/05-acceptance.md](docs/05-acceptance.md)；模板说明 [docs/06-template-lin-v1.md](docs/06-template-lin-v1.md)。
+> 当前状态：**可验收**。清单 [docs/05-acceptance.md](docs/05-acceptance.md)；模板说明 [docs/06-template-lin-v1.md](docs/06-template-lin-v1.md) / [docs/07-template-packs.md](docs/07-template-packs.md)。
 
 ## 文档入口
 
@@ -14,7 +14,8 @@
 | [docs/03-modules.md](docs/03-modules.md) | 模块边界与构建顺序 |
 | [docs/04-roadmap.md](docs/04-roadmap.md) | 阶段与垂直切片 |
 | [docs/05-acceptance.md](docs/05-acceptance.md) | 验收清单 |
-| [docs/06-template-lin-v1.md](docs/06-template-lin-v1.md) | default-v1 ← 参考简历模板.docx |
+| [docs/06-template-lin-v1.md](docs/06-template-lin-v1.md) | default-v1 / 蓝黑简洁简历 notes |
+| [docs/07-template-packs.md](docs/07-template-packs.md) | `templates/` 包格式（如何加第二套模板） |
 | [docs/adr/](docs/adr/) | 技术决策（栈 / 编辑器 / 导出 / 桌面路径） |
 | [docs/contracts/](docs/contracts/) | 跨模块合同 |
 

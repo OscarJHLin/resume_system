@@ -236,11 +236,21 @@ export function ProfileEditor({
                 void (async () => {
                   setBusy(true);
                   try {
+                    if (file.size > 5 * 1024 * 1024) {
+                      throw new Error('照片请小于 5MB');
+                    }
+                    const mime =
+                      file.type ||
+                      (file.name.toLowerCase().endsWith('.png')
+                        ? 'image/png'
+                        : file.name.toLowerCase().endsWith('.webp')
+                          ? 'image/webp'
+                          : 'image/jpeg');
                     const dataUrl = await readFileAsDataUrl(file);
                     const p = await api.uploadProfilePhoto(
                       editing.id,
                       dataUrl,
-                      file.type,
+                      mime,
                     );
                     setPhotoPreview(
                       api.profilePhotoUrl(p.id, p.updatedAt),
