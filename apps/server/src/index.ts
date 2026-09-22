@@ -6,7 +6,7 @@ import Fastify, {
   type FastifyRequest,
 } from 'fastify';
 import fastifyStatic from '@fastify/static';
-import { defaultDbPath, openDatabase } from './db/client.js';
+import { defaultDbPath, ensureBuiltinLocalDb } from './db/client.js';
 import { Store } from './db/store.js';
 import { registerHealthRoutes } from './modules/health.js';
 import { registerApiRoutes } from './routes/api.js';
@@ -17,14 +17,17 @@ const BODY_LIMIT = 8 * 1024 * 1024;
 
 export function buildApp(dbPath: string = defaultDbPath()) {
   loadTemplateRegistry();
-  const db = openDatabase(dbPath);
-  const store = new Store(db, dbPath);
+  // Auto-create SQLite + photos on every boot — users never configure a DB.
+  const { db, dbPath: resolved, photosDir: photos } = ensureBuiltinLocalDb(dbPath);
+  const store = new Store(db, resolved);
 
   const app = Fastify({ logger: true, bodyLimit: BODY_LIMIT });
   return {
     app,
     store,
     db,
+    dbPath: resolved,
+    photosDir: photos,
     async start() {
       await registerHealthRoutes(app);
       await registerApiRoutes(app, store);
@@ -60,18 +63,17 @@ const HOST = process.env.HOST ?? '127.0.0.1';
 
 async function main() {
   const dbPath = defaultDbPath();
-  const { app, start } = buildApp(dbPath);
+  const { app, start, photosDir } = buildApp(dbPath);
   await start();
   await app.listen({ port: PORT, host: HOST });
   app.log.info(
-    `resume-server db=${dbPath} static=${process.env.RESUME_STATIC_DIR ?? '(none)'}`,
+    `拼履已启动：本地 SQLite 自动就绪（无需配置） db=${dbPath} photos=${photosDir} static=${process.env.RESUME_STATIC_DIR ?? '(none)'}`,
   );
 }
 
 const isDirectRun =
   process.argv[1] &&
-  (process.argv[1].endsWith('index.ts') ||
-    process.argv[1].endsWith('index.js'));
+  /(?:index\.[cm]?[jt]s|server\.mjs)$/.test(process.argv[1].replace(/\\/g, '/'));
 
 if (isDirectRun) {
   main().catch((err) => {

@@ -56,9 +56,11 @@ flowchart TB
 ## 后果
 
 - S1–S4 **原型**可在浏览器双终端或 `npm run app` / Tauri 壳下验收。
-- 首版桌面壳仍依赖本机 Node 启动 Fastify（sidecar 式）；真正无 Node 的单文件安装包另开切片。
+- 首版桌面壳仍依赖本机 **Node 22+** 启动内置 API（`server.mjs` sidecar）；真正无 Node 的单文件安装包另开切片。
+- 安装包资源：`web-dist` + `server/server.mjs` + `templates/`；**禁止**打包 `data/` / `*.db` / `photos/`。
+- CI：`.github/workflows/desktop-release.yml` 在 tag `v*` 时构建 macOS + Windows 并上传 Release。
 - 禁止把权威数据只放在浏览器 IndexedDB 而无法导出到文件型 SQLite（与迁移原则冲突）。
-- SQLite：开发 `./data/resume.db`（**gitignored**，勿提交）；Tauri 使用系统 **app data** 目录下的空或本机已有 `resume.db`。
+- SQLite：开发 `./data/resume.db`（**gitignored**，首次启动自动创建，无需用户配置）；Tauri 使用系统 **app data** 目录下自动建库。
 - **分发隔离**：安装包只带 `web-dist` UI；**禁止**把开发机 `data/`、`*.db`、`photos/` 打进 bundle。每位用户的数据只存在本机。
 
 ## 非目标（本 ADR）

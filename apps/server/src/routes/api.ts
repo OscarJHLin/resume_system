@@ -113,6 +113,12 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
       'export-docx',
     ],
     status: 'ready',
+    /** Built-in local SQLite — no user setup / connection string. */
+    storage: {
+      engine: 'sqlite',
+      autoManaged: true,
+      path: store.getDbPath(),
+    },
   }));
 
   app.get('/api/templates', async () => listTemplateMeta());

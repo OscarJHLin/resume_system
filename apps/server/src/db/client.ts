@@ -100,10 +100,11 @@ function migrateProfileColumns(db: Db): void {
 }
 
 export function defaultDbPath(): string {
-  return (
-    process.env.RESUME_DB_PATH ??
-    path.join(process.cwd(), 'data', 'resume.db')
-  );
+  // Optional override for advanced/dev only — normal users never set this.
+  // Desktop shell always injects OS app-data path; browser launcher uses ./data/.
+  const override = process.env.RESUME_DB_PATH?.trim();
+  if (override) return path.resolve(override);
+  return path.resolve(process.cwd(), 'data', 'resume.db');
 }
 
 /** Photos live next to the SQLite file: <dbDir>/photos/ */
@@ -111,4 +112,18 @@ export function photosDir(dbPath: string = defaultDbPath()): string {
   const dir = path.join(path.dirname(dbPath), 'photos');
   fs.mkdirSync(dir, { recursive: true });
   return dir;
+}
+
+/**
+ * Ensure SQLite file + photos dir exist. Called on every boot —
+ * no user configuration / setup wizard required.
+ */
+export function ensureBuiltinLocalDb(dbPath: string = defaultDbPath()): {
+  dbPath: string;
+  photosDir: string;
+  db: Db;
+} {
+  const db = openDatabase(dbPath);
+  const photos = photosDir(dbPath);
+  return { dbPath, photosDir: photos, db };
 }

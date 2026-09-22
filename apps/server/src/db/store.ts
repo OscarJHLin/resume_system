@@ -73,6 +73,11 @@ export class Store {
     private readonly dbPath: string = defaultDbPath(),
   ) {}
 
+  /** Absolute path of the auto-managed local SQLite file. */
+  getDbPath(): string {
+    return this.dbPath;
+  }
+
   listProfiles(filter: { q?: string; tag?: string } = {}): Profile[] {
     const rows = this.db
       .prepare('SELECT * FROM profile ORDER BY updated_at DESC')

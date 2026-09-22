@@ -40,25 +40,33 @@ npm run app
 ```
 
 会：构建 Web → 启动 API（同进程托管静态页）→ 打开浏览器。  
-SQLite 默认：`./data/resume.db`（可用 `RESUME_DB_PATH` / `RESUME_DATA_DIR` 覆盖）。  
-**该目录已 gitignore，重启/重建不会清空**；Tauri 安装包使用系统 app data 下的独立库，不携带开发者数据。
+SQLite 默认自动落在 `./data/resume.db`（**首次启动自动创建，无需用户配置**）。高级场景可用 `RESUME_DB_PATH` / `RESUME_DATA_DIR` 覆盖。  
+**该目录已 gitignore，重启/重建不会清空**；Tauri 安装包使用系统 app data 下的独立库，不携带开发者数据，首次打开同样自动建库。
 
-### 桌面窗口（Tauri）
+### 桌面安装包（Mac / Windows）
+
+正式安装包见 GitHub Releases：https://github.com/OscarJHLin/resume_system/releases
+
+| 平台 | 下载 | 安装 |
+|---|---|---|
+| **macOS** | `拼履_x.y.z_*.dmg` 或 `.app` | 打开 DMG，拖到「应用程序」 |
+| **Windows** | `拼履_x.y.z_x64-setup.exe`（NSIS） | 双击安装 |
+
+**运行要求：** 本机安装 [Node.js 22+](https://nodejs.org)（拼履桌面壳会拉起内置 API；**不**附带开发者 `data/`）。
+
+**用户数据目录（独立于仓库）：**
+- macOS: `~/Library/Application Support/com.pinlu.desktop/resume.db`
+- Windows: `%APPDATA%\com.pinlu.desktop\resume.db`
+
+### 本地构建桌面壳
 
 ```bash
-npm run app:desktop          # 开发：起本地服务 + Tauri 窗口
-npm run app:desktop:build    # 产出 macOS .app（不入库）
+npm run app:desktop          # 开发：准备 bundle + Tauri 窗口
+npm run app:desktop:build    # 本机产出安装包（macOS：.app / .dmg）
 ```
 
-构建产物（本机，勿提交；默认复制到 `dist-app/`）：
-
-```bash
-npm run app:desktop:build
-# → dist-app/拼履.app   （若设置了 CARGO_TARGET_DIR 则见该目录下 release/bundle/macos/）
-open dist-app/拼履.app
-```
-
-打包后的 `.app` 仍需本机 **Node/npm 在 PATH**，并建议在仓库根执行或设置 `RESUME_ROOT` 指向本仓库（服务从 monorepo 启动）。纯离线无 Node 的安装包未做。
+产物在 `apps/desktop/src-tauri/target/release/bundle/`（可复制到 `dist-app/`，勿提交）。  
+Windows 安装包由 CI（`.github/workflows/desktop-release.yml`）在 `windows-latest` 构建并挂到 Release。
 
 ## 开发双终端（可选）
 
