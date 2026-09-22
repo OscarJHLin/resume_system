@@ -41,12 +41,15 @@
 }
 
 .canvas__photo img {
-  width: 98px;
-  height: 131px;
-  object-fit: cover;
+  max-width: 98px;
+  max-height: 131px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
   border: 1px solid #000;
   background: #f3f5f7;
   display: block;
+  margin: 0 auto;
 }
 
 .canvas__identity {

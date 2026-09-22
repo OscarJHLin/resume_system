@@ -12,6 +12,8 @@ import type { IrBlock, IrHeading, IrParagraph, IrRun, ResumeIR } from '@resume/d
 import { DEFAULT_TEMPLATE_ID } from '@resume/domain';
 import { getTemplate } from '../template/registry.js';
 
+import { fitContain, readImageSize } from './imageFit.js';
+
 /** Content width ≈ 9866; reference tabs at 4933 / 9866. */
 const ENTRY_TAB_CENTER = 4933;
 const ENTRY_TAB_RIGHT = 9866;
@@ -53,7 +55,17 @@ export async function exportDocx(
         : options.photo.mime.includes('gif')
           ? 'gif'
           : 'jpg';
+    const native = readImageSize(options.photo.buffer);
+    const fitted = native
+      ? fitContain(
+          native.width,
+          native.height,
+          photoSpec.widthPx,
+          photoSpec.heightPx,
+        )
+      : { width: photoSpec.widthPx, height: photoSpec.heightPx };
     // Do NOT use exact line spacing here — it clips the image in Word/WPS.
+    // Keep aspect ratio — never stretch into the max box.
     children.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
@@ -63,8 +75,8 @@ export async function exportDocx(
             type,
             data: options.photo.buffer,
             transformation: {
-              width: photoSpec.widthPx,
-              height: photoSpec.heightPx,
+              width: fitted.width,
+              height: fitted.height,
             },
             altText: {
               title: '证件照',

@@ -16,6 +16,7 @@ import {
   workbenchBanner,
   type ConnectionState,
 } from './workbenchState';
+import { saveDocxWithPicker } from './saveDocx';
 import './workbench.css';
 
 /**
@@ -204,13 +205,13 @@ export function Workbench() {
     setStatus('导出中…');
     try {
       const blob = await api.exportDocx(resume.id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'resume.docx';
-      a.click();
-      URL.revokeObjectURL(url);
-      setStatus('已下载 resume.docx');
+      const suggested = `${resume.title || '简历'}.docx`;
+      const result = await saveDocxWithPicker(blob, suggested);
+      if (result.mode === 'cancelled') {
+        setStatus('已取消导出');
+      } else {
+        setStatus(`已保存 ${result.name}`);
+      }
     } catch (e) {
       setStatus(`导出失败: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
