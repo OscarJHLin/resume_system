@@ -46,7 +46,7 @@ describe('placementDisplayFields', () => {
       },
       'awards',
     );
-    assert.match(v.awardLine ?? '', /L2 \(AI 增强操作级\)/);
+    assert.match(v.awardLine ?? '', /L2（示例级别）/);
     assert.match(v.awardLine ?? '', /示例职业能力证书/);
     assert.match(v.awardLine ?? '', /至今/);
   });
