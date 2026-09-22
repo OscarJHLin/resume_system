@@ -358,8 +358,14 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
         profile,
         placements: resume.placements,
       });
-      // Photo intentionally omitted from DOCX (template has no photo column).
-      const buffer = await exportDocx(ir, { photo: null });
+      const photo = resume.profileId
+        ? store.getProfilePhoto(resume.profileId)
+        : null;
+      const buffer = await exportDocx(ir, {
+        photo: photo
+          ? { buffer: photo.buffer, mime: photo.mime }
+          : null,
+      });
       const filename = `${sanitizeFilename(resume.title)}.docx`;
       const encoded = encodeURIComponent(filename);
       return reply

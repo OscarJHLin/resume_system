@@ -21,7 +21,7 @@ templates/
 | `displayName` | yes | UI label (e.g. **蓝黑简洁简历**). |
 | `version` | yes | Semver string written into ResumeIR `templateVersion`. |
 | `description` | no | Shown in template picker. |
-| `photoInTemplate` | yes | If `false`, canvas/DOCX omit photo column (photos still archive on profile cards). |
+| `photoInTemplate` | yes | Pack supports a portrait beside the header when the applied profile has a photo. |
 | `sectionOrder` | yes | Module sections after education/skills header: `skills` \| `projects` \| `internships` \| `awards`. Skills in this list are skipped for placements (rendered from `Profile.skills`). |
 | `page` | yes | DOCX page size/margins in twips (`width`, `height`, `margin`). |
 | `styles` | yes | Text styles for IR runs: `name`, `tagline`, `contact`, `sectionHeading`, `entryTitle`, `entryMeta`, `skillLine`, `body`. Each may set `bold`, `fontSizePt`, `fontEastAsia`, `fontAscii`. |

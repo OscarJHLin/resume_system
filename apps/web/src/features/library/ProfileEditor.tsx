@@ -106,7 +106,7 @@ export function ProfileEditor({
         </div>
 
         <p className="moded__hint">
-          必填：姓名、性别、邮箱、手机号、微信号。教育 / 技术能力可添加多段。照片仅存档，模板与导出不含照片栏。
+          必填：姓名、性别、邮箱、手机号、微信号。教育 / 技术能力可添加多段。照片上传后，应用到简历即可显示在左侧页眉与导出 DOCX。
         </p>
 
         <fieldset className="moded__fieldset">
@@ -181,7 +181,7 @@ export function ProfileEditor({
         </fieldset>
 
         <fieldset className="moded__fieldset">
-          <legend>照片（存档，模板不展示）</legend>
+          <legend>照片（应用到简历后显示在左侧页眉）</legend>
           <div className="moded__photo-row">
             {photoPreview ? (
               <img src={photoPreview} alt="照片预览" className="moded__thumb" />

@@ -33,7 +33,7 @@ export const TEMPLATES: readonly TemplateMeta[] = [
   {
     id: DEFAULT_TEMPLATE_ID,
     label: '蓝黑简洁简历',
-    description: '蓝黑简洁版式：教育→技术→项目→实习→获奖；无证件照栏',
+    description: '蓝黑简洁版式：教育→技术→项目→实习→获奖；有照片时显示在页眉',
   },
 ] as const;
 

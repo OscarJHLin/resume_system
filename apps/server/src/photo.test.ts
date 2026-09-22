@@ -17,7 +17,7 @@ const FULL_PROFILE = {
   tags: [],
 };
 
-describe('profile photo storage (DOCX omits photo)', () => {
+describe('profile photo storage (canvas + DOCX)', () => {
   let dbPath: string;
   let app: FastifyInstance;
   let baseUrl: string;
@@ -51,7 +51,7 @@ describe('profile photo storage (DOCX omits photo)', () => {
     }
   });
 
-  it('stores photo on profile card; export has no embedded image requirement', async () => {
+  it('stores photo on profile card and embeds it in DOCX export', async () => {
     const profile = await fetch(`${baseUrl}/api/profiles`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -94,6 +94,11 @@ describe('profile photo storage (DOCX omits photo)', () => {
     assert.equal(exportRes.status, 200);
     const buf = Buffer.from(await exportRes.arrayBuffer());
     assert.equal(buf.subarray(0, 2).toString(), 'PK');
+    // docx package path for embedded media
+    assert.ok(
+      buf.includes(Buffer.from('word/media')),
+      'exported docx should embed photo under word/media',
+    );
   });
 
   it('accepts ~1.5MB base64 photo payloads (bodyLimit > Fastify default 1MB)', async () => {

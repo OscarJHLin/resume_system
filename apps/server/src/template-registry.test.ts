@@ -22,7 +22,7 @@ describe('template pack registry', () => {
     assert.ok(def);
     assert.equal(def.displayName, '蓝黑简洁简历');
     assert.equal(def.slug, 'blue-black-simple');
-    assert.equal(def.photoInTemplate, false);
+    assert.equal(def.photoInTemplate, true);
     assert.equal(def.styles.name.fontSizePt, 22);
     const meta = listTemplateMeta();
     assert.equal(meta[0]?.label, '蓝黑简洁简历');

@@ -19,7 +19,8 @@ import {
 /**
  * Template-driven IR renderer. Typography and section order come from
  * templates/<slug>/manifest.json (see docs/07-template-packs.md).
- * Photo column is controlled by photoInTemplate (blue-black-simple: false).
+ * Photo column: shown on canvas/DOCX when the applied profile has a photo
+ * (manifest photoInTemplate documents that the pack supports portraits).
  */
 export class UnknownTemplateError extends Error {
   constructor(templateId: string) {

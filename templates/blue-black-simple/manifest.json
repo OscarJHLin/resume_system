@@ -3,8 +3,8 @@
   "slug": "blue-black-simple",
   "displayName": "蓝黑简洁简历",
   "version": "1.0.0",
-  "description": "蓝黑简洁版式：教育→技术→项目→实习→获奖；无证件照栏",
-  "photoInTemplate": false,
+  "description": "蓝黑简洁版式：教育→技术→项目→实习→获奖；有照片时显示在页眉右侧",
+  "photoInTemplate": true,
   "sectionOrder": ["skills", "projects", "internships", "awards"],
   "page": {
     "width": 11906,

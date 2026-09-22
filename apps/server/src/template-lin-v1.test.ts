@@ -15,7 +15,7 @@ describe('lin-v1 / default-v1 template fidelity', () => {
     assert.equal(LIN_V1_STYLE_PROBE.contactPt, 9.5);
     assert.equal(LIN_V1_STYLE_PROBE.heiti, '黑体');
     assert.equal(LIN_V1_STYLE_PROBE.song, '宋体');
-    assert.equal(LIN_V1_STYLE_PROBE.photoInTemplate, false);
+    assert.equal(LIN_V1_STYLE_PROBE.photoInTemplate, true);
     assert.deepEqual([...LIN_V1_STYLE_PROBE.sectionOrder], [
       'skills',
       'projects',
@@ -26,7 +26,7 @@ describe('lin-v1 / default-v1 template fidelity', () => {
     assert.equal(LIN_V1_PAGE.margin.left, 1020);
   });
 
-  it('renders education + profile skills + entry tabs (no photo)', () => {
+  it('renders education + profile skills + entry tabs', () => {
     const ir = renderToIR(
       {
         templateId: DEFAULT_TEMPLATE_ID,

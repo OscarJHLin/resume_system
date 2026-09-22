@@ -19,6 +19,7 @@ import {
 } from '../dnd/dragPayload';
 import { placementsForSection } from '../editor/docModel';
 import { canMovePlacement } from '../editor/placementOrder';
+import { api } from '../../api/client';
 import './resumeCanvas.css';
 
 export interface ResumeCanvasProps {
@@ -36,8 +37,8 @@ export interface ResumeCanvasProps {
 }
 
 /**
- * Left column: lin-v1 template preview (no photo column).
- * Identity / education / skills come from applied 基本信息 card (read-only here).
+ * Left column: template preview. Photo shows beside the header when the
+ * applied 基本信息 card has an uploaded portrait.
  */
 export function ResumeCanvas({
   resume,
@@ -80,11 +81,16 @@ export function ResumeCanvas({
     profile?.email,
     profile?.wechat ? `微信: ${profile.wechat}` : undefined,
   ].filter(Boolean);
+  const showPhoto = Boolean(profile?.hasPhoto && profile.id);
 
   return (
     <main className="canvas">
       <div className="canvas__page">
-        <header className="canvas__hero canvas__hero--no-photo">
+        <header
+          className={
+            showPhoto ? 'canvas__hero' : 'canvas__hero canvas__hero--no-photo'
+          }
+        >
           <div className="canvas__identity">
             <p className={`canvas__name${name ? '' : ' canvas__ph'}`}>
               {name || '姓名'}
@@ -105,6 +111,14 @@ export function ResumeCanvas({
               <p className="canvas__muted">性别：{profile.gender}</p>
             )}
           </div>
+          {showPhoto && profile && (
+            <div className="canvas__photo">
+              <img
+                src={api.profilePhotoUrl(profile.id, profile.updatedAt)}
+                alt="证件照"
+              />
+            </div>
+          )}
         </header>
 
         <CanvasSection title="教育背景">
