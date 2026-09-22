@@ -1,0 +1,76 @@
+name: Desktop release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            label: macOS
+          - platform: windows-latest
+            label: Windows
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Prepare desktop bundle (server + templates)
+        run: npm run desktop:prepare
+
+      - name: Build Tauri + upload Release assets
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: apps/desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: 拼履 ${{ github.ref_name }}
+          releaseBody: |
+            ## 拼履 ${{ github.ref_name }}
+
+            模块化简历：内容库 → 模板画布 → DOCX。
+
+            ### 安装
+            - **macOS**: 下载 `.dmg`，拖到「应用程序」
+            - **Windows**: 下载 NSIS `.exe` 安装器并运行
+
+            ### 热更新
+            已安装用户下次启动会检查 GitHub Release 的 `latest.json`，有新版本则自动下载并重启（需签名包）。
+
+            ### 运行要求
+            - 本机需安装 **Node.js 22+**（桌面壳拉起内置 API）
+            - 数据在系统 App Data，**不**携带开发者数据库
+
+            ### 数据路径
+            - macOS: `~/Library/Application Support/com.pinlu.desktop/resume.db`
+            - Windows: `%APPDATA%\com.pinlu.desktop\resume.db`
+          releaseDraft: false
+          prerelease: false
+          uploadUpdaterJson: true
+          updaterJsonPreferNsis: true

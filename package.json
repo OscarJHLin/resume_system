@@ -1,7 +1,7 @@
 {
   "name": "resume-system",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.2.0",
   "description": "拼履 — modular resume assembler (content library → template → DOCX)",
   "workspaces": [
     "apps/*",
@@ -14,8 +14,9 @@
     "typecheck": "npm run typecheck -w @resume/domain -w @resume/shared -w @resume/server -w @resume/web",
     "test": "npm run test -w @resume/domain -w @resume/server -w @resume/web",
     "app": "bash scripts/launch-acceptance.sh",
-    "app:desktop": "npm run build -w @resume/web && npm run dev -w @resume/desktop",
-    "app:desktop:build": "npm run build -w @resume/web && npm run build -w @resume/desktop"
+    "desktop:prepare": "bash scripts/prepare-desktop-bundle.sh",
+    "app:desktop": "npm run desktop:prepare && npm run dev -w @resume/desktop",
+    "app:desktop:build": "npm run desktop:prepare && npm run build -w @resume/desktop"
   },
   "engines": {
     "node": ">=22"

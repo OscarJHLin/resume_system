@@ -52,11 +52,15 @@ npm run app
 | **macOS** | `拼履_x.y.z_*.dmg` 或 `.app` | 打开 DMG，拖到「应用程序」 |
 | **Windows** | `拼履_x.y.z_x64-setup.exe`（NSIS） | 双击安装 |
 
+**热更新：** 从 v1.2 起，已安装的桌面端会在启动时检查 Release 的 `latest.json`，有新版本则自动下载并重启（见 [ADR-0005](docs/adr/0005-desktop-updater.md)）。用户 SQLite 数据保留在 App Data，不被覆盖。
+
 **运行要求：** 本机安装 [Node.js 22+](https://nodejs.org)（拼履桌面壳会拉起内置 API；**不**附带开发者 `data/`）。
 
 **用户数据目录（独立于仓库）：**
 - macOS: `~/Library/Application Support/com.pinlu.desktop/resume.db`
 - Windows: `%APPDATA%\com.pinlu.desktop\resume.db`
+
+发布：`git tag v1.2 && git push origin v1.2` → Actions 构建双端安装包并上传 `latest.json`。
 
 ### 本地构建桌面壳
 
