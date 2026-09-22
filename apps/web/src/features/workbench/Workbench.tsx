@@ -1,96 +1,95 @@
 import { useCallback, useEffect, useState } from 'react';
+import type { Profile, ResumeDocument, SectionId } from '@resume/domain';
+import { api } from '../../api/client';
 import { LibrarySidebar } from '../library/LibrarySidebar';
 import { EditorShell } from '../editor/EditorShell';
 import './workbench.css';
 
-type ResumeSummary = { id: string; title: string };
-
 /**
- * S1 workbench: optional seed + DOCX download. DnD/TipTap arrive in S2–S3.
+ * S2 workbench: tag library + section DnD → snapshot placements + DOCX export.
  */
 export function Workbench() {
-  const [resumeId, setResumeId] = useState<string | null>(null);
+  const [resume, setResume] = useState<ResumeDocument | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [libraryKey, setLibraryKey] = useState(0);
   const [status, setStatus] = useState<string>('就绪');
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const list = (await fetch('/api/resumes').then((r) => r.json())) as ResumeSummary[];
-        if (list[0]) setResumeId(list[0].id);
-      } catch {
-        setStatus('无法连接 API（请先 npm run dev:server）');
-      }
-    })();
+  const refreshResume = useCallback(async (id: string) => {
+    const doc = await api.getResume(id);
+    setResume(doc);
+    return doc;
   }, []);
+
+  const bootstrap = useCallback(async () => {
+    try {
+      const [p, list] = await Promise.all([
+        api.getProfile(),
+        api.listResumes(),
+      ]);
+      setProfile(p);
+      if (list[0]) {
+        await refreshResume(list[0].id);
+      }
+    } catch {
+      setStatus('无法连接 API（请先 npm run dev:server）');
+    }
+  }, [refreshResume]);
+
+  useEffect(() => {
+    void bootstrap();
+  }, [bootstrap]);
 
   const seedDemo = useCallback(async () => {
     setBusy(true);
     setStatus('写入演示数据…');
     try {
-      await fetch('/api/profile', {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          name: '演示候选人',
-          phone: '13800000000',
-          email: 'demo@example.com',
-          location: '上海',
-          education: [
-            {
-              school: '示例大学',
-              degree: '本科',
-              major: '计算机',
-              timeRange: '2018-2022',
-            },
-          ],
-        }),
+      const p = await api.putProfile({
+        name: '演示候选人',
+        phone: '13800000000',
+        email: 'demo@example.com',
+        location: '上海',
+        education: [
+          {
+            id: '',
+            school: '示例大学',
+            degree: '本科',
+            major: '计算机',
+            timeRange: '2018-2022',
+          },
+        ],
+      });
+      setProfile(p);
+
+      await api.createModule({
+        category: 'project',
+        title: '模块化简历系统',
+        subtitle: '个人项目',
+        projectType: '全栈',
+        timeRange: '2026.01 - 2026.09',
+        body: '内容库 + 快照组装 + DOCX 导出',
+        tags: ['TypeScript', '简历'],
+      });
+      await api.createModule({
+        category: 'skill',
+        title: 'TypeScript',
+        body: '类型安全与工程化',
+        tags: ['TypeScript'],
+      });
+      await api.createModule({
+        category: 'internship',
+        title: '示例实习',
+        subtitle: '某科技公司',
+        timeRange: '2022.06 - 2022.09',
+        body: '参与后端接口开发',
+        tags: ['实习', '后端'],
       });
 
-      const project = await fetch('/api/modules', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          category: 'project',
-          title: '模块化简历系统',
-          subtitle: '个人项目',
-          projectType: '全栈',
-          timeRange: '2026.01 - 2026.09',
-          body: '内容库 + 快照组装 + DOCX 导出',
-          tags: ['TypeScript', '简历'],
-        }),
-      }).then((r) => r.json() as Promise<{ id: string }>);
-
-      const skill = await fetch('/api/modules', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          category: 'skill',
-          title: 'TypeScript',
-          body: '类型安全与工程化',
-          tags: ['TypeScript'],
-        }),
-      }).then((r) => r.json() as Promise<{ id: string }>);
-
-      const resume = await fetch('/api/resumes', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ title: 'S1演示简历' }),
-      }).then((r) => r.json() as Promise<{ id: string }>);
-
-      await fetch(`/api/resumes/${resume.id}/placements`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ section: 'projects', moduleId: project.id }),
-      });
-      await fetch(`/api/resumes/${resume.id}/placements`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ section: 'skills', moduleId: skill.id }),
-      });
-
-      setResumeId(resume.id);
-      setStatus(`已种子化 resume=${resume.id}`);
+      const doc = await api.createResume('S2演示简历');
+      // Seed leaves placements empty so DnD can be demonstrated.
+      setResume(doc);
+      setLibraryKey((k) => k + 1);
+      setStatus(`已种子化（空简历，请从左侧拖入）· ${doc.id.slice(0, 8)}…`);
     } catch (e) {
       setStatus(`种子失败: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
@@ -98,21 +97,35 @@ export function Workbench() {
     }
   }, []);
 
+  const onDropModule = useCallback(
+    async (section: SectionId, moduleId: string) => {
+      if (!resume) {
+        setStatus('请先创建或写入演示简历');
+        return;
+      }
+      setBusy(true);
+      try {
+        await api.addPlacement(resume.id, section, moduleId);
+        await refreshResume(resume.id);
+        setStatus(`已落入 ${section}（快照）`);
+      } catch (e) {
+        setStatus(`落入失败: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [resume, refreshResume],
+  );
+
   const exportDocx = useCallback(async () => {
-    if (!resumeId) {
+    if (!resume) {
       setStatus('请先「写入演示数据」或创建简历');
       return;
     }
     setBusy(true);
     setStatus('导出中…');
     try {
-      const res = await fetch(`/api/resumes/${resumeId}/export`, {
-        method: 'POST',
-      });
-      if (!res.ok) {
-        throw new Error(`export ${res.status}`);
-      }
-      const blob = await res.blob();
+      const blob = await api.exportDocx(resume.id);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -125,7 +138,7 @@ export function Workbench() {
     } finally {
       setBusy(false);
     }
-  }, [resumeId]);
+  }, [resume]);
 
   return (
     <div className="workbench">
@@ -133,8 +146,7 @@ export function Workbench() {
         <div>
           <p className="workbench__brand">简历组装系统</p>
           <p className="workbench__phase">
-            S1 · API 已通 · {status}
-            {resumeId ? ` · ${resumeId.slice(0, 8)}…` : ''}
+            S2 · 标签库 + 拖拽 · {status}
           </p>
         </div>
         <div className="workbench__actions">
@@ -149,7 +161,7 @@ export function Workbench() {
           <button
             type="button"
             className="workbench__export"
-            disabled={busy || !resumeId}
+            disabled={busy || !resume}
             onClick={() => void exportDocx()}
           >
             导出 DOCX
@@ -157,8 +169,16 @@ export function Workbench() {
         </div>
       </header>
       <div className="workbench__body">
-        <LibrarySidebar />
-        <EditorShell />
+        <LibrarySidebar
+          refreshKey={libraryKey}
+          onStatus={setStatus}
+        />
+        <EditorShell
+          resume={resume}
+          profile={profile}
+          onDropModule={onDropModule}
+          onStatus={setStatus}
+        />
       </div>
     </div>
   );

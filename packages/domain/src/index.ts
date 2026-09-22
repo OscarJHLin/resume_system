@@ -146,6 +146,39 @@ export interface ModuleDragPayload {
   category: Category;
 }
 
+export function serializeModuleDragPayload(payload: ModuleDragPayload): string {
+  return JSON.stringify(payload);
+}
+
+export function parseModuleDragPayload(raw: string): ModuleDragPayload | null {
+  try {
+    const data = JSON.parse(raw) as Partial<ModuleDragPayload>;
+    if (
+      typeof data.moduleId !== 'string' ||
+      !data.moduleId ||
+      typeof data.category !== 'string' ||
+      !isCategory(data.category)
+    ) {
+      return null;
+    }
+    return { moduleId: data.moduleId, category: data.category };
+  } catch {
+    return null;
+  }
+}
+
+export type DropDecision = 'accept' | 'reject-section' | 'reject-category';
+
+/** Client-side drop gate before calling POST /placements. */
+export function decideModuleDrop(
+  category: Category,
+  section: SectionId,
+): DropDecision {
+  if (!isPlaceableSection(section)) return 'reject-section';
+  if (!categoryAllowedInSection(category, section)) return 'reject-category';
+  return 'accept';
+}
+
 /** Deep-copy ContentModule fields into a placement snapshot (D1). */
 export function snapshotFromModule(
   mod: ContentModule,

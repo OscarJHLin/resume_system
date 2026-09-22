@@ -37,6 +37,27 @@
   font-size: 1.05rem;
 }
 
+.editor__profile {
+  margin-bottom: 0.75rem;
+}
+
+.editor__name {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.editor__muted {
+  margin: 0.2rem 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.editor__edu {
+  margin: 0 0 0.75rem;
+  padding-left: 1.1rem;
+}
+
 .editor__drop {
   margin: 0;
   padding: 0.85rem 1rem;
@@ -44,4 +65,52 @@
   color: var(--muted);
   font-size: 0.9rem;
   background: #eef5f7;
+  min-height: 3.5rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.editor__drop--active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, #fff);
+}
+
+.editor__drop--invalid {
+  border-color: #a33;
+  background: #f8ecec;
+}
+
+.editor__drop-hint {
+  margin: 0;
+}
+
+.editor__placements {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.editor__placement {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.editor__placement:last-child {
+  border-bottom: none;
+}
+
+.editor__placement-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.editor__body {
+  margin: 0.35rem 0 0;
+  font: inherit;
+  white-space: pre-wrap;
+  color: var(--ink);
 }

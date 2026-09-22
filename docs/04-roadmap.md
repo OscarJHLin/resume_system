@@ -12,7 +12,7 @@
 | P2 组装 | Resume placements + 兼容矩阵 | 拒绝链 + 正常链 | Done（并入 S1） |
 | P3 模板 | `default-v1` → ResumeIR | IR 测试 | Done（并入 S1） |
 | P4 导出 | DOCX 下载 | 真实 `.docx` | Done（并入 S1） |
-| P5 编辑器+DnD | TipTap 壳 + 拖入 | 浏览器主路径 | Designed |
+| P5 编辑器+DnD | TipTap 壳 + 拖入 | 浏览器主路径 | Partial（S2 DnD 列表壳 Done；TipTap→S3） |
 | P6 打磨 | 空态/错误、演示数据 | 验收清单 | Partial（有 seed 脚本） |
 
 ## 垂直切片卡片
@@ -31,11 +31,11 @@
 
 ### S2 — 内容库侧栏 + 拖拽落入
 
-- **状态**: Designed（下一步）
-
-- **可观察结果**：浏览器中按**标签**过滤，拖模块到 section，刷新后仍在（读的是 snapshot）。
-- **依赖**：S1、library-ui、editor-shell（可先非 TipTap 列表式落点，再换 TipTap）。
-- **不做**：富文本 body、JD UI。
+- **状态**: Done（2026-09-23）
+- **可观察结果**：浏览器中按**标签**/大类/关键字过滤，拖模块到匹配 section；落库为 snapshot；刷新后仍在；可导出 DOCX。
+- **依赖**：S1 placement API；`MODULE_DRAG_MIME` + `decideModuleDrop`（domain）。
+- **证据**：`npm test`（domain DnD 合同 + server 标签过滤/快照回归 + web query/class helpers）。
+- **不做**：TipTap、富文本 body、JD UI。
 
 ### S3 — TipTap 文档感编辑壳
 
@@ -62,4 +62,4 @@
 
 ## 建议下一步（唯一）
 
-**S1 已完成。** 开工 **S2**：内容库侧栏标签过滤 + 拖拽落入 section（落点可先非 TipTap），落库仍走现有 snapshot placement API。
+**S2 已完成。** 开工 **S3**：用 TipTap 替换列表式编辑壳，保留现有 snapshot placements 与 DnD 桥接。

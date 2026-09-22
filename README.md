@@ -2,7 +2,7 @@
 
 本地优先的简历组装系统：**S1 已打通**「个人资料 / 内容库 / 快照组装 / 模板 IR / DOCX 导出」。
 
-> 当前状态：**S1 Ready**（无 TipTap / DnD；见路线图 S2）。
+> 当前状态：**S2 Ready**（标签库 + 拖拽落入；TipTap 见 S3）。
 
 ## 文档入口
 
@@ -42,7 +42,20 @@ npm run dev:web
 健康检查：`curl http://127.0.0.1:8787/health`  
 元信息：`curl http://127.0.0.1:8787/api/meta`
 
-## S1 演示
+## S2 拖拽演示
+
+```bash
+npm run dev:server   # :8787
+npm run dev:web      # :5173
+```
+
+1. 打开 http://127.0.0.1:5173  
+2. 点 **写入演示数据**（生成空简历 + 带标签模块）  
+3. 左侧可用「标签 / 大类 / 关键字」过滤  
+4. 将模块拖到右侧匹配区块（不匹配会拒绝）  
+5. **导出 DOCX**
+
+## S1 API 演示（仍可用）
 
 ### A. 一键脚本（推荐）
 
@@ -108,7 +121,7 @@ npm run test -w @resume/server
 ## 开发约定
 
 1. 改行为前先看对应 `docs/contracts/*`。
-2. 下一切片：**S2** 内容库侧栏 + 拖拽落入（见 [docs/04-roadmap.md](docs/04-roadmap.md)）。
+2. 下一切片：**S3** TipTap 文档壳（见 [docs/04-roadmap.md](docs/04-roadmap.md)）。
 3. 不要在未实现层假装 Done；证据绑定命令与产物。
 
 ## 已锁定决策

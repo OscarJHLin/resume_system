@@ -60,21 +60,24 @@
 
 ## 7. `editor-shell`
 
-- **责任**：TipTap schema（section 节点、只读/半受控条目节点）；接收 drop；调用 API 更新 placements；本地预览可先用 IR 只读渲染降级。
-- **依赖**：`domain` 类型、Web API client。
-- **DoD**：拖入后主区出现对应条目（浏览器可观察）。
+- **责任**：简历主区 section 落点、展示 placements 快照；接收 drop → `POST .../placements`。S2 为列表式壳；TipTap 在 S3。
+- **依赖**：`domain`（`decideModuleDrop`）、Web API client。
+- **状态**：S2 Ready（列表壳）
+- **DoD**：拖入后主区出现对应条目；不匹配大类拒绝。
 
 ## 8. `library-ui`
 
-- **责任**：列表、**标签过滤/搜索**、拖拽 `application/x-resume-module` payload。
-- **依赖**：content-library API。
+- **责任**：列表、**标签/大类/关键字过滤**、拖拽 `application/x-resume-module` payload。
+- **依赖**：content-library API；`@resume/domain` DnD 合同。
+- **状态**：S2 Ready
 - **DoD**：按 tag 过滤可见；拖拽数据可被 editor drop zone 解析。
 - **不做**：JD 输入框、目标岗位实体 UI。
 
 ## 9. `workbench`
 
-- **责任**：页面骨架、导出按钮、错误/空态。
+- **责任**：页面骨架、种子数据、导出按钮、串联 library + editor。
 - **依赖**：上述 UI 模块。
+- **状态**：S2 Ready（列表式落点；TipTap→S3）
 - **DoD**：单页可完成「搜 → 拖 → 导出」主路径。
 
 ---
@@ -87,12 +90,12 @@
 3. content-library
 4. resume-assembly          ← 到此后端事实链打通
 5. template-engine
-6. export-docx              ← 首个垂直切片证据：模块→简历→docx
-7. library-ui（只读列表）
-8. editor-shell（section + drop）
-9. workbench 串联 + 打磨
+6. export-docx              ← S1 证据：模块→简历→docx
+7. library-ui + editor-shell DnD  ← S2
+8. TipTap editor-shell       ← S3
+9. workbench 打磨
 ```
 
 **并行建议**：`template-engine` 与 `content-library` 在合同冻结后可并行；`export-docx` 必须等 IR 合同稳定。
 
-**首个垂直切片（S1）**：不用完整 TipTap——可用 API + 最小 fixture UI 或脚本证明导出。编辑器作为 S2。
+**S1** 已完成；**S2** 列表式 DnD 已完成；**S3** 换 TipTap 文档壳。

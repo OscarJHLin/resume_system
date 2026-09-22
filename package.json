@@ -12,9 +12,9 @@
     "dev:server": "npm run dev -w @resume/server",
     "build": "npm run build -w @resume/domain -w @resume/shared -w @resume/server -w @resume/web",
     "typecheck": "npm run typecheck -w @resume/domain -w @resume/shared -w @resume/server -w @resume/web",
-    "test": "npm run test -w @resume/server"
+    "test": "npm run test -w @resume/domain -w @resume/server -w @resume/web"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   }
 }
