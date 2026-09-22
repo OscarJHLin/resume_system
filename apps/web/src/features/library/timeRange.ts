@@ -31,15 +31,15 @@ export function displayDateToIso(display: string): string {
 /**
  * Build timeRange string for API.
  * - both empty → undefined
- * - start only → "YYYY.MM.DD"
+ * - start only → "YYYY.MM.DD - 至今"
  * - both → "YYYY.MM.DD - YYYY.MM.DD"
- * - end only → treated as start-only (end alone is invalid; returns start undefined → use end as single)
+ * - end only → single date (no 至今)
  */
 export function formatTimeRange(parts: TimeRangeParts): string | undefined {
   const start = parts.start.trim();
   const end = parts.end.trim();
   if (!start && !end) return undefined;
-  if (start && !end) return isoDateToDisplay(start);
+  if (start && !end) return `${isoDateToDisplay(start)} - 至今`;
   if (!start && end) return isoDateToDisplay(end);
   return `${isoDateToDisplay(start)} - ${isoDateToDisplay(end)}`;
 }
@@ -50,9 +50,10 @@ export function parseTimeRange(timeRange?: string | null): TimeRangeParts {
   const raw = timeRange.trim();
   const range = raw.split(/\s*[-–—]\s*/);
   if (range.length >= 2) {
+    const endRaw = range[1]!.trim();
     return {
       start: displayDateToIso(range[0]!),
-      end: displayDateToIso(range[1]!),
+      end: endRaw === '至今' ? '' : displayDateToIso(endRaw),
     };
   }
   return { start: displayDateToIso(raw), end: '' };

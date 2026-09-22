@@ -11,6 +11,7 @@ import type {
 } from '@resume/domain';
 import {
   DEFAULT_TEMPLATE_ID,
+  displayModuleTimeRange,
   PERSONAL_STATEMENT_LABEL,
   SECTION_LABELS,
   TARGET_ROLE_PREFIX,
@@ -205,7 +206,11 @@ function renderSnapshot(
   const out: IrBlock[] = [];
 
   if (section === 'awards') {
-    const line = [s.title, s.timeRange, s.body.trim()]
+    // 名称，级别，颁发机构，时间，补充说明
+    const level = (s.projectType ?? '').trim();
+    const org = (s.subtitle ?? '').trim();
+    const when = displayModuleTimeRange(s.timeRange);
+    const line = [s.title, level, org, when, s.body.trim()]
       .filter(Boolean)
       .join('，');
     out.push(
@@ -220,7 +225,7 @@ function renderSnapshot(
   // internships: company | 岗位 · 部门 | dates — show every saved field
   const tech = (s.projectType ?? '').trim() || undefined;
   const duty = (s.subtitle ?? '').trim() || undefined;
-  const right = s.timeRange || undefined;
+  const right = displayModuleTimeRange(s.timeRange) || undefined;
   const tabCenter =
     section === 'internships'
       ? layout.internshipTabCenter

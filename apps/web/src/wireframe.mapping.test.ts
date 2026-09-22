@@ -23,7 +23,7 @@ describe('wireframe field mapping', () => {
     assert.equal(r.ok, true);
     if (r.ok) {
       assert.equal(r.payload.projectType, 'Flutter / Drift');
-      assert.equal(r.payload.timeRange, '2025.01.01');
+      assert.equal(r.payload.timeRange, '2025.01.01 - 至今');
       assert.deepEqual(r.payload.tags, ['Flutter', '收纳']);
     }
   });

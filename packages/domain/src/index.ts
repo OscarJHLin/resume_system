@@ -371,9 +371,23 @@ export function educationTimeRange(
   const a = startDate?.trim();
   const b = endDate?.trim();
   if (a && b) return `${formatEduDate(a)} - ${formatEduDate(b)}`;
-  if (a) return formatEduDate(a);
+  if (a) return `${formatEduDate(a)} - 至今`;
   if (b) return formatEduDate(b);
   return fallback?.trim() || undefined;
+}
+
+const PRESENT_LABEL = '至今';
+
+/**
+ * Normalize stored module timeRange for canvas / DOCX.
+ * Start-only (no range separator) → `… - 至今`.
+ */
+export function displayModuleTimeRange(timeRange?: string | null): string {
+  if (!timeRange?.trim()) return '';
+  const raw = timeRange.trim();
+  if (raw.includes(PRESENT_LABEL)) return raw;
+  if (/\s*[-–—]\s*/.test(raw)) return raw;
+  return `${raw} - ${PRESENT_LABEL}`;
 }
 
 function formatEduDate(iso: string): string {

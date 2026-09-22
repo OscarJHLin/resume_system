@@ -17,7 +17,7 @@ describe('module form timeRange helpers', () => {
     assert.equal(formatTimeRange({ start: '', end: '' }), undefined);
     assert.equal(
       formatTimeRange({ start: '2023-09-01', end: '' }),
-      '2023.09.01',
+      '2023.09.01 - 至今',
     );
     assert.equal(
       formatTimeRange({ start: '2023-09-01', end: '2027-06-30' }),
@@ -28,6 +28,10 @@ describe('module form timeRange helpers', () => {
   it('parses stored ranges back to date inputs', () => {
     assert.deepEqual(parseTimeRange('2024.07'), {
       start: '2024-07-01',
+      end: '',
+    });
+    assert.deepEqual(parseTimeRange('2023.09.01 - 至今'), {
+      start: '2023-09-01',
       end: '',
     });
     assert.deepEqual(parseTimeRange('2023.09.01 - 2027.06.30'), {

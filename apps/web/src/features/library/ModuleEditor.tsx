@@ -141,11 +141,14 @@ export function ModuleEditor({
               allowClear
             />
             <StepDatePicker
-              label="结束（可留空）"
+              label="结束（可留空 → 至今）"
               value={values.timeEnd}
               onChange={(iso) => set('timeEnd', iso)}
               allowClear
             />
+            {values.timeStart && !values.timeEnd ? (
+              <p className="moded__hint">结束未填时，简历上显示为「至今」</p>
+            ) : null}
             <button
               type="button"
               className="moded__linkish"

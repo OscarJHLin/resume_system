@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type {
+import {
   ContentModule,
   LibraryModuleCategory,
   Profile,
+  displayModuleTimeRange,
 } from '@resume/domain';
 import { api } from '../../api/client';
 import { clearModuleDrag, setModuleDragData } from '../dnd/dragPayload';
@@ -302,7 +303,7 @@ export function ContentDatabase({
                 <div className="cdb__card-row">
                   <span className="cdb__field cdb__title">{m.title}</span>
                   <span className="cdb__field cdb__time">
-                    {m.timeRange || '时间'}
+                    {displayModuleTimeRange(m.timeRange) || '时间'}
                   </span>
                 </div>
                 <div className="cdb__field cdb__stack">
