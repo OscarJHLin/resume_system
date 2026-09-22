@@ -21,6 +21,19 @@ export interface TemplateStyles {
   body: TextStyle;
 }
 
+export interface TemplatePhotoSpec {
+  placement: 'above-name-center' | 'header-right';
+  widthPx: number;
+  heightPx: number;
+}
+
+export interface TemplateLayoutSpec {
+  entryTabCenter: number;
+  internshipTabCenter: number;
+  entryTabRight: number;
+  bulletIndent: { left: number; hanging: number };
+}
+
 export interface TemplateDefinition {
   id: string;
   slug: string;
@@ -28,6 +41,8 @@ export interface TemplateDefinition {
   version: string;
   description: string;
   photoInTemplate: boolean;
+  photo?: TemplatePhotoSpec;
+  layout: TemplateLayoutSpec;
   sectionOrder: SectionId[];
   page: TemplatePageSpec;
   styles: TemplateStyles;
@@ -40,10 +55,19 @@ interface ManifestFile {
   version: string;
   description?: string;
   photoInTemplate: boolean;
+  photo?: TemplatePhotoSpec;
+  layout?: Partial<TemplateLayoutSpec>;
   sectionOrder: SectionId[];
   page: TemplatePageSpec;
   styles: TemplateStyles;
 }
+
+const DEFAULT_LAYOUT: TemplateLayoutSpec = {
+  entryTabCenter: 4933,
+  internshipTabCenter: 6520,
+  entryTabRight: 9866,
+  bulletIndent: { left: 340, hanging: 228 },
+};
 
 const SECTION_IDS = new Set<SectionId>([
   'basic',
@@ -134,6 +158,15 @@ export function loadTemplateRegistry(
       version: m.version,
       description: m.description ?? '',
       photoInTemplate: Boolean(m.photoInTemplate),
+      photo: m.photo,
+      layout: {
+        ...DEFAULT_LAYOUT,
+        ...(m.layout ?? {}),
+        bulletIndent: {
+          ...DEFAULT_LAYOUT.bulletIndent,
+          ...(m.layout?.bulletIndent ?? {}),
+        },
+      },
       sectionOrder: m.sectionOrder,
       page: m.page,
       styles: m.styles,

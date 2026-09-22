@@ -23,6 +23,9 @@ describe('template pack registry', () => {
     assert.equal(def.displayName, '蓝黑简洁简历');
     assert.equal(def.slug, 'blue-black-simple');
     assert.equal(def.photoInTemplate, true);
+    assert.equal(def.photo?.placement, 'above-name-center');
+    assert.equal(def.layout.internshipTabCenter, 6520);
+    assert.equal(def.styles.tagline.bold, true);
     assert.equal(def.styles.name.fontSizePt, 22);
     const meta = listTemplateMeta();
     assert.equal(meta[0]?.label, '蓝黑简洁简历');

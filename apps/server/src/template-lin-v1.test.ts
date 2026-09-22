@@ -16,6 +16,7 @@ describe('lin-v1 / default-v1 template fidelity', () => {
     assert.equal(LIN_V1_STYLE_PROBE.heiti, '黑体');
     assert.equal(LIN_V1_STYLE_PROBE.song, '宋体');
     assert.equal(LIN_V1_STYLE_PROBE.photoInTemplate, true);
+    assert.equal(LIN_V1_STYLE_PROBE.photoPlacement, 'above-name-center');
     assert.deepEqual([...LIN_V1_STYLE_PROBE.sectionOrder], [
       'skills',
       'projects',
@@ -79,7 +80,7 @@ describe('lin-v1 / default-v1 template fidelity', () => {
       () => '2026-09-23T00:00:00.000Z',
     );
 
-    assert.equal(ir.templateVersion, '1.0.0');
+    assert.equal(ir.templateVersion, '1.1.0');
 
     const eduHead = ir.blocks.find(
       (b) =>
@@ -93,10 +94,11 @@ describe('lin-v1 / default-v1 template fidelity', () => {
     const skill = ir.blocks.find(
       (b) =>
         b.kind === 'paragraph' &&
-        b.runs[0]?.text === '编程语言：TypeScript、Python',
+        b.runs[0]?.text === '编程语言：' &&
+        b.runs[1]?.text === 'TypeScript、Python',
     );
     assert.ok(skill && skill.kind === 'paragraph');
-    assert.equal(skill.bullet, true);
+    assert.equal(skill.bullet, false);
     assert.equal(skill.runs[0]?.style?.bold, true);
 
     const entry = ir.blocks.find(
@@ -107,6 +109,8 @@ describe('lin-v1 / default-v1 template fidelity', () => {
     );
     assert.ok(entry && entry.kind === 'paragraph');
     assert.ok(entry.runs.some((r) => r.text === '\t'));
+    assert.ok(entry.runs.some((r) => r.text === 'Python'));
+    assert.equal(entry.entryTabs, 4933);
   });
 
   it('exported docx is non-empty OOXML', async () => {

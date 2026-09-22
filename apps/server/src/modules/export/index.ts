@@ -39,6 +39,13 @@ export async function exportDocx(
   options: ExportOptions = {},
 ): Promise<Buffer> {
   const PAGE = pageForTemplate(ir.templateId);
+  const def = getTemplate(ir.templateId) ?? getTemplate(DEFAULT_TEMPLATE_ID);
+  const photoSpec = def?.photo ?? {
+    placement: 'above-name-center' as const,
+    widthPx: 98,
+    heightPx: 131,
+  };
+  const layout = def?.layout;
   const children: Paragraph[] = [];
   if (options.photo?.buffer?.length) {
     const type =
@@ -47,15 +54,19 @@ export async function exportDocx(
         : options.photo.mime.includes('gif')
           ? 'gif'
           : 'jpg';
+    // Reference: centered inline photo above name (~98×131 CSS px / 74×98 pt).
     children.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
-        spacing: { after: 120 },
+        spacing: { after: 150, line: 240, lineRule: 'exact' },
         children: [
           new ImageRun({
             type,
             data: options.photo.buffer,
-            transformation: { width: 72, height: 96 },
+            transformation: {
+              width: photoSpec.widthPx,
+              height: photoSpec.heightPx,
+            },
             altText: {
               title: '证件照',
               description: '简历证件照',
@@ -66,7 +77,9 @@ export async function exportDocx(
       }),
     );
   }
-  children.push(...ir.blocks.map(blockToParagraph));
+  children.push(
+    ...ir.blocks.map((b) => blockToParagraph(b, layout)),
+  );
   const doc = new Document({
     sections: [
       {
@@ -89,11 +102,19 @@ export async function exportDocx(
   return Buffer.from(await Packer.toBuffer(doc));
 }
 
-function blockToParagraph(block: IrBlock): Paragraph {
+function blockToParagraph(
+  block: IrBlock,
+  layout?: {
+    entryTabCenter: number;
+    internshipTabCenter: number;
+    entryTabRight: number;
+    bulletIndent: { left: number; hanging: number };
+  },
+): Paragraph {
   if (block.kind === 'heading') {
     return headingParagraph(block);
   }
-  return bodyParagraph(block);
+  return bodyParagraph(block, layout);
 }
 
 function headingParagraph(block: IrHeading): Paragraph {
@@ -127,22 +148,36 @@ function headingParagraph(block: IrHeading): Paragraph {
   });
 }
 
-function bodyParagraph(block: IrParagraph): Paragraph {
+function bodyParagraph(
+  block: IrParagraph,
+  layout?: {
+    entryTabCenter: number;
+    internshipTabCenter: number;
+    entryTabRight: number;
+    bulletIndent: { left: number; hanging: number };
+  },
+): Paragraph {
+  const tabRight = layout?.entryTabRight ?? ENTRY_TAB_RIGHT;
+  const defaultCenter = layout?.entryTabCenter ?? ENTRY_TAB_CENTER;
+  const centerPos =
+    typeof block.entryTabs === 'number' ? block.entryTabs : defaultCenter;
+  const bulletInd = layout?.bulletIndent ?? { left: 340, hanging: 228 };
+
   return new Paragraph({
     alignment: mapAlign(block.alignment),
     spacing: {
       before: ptToTwip(block.spacingBeforePt ?? 0),
-      after: ptToTwip(block.spacingAfterPt ?? 4),
-      line: 320,
+      after: ptToTwip(block.spacingAfterPt ?? 0.8),
+      line: block.bullet ? 320 : block.alignment === 'center' ? 280 : 320,
       lineRule: 'exact',
     },
     indent: block.bullet
-      ? { left: 340, hanging: 228 }
+      ? { left: bulletInd.left, hanging: bulletInd.hanging }
       : undefined,
     tabStops: block.entryTabs
       ? [
-          { type: TabStopType.CENTER, position: ENTRY_TAB_CENTER },
-          { type: TabStopType.RIGHT, position: ENTRY_TAB_RIGHT },
+          { type: TabStopType.CENTER, position: centerPos },
+          { type: TabStopType.RIGHT, position: tabRight },
         ]
       : undefined,
     children: [
@@ -150,6 +185,7 @@ function bodyParagraph(block: IrParagraph): Paragraph {
         ? [
             new TextRun({
               text: '• ',
+              bold: true,
               font: fontFace('宋体'),
               size: 21,
             }),

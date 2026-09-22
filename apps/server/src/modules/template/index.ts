@@ -17,10 +17,10 @@ import {
 } from './registry.js';
 
 /**
- * Template-driven IR renderer. Typography and section order come from
+ * Template-driven IR renderer. Typography / tabs / photo placement come from
  * templates/<slug>/manifest.json (see docs/07-template-packs.md).
- * Photo column: shown on canvas/DOCX when the applied profile has a photo
- * (manifest photoInTemplate documents that the pack supports portraits).
+ * Blue-black-simple matches 参考简历模板.docx: centered photo above name,
+ * three-column entry tabs, skill lines without bullets.
  */
 export class UnknownTemplateError extends Error {
   constructor(templateId: string) {
@@ -39,6 +39,7 @@ export function renderToIR(
   }
 
   const STYLE = def.styles;
+  const layout = def.layout;
   const blocks: IrBlock[] = [];
   const { profile, placements } = input;
 
@@ -86,7 +87,10 @@ export function renderToIR(
           edu.school || '学校',
           major || undefined,
           edu.timeRange,
-          { spacingAfterPt: 0.8 },
+          {
+            spacingAfterPt: 0.8,
+            entryTabCenter: layout.entryTabCenter,
+          },
         ),
       );
       const detail = [
@@ -110,14 +114,20 @@ export function renderToIR(
   if (profile.skills.length > 0) {
     blocks.push(sectionHeading(SECTION_LABELS.skills, STYLE));
     for (const skill of profile.skills) {
-      const line = skill.body.trim()
-        ? `${skill.title}：${skill.body.trim().replace(/\n/g, '；')}`
-        : skill.title;
-      if (!line.trim()) continue;
+      const title = skill.title.trim();
+      const body = skill.body.trim().replace(/\n/g, '；');
+      if (!title && !body) continue;
+      const runs =
+        title && body
+          ? [
+              { text: `${title}：`, style: STYLE.skillLine },
+              { text: body, style: STYLE.skillLine },
+            ]
+          : [{ text: title || body, style: STYLE.skillLine }];
       blocks.push(
-        para([{ text: line, style: STYLE.skillLine }], {
+        para(runs, {
           spacingAfterPt: 0.4,
-          bullet: true,
+          bullet: false,
         }),
       );
     }
@@ -132,7 +142,7 @@ export function renderToIR(
 
     blocks.push(sectionHeading(SECTION_LABELS[section], STYLE));
     for (const item of items) {
-      blocks.push(...renderSnapshot(STYLE, item, section));
+      blocks.push(...renderSnapshot(STYLE, layout, item, section));
     }
   }
 
@@ -160,6 +170,7 @@ function sectionHeading(text: string, STYLE: TemplateStyles): IrBlock {
 
 function renderSnapshot(
   STYLE: TemplateStyles,
+  layout: TemplateDefinition['layout'],
   placement: SectionPlacement,
   section: SectionId,
 ): IrBlock[] {
@@ -179,11 +190,23 @@ function renderSnapshot(
     return out;
   }
 
-  const meta = [s.subtitle, s.projectType].filter(Boolean).join(' · ');
+  // projects: title | tech(stack) | dates — matches reference ResumeEntry
+  // internships: company | role | dates — wider center tab (6520)
+  const middle =
+    section === 'internships'
+      ? s.subtitle || s.projectType || undefined
+      : s.projectType || s.subtitle || undefined;
+  const right = s.timeRange || undefined;
+  const tabCenter =
+    section === 'internships'
+      ? layout.internshipTabCenter
+      : layout.entryTabCenter;
+
   out.push(
-    entryLine(STYLE, s.title, meta || undefined, s.timeRange, {
+    entryLine(STYLE, s.title, middle, right, {
       spacingAfterPt: 0.8,
       spacingBeforePt: placement.sortOrder > 0 ? 6.5 : 0,
+      entryTabCenter: tabCenter,
     }),
   );
 
@@ -206,7 +229,11 @@ function entryLine(
   title: string,
   middle: string | undefined,
   time: string | undefined,
-  opts: { spacingAfterPt?: number; spacingBeforePt?: number } = {},
+  opts: {
+    spacingAfterPt?: number;
+    spacingBeforePt?: number;
+    entryTabCenter?: number;
+  } = {},
 ): IrParagraph {
   const runs: IrParagraph['runs'] = [
     { text: title, style: STYLE.entryTitle },
@@ -222,7 +249,7 @@ function entryLine(
   return para(runs, {
     spacingAfterPt: opts.spacingAfterPt,
     spacingBeforePt: opts.spacingBeforePt,
-    entryTabs: true,
+    entryTabs: opts.entryTabCenter ?? true,
   });
 }
 
@@ -233,7 +260,7 @@ function para(
     spacingBeforePt?: number;
     alignment?: IrParagraph['alignment'];
     bullet?: boolean;
-    entryTabs?: boolean;
+    entryTabs?: boolean | number;
   } = {},
 ): IrParagraph {
   return {
@@ -259,6 +286,7 @@ export function styleProbeFor(
   song: string;
   sectionOrder: readonly SectionId[];
   photoInTemplate: boolean;
+  photoPlacement?: string;
 } {
   const def = requireTemplate(templateId);
   return {
@@ -270,6 +298,7 @@ export function styleProbeFor(
     song: def.styles.body.fontEastAsia ?? '',
     sectionOrder: def.sectionOrder,
     photoInTemplate: def.photoInTemplate,
+    photoPlacement: def.photo?.placement,
   };
 }
 
@@ -305,5 +334,4 @@ export function placeholderProfile(): Profile {
   };
 }
 
-/** Re-export TextStyle for callers that need style typing. */
 export type { TextStyle };

@@ -86,31 +86,7 @@ export function ResumeCanvas({
   return (
     <main className="canvas">
       <div className="canvas__page">
-        <header
-          className={
-            showPhoto ? 'canvas__hero' : 'canvas__hero canvas__hero--no-photo'
-          }
-        >
-          <div className="canvas__identity">
-            <p className={`canvas__name${name ? '' : ' canvas__ph'}`}>
-              {name || '姓名'}
-            </p>
-            <p className={`canvas__tagline${summary ? '' : ' canvas__ph'}`}>
-              {summary || '标语 / 定位（在「基本信息」中填写）'}
-            </p>
-            <p
-              className={`canvas__contact-row canvas__contact-static${
-                contactParts.length ? '' : ' canvas__ph'
-              }`}
-            >
-              {contactParts.length
-                ? contactParts.join(' | ')
-                : '手机 | 邮箱 | 微信（应用到简历后显示）'}
-            </p>
-            {profile?.gender && (
-              <p className="canvas__muted">性别：{profile.gender}</p>
-            )}
-          </div>
+        <header className="canvas__hero">
           {showPhoto && profile && (
             <div className="canvas__photo">
               <img
@@ -119,6 +95,23 @@ export function ResumeCanvas({
               />
             </div>
           )}
+          <div className="canvas__identity">
+            <p className={`canvas__name${name ? '' : ' canvas__ph'}`}>
+              {name || '姓名'}
+            </p>
+            <p className={`canvas__tagline${summary ? '' : ' canvas__ph'}`}>
+              {summary || '标语 / 定位（在「基本信息」中填写）'}
+            </p>
+            <p
+              className={`canvas__contact${
+                contactParts.length ? '' : ' canvas__ph'
+              }`}
+            >
+              {contactParts.length
+                ? contactParts.join(' | ')
+                : '地区 | 手机 | 邮箱（应用到简历后显示）'}
+            </p>
+          </div>
         </header>
 
         <CanvasSection title="教育背景">
@@ -144,12 +137,16 @@ export function ResumeCanvas({
                   .join('；');
                 return (
                   <div key={edu.id} className="canvas__edu-preview">
-                    <div className="canvas__item-head">
-                      <strong>{edu.school || '学校'}</strong>
-                      <span className="canvas__muted">{range}</span>
+                    <div className="canvas__entry">
+                      <span className="canvas__entry-title">
+                        {edu.school || '学校'}
+                      </span>
+                      <span className="canvas__entry-mid">{major}</span>
+                      <span className="canvas__entry-right">{range}</span>
                     </div>
-                    {major && <p className="canvas__muted">{major}</p>}
-                    {detail && <p className="canvas__body-line">{detail}</p>}
+                    {detail && (
+                      <p className="canvas__bullet">{detail}</p>
+                    )}
                   </div>
                 );
               })}
@@ -163,20 +160,20 @@ export function ResumeCanvas({
               技术能力占位 — 在基本信息中添加「标题 + 正文」能力块
             </p>
           ) : (
-            <ul className="canvas__skills">
+            <div className="canvas__skills">
               {profile.skills.map((s: SkillBlock) => (
-                <li key={s.id}>
+                <p key={s.id} className="canvas__skill-line">
                   <strong>{s.title}</strong>
                   {s.body ? `：${s.body}` : ''}
-                </li>
+                </p>
               ))}
-            </ul>
+            </div>
           )}
         </CanvasSection>
 
         <PlaceableSection
           sectionId="projects"
-          title="项目"
+          title={SECTION_LABELS.projects}
           resume={resume}
           onDropModule={onDropModule}
           onDeletePlacement={onDeletePlacement}
@@ -185,7 +182,7 @@ export function ResumeCanvas({
         />
         <PlaceableSection
           sectionId="internships"
-          title="实习"
+          title={SECTION_LABELS.internships}
           resume={resume}
           onDropModule={onDropModule}
           onDeletePlacement={onDeletePlacement}
@@ -326,12 +323,19 @@ function PlacementRow({
   onDelete: () => void;
 }) {
   const s = placement.snapshot;
-  return (
-    <article className="canvas__item">
-      <div className="canvas__item-head">
-        <strong>{s.title}</strong>
-        <span className="canvas__muted">{s.timeRange}</span>
-        <span className="canvas__item-actions">
+  const isInternship = placement.section === 'internships';
+  const isAward = placement.section === 'awards';
+  const middle = isInternship
+    ? s.subtitle || s.projectType
+    : s.projectType || s.subtitle;
+
+  if (isAward) {
+    const line = [s.title, s.timeRange, s.body.trim()]
+      .filter(Boolean)
+      .join('，');
+    return (
+      <article className="canvas__item">
+        <div className="canvas__item-toolbar">
           <button type="button" disabled={!canUp} onClick={onUp}>
             ↑
           </button>
@@ -341,14 +345,43 @@ function PlacementRow({
           <button type="button" onClick={onDelete}>
             删
           </button>
-        </span>
+        </div>
+        <p className="canvas__bullet">{line}</p>
+      </article>
+    );
+  }
+
+  return (
+    <article className="canvas__item">
+      <div className="canvas__item-toolbar">
+        <button type="button" disabled={!canUp} onClick={onUp}>
+          ↑
+        </button>
+        <button type="button" disabled={!canDown} onClick={onDown}>
+          ↓
+        </button>
+        <button type="button" onClick={onDelete}>
+          删
+        </button>
       </div>
-      {(s.subtitle || s.projectType) && (
-        <p className="canvas__muted">
-          {[s.subtitle, s.projectType].filter(Boolean).join(' · ')}
-        </p>
-      )}
-      {s.body && <pre className="canvas__body">{s.body}</pre>}
+      <div
+        className={
+          isInternship ? 'canvas__entry canvas__entry--intern' : 'canvas__entry'
+        }
+      >
+        <span className="canvas__entry-title">{s.title}</span>
+        <span className="canvas__entry-mid">{middle}</span>
+        <span className="canvas__entry-right">{s.timeRange}</span>
+      </div>
+      {s.body
+        .split(/\n/)
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((line) => (
+          <p key={line} className="canvas__bullet">
+            {line}
+          </p>
+        ))}
     </article>
   );
 }

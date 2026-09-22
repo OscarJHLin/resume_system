@@ -2,23 +2,34 @@
   "id": "default-v1",
   "slug": "blue-black-simple",
   "displayName": "蓝黑简洁简历",
-  "version": "1.0.0",
-  "description": "蓝黑简洁版式：教育→技术→项目→实习→获奖；有照片时显示在页眉右侧",
+  "version": "1.1.0",
+  "description": "对齐参考简历模板：居中证件照→姓名→标语→联系；教育/项目三栏 Tab；技能加粗「标题：正文」",
   "photoInTemplate": true,
+  "photo": {
+    "placement": "above-name-center",
+    "widthPx": 98,
+    "heightPx": 131
+  },
   "sectionOrder": ["skills", "projects", "internships", "awards"],
   "page": {
     "width": 11906,
     "height": 16838,
     "margin": { "top": 680, "right": 1020, "bottom": 680, "left": 1020 }
   },
+  "layout": {
+    "entryTabCenter": 4933,
+    "internshipTabCenter": 6520,
+    "entryTabRight": 9866,
+    "bulletIndent": { "left": 340, "hanging": 228 }
+  },
   "styles": {
     "name": { "bold": true, "fontSizePt": 22, "fontEastAsia": "黑体" },
-    "tagline": { "fontSizePt": 11, "fontEastAsia": "黑体" },
-    "contact": { "fontSizePt": 9.5, "fontEastAsia": "宋体" },
+    "tagline": { "bold": true, "fontSizePt": 11, "fontEastAsia": "黑体" },
+    "contact": { "bold": true, "fontSizePt": 9.5, "fontEastAsia": "宋体" },
     "sectionHeading": { "bold": true, "fontSizePt": 13, "fontEastAsia": "黑体" },
     "entryTitle": { "bold": true, "fontSizePt": 10.5, "fontEastAsia": "黑体" },
-    "entryMeta": { "fontSizePt": 10.5, "fontEastAsia": "宋体" },
+    "entryMeta": { "bold": true, "fontSizePt": 10.5, "fontEastAsia": "宋体" },
     "skillLine": { "bold": true, "fontSizePt": 10.5, "fontEastAsia": "宋体" },
-    "body": { "fontSizePt": 10.5, "fontEastAsia": "宋体" }
+    "body": { "bold": true, "fontSizePt": 10.5, "fontEastAsia": "宋体" }
   }
 }

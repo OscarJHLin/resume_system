@@ -33,7 +33,7 @@ export const TEMPLATES: readonly TemplateMeta[] = [
   {
     id: DEFAULT_TEMPLATE_ID,
     label: '蓝黑简洁简历',
-    description: '蓝黑简洁版式：教育→技术→项目→实习→获奖；有照片时显示在页眉',
+    description: '对齐参考简历模板：居中证件照→姓名→标语→联系；三栏条目',
   },
 ] as const;
 
@@ -185,10 +185,11 @@ export interface IrParagraph {
   /** Resume body bullet (hanging indent). */
   bullet?: boolean;
   /**
-   * Three-column entry row (title | meta | time) using tab stops,
-   * matching reference DOCX ResumeEntry layout.
+   * Three-column entry row (title | meta | time) using tab stops.
+   * When true, uses default center tab; or pass center position in twips
+   * (education/projects: 4933; internships: 6520 in the reference DOCX).
    */
-  entryTabs?: boolean;
+  entryTabs?: boolean | number;
 }
 
 export interface IrHeading {

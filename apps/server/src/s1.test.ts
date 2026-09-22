@@ -217,9 +217,11 @@ describe('S1 resume assembly', () => {
     const skill = ir.blocks.find(
       (b) =>
         b.kind === 'paragraph' &&
-        b.runs[0]?.text === '编程语言：TypeScript',
+        b.runs[0]?.text === '编程语言：' &&
+        b.runs[1]?.text === 'TypeScript',
     );
     assert.ok(skill);
+    assert.equal(skill.kind === 'paragraph' && skill.bullet, false);
 
     const titlePara = ir.blocks.find(
       (b) =>
