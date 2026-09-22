@@ -155,17 +155,6 @@ export function ModuleEditor({
           </fieldset>
         )}
 
-        {labels.showProjectType && (
-          <label className="moded__field">
-            <span>{labels.projectType}</span>
-            <input
-              value={values.projectType}
-              onChange={(e) => set('projectType', e.target.value)}
-              placeholder="例如：个人项目 / 全栈"
-            />
-          </label>
-        )}
-
         {labels.showWorkstation && (
           <label className="moded__field">
             <span>{labels.workstation}</span>
@@ -173,6 +162,17 @@ export function ModuleEditor({
               value={values.workstation}
               onChange={(e) => set('workstation', e.target.value)}
               placeholder="可留空"
+            />
+          </label>
+        )}
+
+        {labels.showProjectType && (
+          <label className="moded__field">
+            <span>{labels.projectType}</span>
+            <input
+              value={values.projectType}
+              onChange={(e) => set('projectType', e.target.value)}
+              placeholder="例如：个人项目 / 全栈"
             />
           </label>
         )}

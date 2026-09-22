@@ -8,6 +8,7 @@ import {
 describe('wireframe field mapping', () => {
   it('maps 技术栈 label to projectType for projects', () => {
     const labels = labelsForCategory('project');
+    assert.match(labels.workstation, /担任的职责/);
     assert.match(labels.projectType, /技术栈/);
     const r = validateModuleForm({
       category: 'project',

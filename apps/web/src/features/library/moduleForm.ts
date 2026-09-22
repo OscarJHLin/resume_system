@@ -9,7 +9,7 @@ import {
 export interface ModuleFormValues {
   category: Category;
   title: string;
-  /** 工作站 / 基础站 / 副标题 — optional */
+  /** 担任的职责 / 副标题 — optional → API subtitle */
   workstation: string;
   /** 项目类型 / 岗位 — optional */
   projectType: string;
@@ -36,17 +36,18 @@ export interface ModuleFormLabels {
  * Wireframe field mapping for library cards (项目/实习):
  * - 标题 → title
  * - 时间 → timeRange (optional date range)
+ * - 担任的职责 → subtitle (optional)
  * - 技术栈 → projectType (plain text; e.g. "Flutter / Riverpod")
  * - 正文 → body
  * - 标签 → tags[]
- * - 工作站/基础站 → subtitle (optional; not on sketch card but kept in form)
+ * Form order: 大类 → 标题 → 时间 → 担任的职责 → 技术栈 → 正文 → 标签
  */
 export function labelsForCategory(category: Category): ModuleFormLabels {
   switch (category) {
     case 'project':
       return {
         title: '标题',
-        workstation: '工作站 / 基础站（可留空）',
+        workstation: '担任的职责（可留空）',
         projectType: '技术栈（可留空）',
         time: '时间（可留空）',
         body: '正文',
