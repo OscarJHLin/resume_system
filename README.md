@@ -1,8 +1,8 @@
 # 模块化简历组装系统
 
-本地优先的简历组装系统：**S1–S4 MVP 主路径已打通**（资料 / 标签库 / 快照 / TipTap 投影 / 删除排序 / DOCX）。
+本地优先的简历组装系统：**S1–S4 + 内容库表单编辑器 + lin-v1 模板导出 + 一键验收启动**。
 
-> 当前状态：**S4 Ready**。验收见 [docs/05-acceptance.md](docs/05-acceptance.md)。
+> 当前状态：**可验收**。清单 [docs/05-acceptance.md](docs/05-acceptance.md)；模板说明 [docs/06-template-lin-v1.md](docs/06-template-lin-v1.md)。
 
 ## 文档入口
 
@@ -13,32 +13,50 @@
 | [docs/02-architecture.md](docs/02-architecture.md) | 架构、数据模型、流水线 |
 | [docs/03-modules.md](docs/03-modules.md) | 模块边界与构建顺序 |
 | [docs/04-roadmap.md](docs/04-roadmap.md) | 阶段与垂直切片 |
-| [docs/05-acceptance.md](docs/05-acceptance.md) | S1–S4 验收清单 |
+| [docs/05-acceptance.md](docs/05-acceptance.md) | 验收清单 |
+| [docs/06-template-lin-v1.md](docs/06-template-lin-v1.md) | default-v1 ← 参考简历模板.docx |
 | [docs/adr/](docs/adr/) | 技术决策（栈 / 编辑器 / 导出 / 桌面路径） |
 | [docs/contracts/](docs/contracts/) | 跨模块合同 |
 
 ## 技术栈（摘要）
 
-TypeScript monorepo（npm workspaces）· Vite/React · **TipTap** · Fastify · **`node:sqlite`** · `docx` 导出。  
-近端：本地 Web+API；长期：Tauri 桌面（[ADR-0004](docs/adr/0004-desktop-path.md)）。
+TypeScript monorepo · Vite/React · TipTap · Fastify · `node:sqlite` · `docx` · **Tauri 2 壳（可选）**。
 
 ## 环境要求
 
-- Node.js **22+**（使用内置 `node:sqlite`；推荐 22/24/26）
-- npm 10+（workspaces）
+- Node.js **22+**（`node:sqlite`）
+- npm 10+
+- 桌面壳另需：Rust/Cargo（已装则可 `npm run app:desktop`）
 
-## 快速开始
+## 一键验收（推荐，无需双终端）
 
 ```bash
 cd /Users/linyunhe/ai_project/resume_system
 npm install
-
-# 终端 1 — API（默认 http://127.0.0.1:8787，库文件 ./data/resume.db）
-npm run dev:server
-
-# 终端 2 — Web（默认 http://127.0.0.1:5173，代理 /api）
-npm run dev:web
+npm run app
 ```
+
+会：构建 Web → 启动 API（同进程托管静态页）→ 打开浏览器。  
+SQLite 默认：`./data/resume.db`（可用 `RESUME_DB_PATH` / `RESUME_DATA_DIR` 覆盖）。
+
+### 桌面窗口（Tauri）
+
+```bash
+npm run app:desktop          # 开发：起本地服务 + Tauri 窗口
+npm run app:desktop:build    # 产出 macOS .app（不入库）
+```
+
+构建产物（本机，勿提交；默认复制到 `dist-app/`）：
+
+```bash
+npm run app:desktop:build
+# → dist-app/简历组装系统.app   （若设置了 CARGO_TARGET_DIR 则见该目录下 release/bundle/macos/）
+open dist-app/简历组装系统.app
+```
+
+打包后的 `.app` 仍需本机 **Node/npm 在 PATH**，并建议在仓库根执行或设置 `RESUME_ROOT` 指向本仓库（服务从 monorepo 启动）。纯离线无 Node 的安装包未做。
+
+## 开发双终端（可选）
 
 健康检查：`curl http://127.0.0.1:8787/health`  
 元信息：`curl http://127.0.0.1:8787/api/meta`
@@ -47,9 +65,9 @@ npm run dev:web
 
 完整步骤见 **[docs/05-acceptance.md](docs/05-acceptance.md)**。摘要：
 
-1. `npm run dev:server` + `npm run dev:web`
-2. **写入演示数据** → 主区已有可读条目  
-3. 标签过滤 / 拖入 / ↑↓删 / **导出 DOCX**
+1. `npm run app`（或双终端 dev）
+2. **写入演示数据** 或 **新建模块**（标题必填；时间/工作站可留空，日期点选）
+3. 标签过滤 → 拖入 → ↑↓/删 → **导出 DOCX**（版式见 lin-v1 文档）
 
 ## S3 TipTap 演示
 

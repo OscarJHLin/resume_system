@@ -55,9 +55,10 @@ flowchart TB
 
 ## 后果
 
-- S1–S4 **不**实现安装包、代码签名、自动更新。
+- S1–S4 **原型**可在浏览器双终端或 `npm run app` / Tauri 壳下验收。
+- 首版桌面壳仍依赖本机 Node 启动 Fastify（sidecar 式）；真正无 Node 的单文件安装包另开切片。
 - 禁止把权威数据只放在浏览器 IndexedDB 而无法导出到文件型 SQLite（与迁移原则冲突）。
-- 引入 Tauri 时另开切片与打包 ADR 细节（签名、sidecar 是否保留 Node 等）。
+- SQLite：开发 `./data/resume.db`；Tauri 使用系统 app data 目录下的 `resume.db`。
 
 ## 非目标（本 ADR）
 

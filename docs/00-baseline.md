@@ -3,17 +3,17 @@
 - as_of: 2026-09-23
 - repository: `/Users/linyunhe/ai_project/resume_system`
 - branch / HEAD: 尚未初始化 git（或未 commit）
-- worktree: **S4 已实现**（空态/种子、placement 删排、验收清单）
-- 环境目标: 近端本地 Web + API + SQLite；长期 Win/Mac 桌面（ADR-0004）
+- worktree: **可验收**：lin-v1 模板、内容库表单、一键 `npm run app` / Tauri 壳
+- 环境目标: 近端本地 Web + API + SQLite；Tauri 壳已脚手架（仍依赖本机 Node）
 
 ## 当前能力分层
 
 | 类别 | 现状 |
 |---|---|
-| 已验证（本机） | S1–S4 MVP；`npm test`；[05-acceptance.md](./05-acceptance.md) |
-| 仅设计 / 未做 | 多模板、桌面壳、PDF、JD、从库刷新快照 |
-| 持久化 | `node:sqlite` 文件（默认 `./data/resume.db`） |
-| 被阻塞 | 无；MVP 闭环，增强项按需开立 |
+| 已验证（本机） | S1–S4；模块表单 CRUD；lin-v1 导出；`npm test`；`npm run app` |
+| 仅设计 / 未做 | 多模板、无 Node 单文件安装包、PDF、JD、证件照导出 |
+| 持久化 | `RESUME_DB_PATH` 或 `./data/resume.db`；Tauri→app data dir |
+| 被阻塞 | 无 |
 
 ## 已锁定产品决策（摘要）
 

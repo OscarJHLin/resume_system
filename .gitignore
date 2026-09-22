@@ -11,3 +11,6 @@ data/
 .turbo
 coverage/
 *.tsbuildinfo
+.tmp/
+apps/desktop/src-tauri/target/
+dist-app/
