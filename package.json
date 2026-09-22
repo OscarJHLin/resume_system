@@ -1,0 +1,20 @@
+{
+  "name": "resume-system",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Modular resume assembly system — foundation scaffold",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @resume/web",
+    "dev:server": "npm run dev -w @resume/server",
+    "build": "npm run build -w @resume/domain -w @resume/shared -w @resume/server -w @resume/web",
+    "typecheck": "npm run typecheck -w @resume/domain -w @resume/shared -w @resume/server -w @resume/web",
+    "test": "npm run test -w @resume/server"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
