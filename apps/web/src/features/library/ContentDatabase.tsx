@@ -169,182 +169,186 @@ export function ContentDatabase({
 
   return (
     <aside className={`cdb${disabled ? ' cdb--disabled' : ''}`}>
-      <div className="cdb__search">
-        <span className="cdb__search-icon" aria-hidden>
-          ⌕
-        </span>
-        <input
-          type="search"
-          placeholder="搜索"
-          value={q}
-          disabled={disabled}
-          onChange={(e) => setQ(e.target.value)}
-        />
-      </div>
-
-      <div className="cdb__tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={
-              tab === t.id ? 'cdb__tab cdb__tab--active' : 'cdb__tab'
-            }
+      <div className="cdb__chrome">
+        <div className="cdb__search">
+          <span className="cdb__search-icon" aria-hidden>
+            ⌕
+          </span>
+          <input
+            type="search"
+            placeholder="搜索"
+            value={q}
             disabled={disabled}
-            onClick={() => setTab(t.id)}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
+
+        <div className="cdb__tabs">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={
+                tab === t.id ? 'cdb__tab cdb__tab--active' : 'cdb__tab'
+              }
+              disabled={disabled}
+              onClick={() => setTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            className="cdb__add"
+            disabled={disabled}
+            title="新建"
+            aria-label="新建"
+            onClick={openCreate}
           >
-            {t.label}
+            +
           </button>
-        ))}
-        <button
-          type="button"
-          className="cdb__add"
-          disabled={disabled}
-          title="新建"
-          aria-label="新建"
-          onClick={openCreate}
-        >
-          +
-        </button>
+        </div>
+
+        <p className="cdb__meta">{error ?? emptyHint}</p>
       </div>
 
-      <p className="cdb__meta">{error ?? emptyHint}</p>
-
-      {tab === 'profile' ? (
-        <ul className="cdb__list">
-          {profiles.map((p) => (
-            <li key={p.id} className="cdb__card cdb__card--profile">
-              <div className="cdb__card-row">
-                <div className="cdb__profile-head">
-                  {p.hasPhoto ? (
-                    <img
-                      className="cdb__photo-thumb"
-                      src={api.profilePhotoUrl(p.id, p.updatedAt)}
-                      alt=""
-                    />
-                  ) : (
-                    <span className="cdb__photo-thumb cdb__photo-thumb--empty">
-                      无
-                    </span>
+      <div className="cdb__scroll">
+        {tab === 'profile' ? (
+          <ul className="cdb__list">
+            {profiles.map((p) => (
+              <li key={p.id} className="cdb__card cdb__card--profile">
+                <div className="cdb__card-row">
+                  <div className="cdb__profile-head">
+                    {p.hasPhoto ? (
+                      <img
+                        className="cdb__photo-thumb"
+                        src={api.profilePhotoUrl(p.id, p.updatedAt)}
+                        alt=""
+                      />
+                    ) : (
+                      <span className="cdb__photo-thumb cdb__photo-thumb--empty">
+                        无
+                      </span>
+                    )}
+                    <span className="cdb__field cdb__title">{p.name}</span>
+                  </div>
+                  {appliedProfileId === p.id && (
+                    <span className="cdb__badge">已应用</span>
                   )}
-                  <span className="cdb__field cdb__title">{p.name}</span>
                 </div>
-                {appliedProfileId === p.id && (
-                  <span className="cdb__badge">已应用</span>
+                <div className="cdb__field cdb__stack">
+                  {profileCardSummary(p)}
+                </div>
+                {p.notes && (
+                  <div className="cdb__field cdb__body">{p.notes}</div>
                 )}
-              </div>
-              <div className="cdb__field cdb__stack">
-                {profileCardSummary(p)}
-              </div>
-              {p.notes && (
-                <div className="cdb__field cdb__body">{p.notes}</div>
-              )}
-              <div className="cdb__tags">
-                {(p.tags.length ? p.tags : ['标签']).map((t) => (
-                  <span key={t} className="cdb__tag">
-                    {t}
+                <div className="cdb__tags">
+                  {(p.tags.length ? p.tags : ['标签']).map((t) => (
+                    <span key={t} className="cdb__tag">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+                <div className="cdb__card-actions">
+                  <button
+                    type="button"
+                    className="cdb__edit"
+                    disabled={disabled}
+                    onClick={() => {
+                      setEditingProfile(p);
+                      setProfileEditorOpen(true);
+                    }}
+                  >
+                    编辑
+                  </button>
+                  <button
+                    type="button"
+                    className="cdb__edit cdb__edit--primary"
+                    disabled={disabled || !onApplyProfile}
+                    onClick={() => {
+                      void onApplyProfile?.(p.id);
+                    }}
+                  >
+                    应用到简历
+                  </button>
+                  <button
+                    type="button"
+                    className="cdb__edit cdb__edit--danger"
+                    disabled={disabled}
+                    onClick={() => {
+                      void onDeleteProfile(p);
+                    }}
+                  >
+                    删除
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <ul className="cdb__list">
+            {modules.map((m) => (
+              <li
+                key={m.id}
+                className="cdb__card"
+                draggable={!disabled}
+                onDragStart={(e) => {
+                  if (disabled) return;
+                  setModuleDragData(e.dataTransfer, m.id, m.category);
+                  onStatus?.(`拖拽中: ${m.title}`);
+                }}
+                onDragEnd={() => clearModuleDrag()}
+              >
+                <div className="cdb__card-row">
+                  <span className="cdb__field cdb__title">{m.title}</span>
+                  <span className="cdb__field cdb__time">
+                    {m.timeRange || '时间'}
                   </span>
-                ))}
-              </div>
-              <div className="cdb__card-actions">
-                <button
-                  type="button"
-                  className="cdb__edit"
-                  disabled={disabled}
-                  onClick={() => {
-                    setEditingProfile(p);
-                    setProfileEditorOpen(true);
-                  }}
-                >
-                  编辑
-                </button>
-                <button
-                  type="button"
-                  className="cdb__edit cdb__edit--primary"
-                  disabled={disabled || !onApplyProfile}
-                  onClick={() => {
-                    void onApplyProfile?.(p.id);
-                  }}
-                >
-                  应用到简历
-                </button>
-                <button
-                  type="button"
-                  className="cdb__edit cdb__edit--danger"
-                  disabled={disabled}
-                  onClick={() => {
-                    void onDeleteProfile(p);
-                  }}
-                >
-                  删除
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <ul className="cdb__list">
-          {modules.map((m) => (
-            <li
-              key={m.id}
-              className="cdb__card"
-              draggable={!disabled}
-              onDragStart={(e) => {
-                if (disabled) return;
-                setModuleDragData(e.dataTransfer, m.id, m.category);
-                onStatus?.(`拖拽中: ${m.title}`);
-              }}
-              onDragEnd={() => clearModuleDrag()}
-            >
-              <div className="cdb__card-row">
-                <span className="cdb__field cdb__title">{m.title}</span>
-                <span className="cdb__field cdb__time">
-                  {m.timeRange || '时间'}
-                </span>
-              </div>
-              <div className="cdb__field cdb__stack">
-                {[m.projectType, m.subtitle].filter(Boolean).join(' · ') ||
-                  '技术栈 / 职责'}
-              </div>
-              <div className="cdb__field cdb__body">
-                {m.body.trim() || '正文'}
-              </div>
-              <div className="cdb__tags">
-                {(m.tags.length ? m.tags : ['标签']).map((t) => (
-                  <span key={t} className="cdb__tag">
-                    {t}
-                  </span>
-                ))}
-              </div>
-              <div className="cdb__card-actions">
-                <button
-                  type="button"
-                  className="cdb__edit"
-                  disabled={disabled}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEditing(m);
-                    setEditorOpen(true);
-                  }}
-                >
-                  编辑
-                </button>
-                <button
-                  type="button"
-                  className="cdb__edit cdb__edit--danger"
-                  disabled={disabled}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void onDeleteModule(m);
-                  }}
-                >
-                  删除
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+                </div>
+                <div className="cdb__field cdb__stack">
+                  {[m.projectType, m.subtitle].filter(Boolean).join(' · ') ||
+                    '技术栈 / 职责'}
+                </div>
+                <div className="cdb__field cdb__body">
+                  {m.body.trim() || '正文'}
+                </div>
+                <div className="cdb__tags">
+                  {(m.tags.length ? m.tags : ['标签']).map((t) => (
+                    <span key={t} className="cdb__tag">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+                <div className="cdb__card-actions">
+                  <button
+                    type="button"
+                    className="cdb__edit"
+                    disabled={disabled}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditing(m);
+                      setEditorOpen(true);
+                    }}
+                  >
+                    编辑
+                  </button>
+                  <button
+                    type="button"
+                    className="cdb__edit cdb__edit--danger"
+                    disabled={disabled}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void onDeleteModule(m);
+                    }}
+                  >
+                    删除
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <ModuleEditor
         open={editorOpen}

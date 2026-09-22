@@ -1,10 +1,12 @@
 .workbench {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .workbench__header {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -107,12 +109,20 @@
 
 .workbench__body--wire {
   flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1.65fr) minmax(280px, 360px);
+  overflow: hidden;
+}
+
+.workbench__body--wire > .canvas,
+.workbench__body--wire > .cdb {
   min-height: 0;
+  height: 100%;
 }
 
 .workbench__banner {
+  flex-shrink: 0;
   padding: 0.55rem 1.25rem;
   font-size: 0.88rem;
   border-bottom: 1px solid var(--line);
