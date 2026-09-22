@@ -6,12 +6,19 @@ const SCHEMA = `
 CREATE TABLE IF NOT EXISTS profile (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
+  gender TEXT,
   phone TEXT,
   email TEXT,
+  wechat TEXT,
+  qq TEXT,
   location TEXT,
   summary TEXT,
   education_json TEXT NOT NULL DEFAULT '[]',
+  skills_json TEXT NOT NULL DEFAULT '[]',
+  tags_json TEXT NOT NULL DEFAULT '[]',
+  notes TEXT,
   photo_filename TEXT,
+  created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
 
@@ -32,7 +39,7 @@ CREATE TABLE IF NOT EXISTS resume (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   template_id TEXT NOT NULL,
-  profile_id TEXT NOT NULL,
+  profile_id TEXT NOT NULL DEFAULT '',
   updated_at TEXT NOT NULL
 );
 
@@ -47,6 +54,7 @@ CREATE TABLE IF NOT EXISTS section_placement (
 
 CREATE INDEX IF NOT EXISTS idx_module_category ON content_module(category);
 CREATE INDEX IF NOT EXISTS idx_placement_resume ON section_placement(resume_id);
+CREATE INDEX IF NOT EXISTS idx_profile_updated ON profile(updated_at);
 `;
 
 export type Db = DatabaseSync;
@@ -57,17 +65,32 @@ export function openDatabase(dbPath: string): Db {
   const db = new DatabaseSync(dbPath);
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
-  migrateProfilePhotoColumn(db);
+  migrateProfileColumns(db);
   return db;
 }
 
-function migrateProfilePhotoColumn(db: Db): void {
-  const cols = db.prepare('PRAGMA table_info(profile)').all() as Array<{
-    name: string;
-  }>;
-  if (!cols.some((c) => c.name === 'photo_filename')) {
-    db.exec('ALTER TABLE profile ADD COLUMN photo_filename TEXT');
-  }
+/** Additive column migrations for older DBs. */
+function migrateProfileColumns(db: Db): void {
+  const cols = new Set(
+    (
+      db.prepare('PRAGMA table_info(profile)').all() as Array<{ name: string }>
+    ).map((c) => c.name),
+  );
+  const add = (name: string, ddl: string) => {
+    if (!cols.has(name)) db.exec(`ALTER TABLE profile ADD COLUMN ${ddl}`);
+  };
+  add('photo_filename', 'photo_filename TEXT');
+  add('gender', 'gender TEXT');
+  add('wechat', 'wechat TEXT');
+  add('qq', 'qq TEXT');
+  add('skills_json', "skills_json TEXT NOT NULL DEFAULT '[]'");
+  add('tags_json', "tags_json TEXT NOT NULL DEFAULT '[]'");
+  add('notes', 'notes TEXT');
+  add('created_at', 'created_at TEXT');
+  // Backfill created_at from updated_at when missing
+  db.exec(
+    `UPDATE profile SET created_at = updated_at WHERE created_at IS NULL OR created_at = ''`,
+  );
 }
 
 export function defaultDbPath(): string {

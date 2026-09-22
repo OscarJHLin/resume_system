@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Profile, ResumeDocument, SectionId } from '@resume/domain';
+import type {
+  Profile,
+  ResumeDocument,
+  SectionId,
+  TemplateMeta,
+} from '@resume/domain';
+import { DEFAULT_TEMPLATE_ID } from '@resume/domain';
 import { api } from '../../api/client';
 import { ResumeCanvas } from '../canvas/ResumeCanvas';
 import { ContentDatabase } from '../library/ContentDatabase';
@@ -13,38 +19,52 @@ import {
 import './workbench.css';
 
 /**
- * Wireframe workbench: left template canvas + right content DB + export.
+ * Workbench: template picker + left lin-v1 canvas + right 4-tab content DB.
  */
 export function Workbench() {
   const [resume, setResume] = useState<ResumeDocument | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [templates, setTemplates] = useState<TemplateMeta[]>([]);
   const [libraryCount, setLibraryCount] = useState<number | null>(null);
   const [libraryKey, setLibraryKey] = useState(0);
   const [connection, setConnection] = useState<ConnectionState>('loading');
   const [status, setStatus] = useState<string>('就绪');
   const [busy, setBusy] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const refreshResume = useCallback(async (id: string) => {
     const doc = await api.getResume(id);
     setResume(doc);
+    if (doc.profileId) {
+      try {
+        const p = await api.getProfile(doc.profileId);
+        setProfile(p);
+      } catch {
+        setProfile(null);
+      }
+    } else {
+      setProfile(null);
+    }
     return doc;
   }, []);
 
   const bootstrap = useCallback(async () => {
     setConnection('loading');
     try {
-      const [p, list, modules] = await Promise.all([
-        api.getProfile(),
+      const [list, mods, tpls] = await Promise.all([
         api.listResumes(),
         api.listModules(),
+        api.listTemplates(),
       ]);
-      setProfile(p);
-      setLibraryCount(modules.length);
+      setTemplates(tpls);
+      setLibraryCount(mods.length);
       setConnection('ok');
       if (list[0]) {
         await refreshResume(list[0].id);
         setStatus(statusLine('就绪', list[0].title));
       } else {
+        setResume(null);
+        setProfile(null);
         setStatus(statusLine('就绪', '尚无简历'));
       }
     } catch {
@@ -57,89 +77,70 @@ export function Workbench() {
     void bootstrap();
   }, [bootstrap]);
 
-  const ensureResume = useCallback(async () => {
-    if (resume) return resume;
-    const doc = await api.createResume('我的简历');
-    setResume(doc);
-    return doc;
-  }, [resume]);
+  const selectTemplate = useCallback(
+    async (templateId: string = DEFAULT_TEMPLATE_ID) => {
+      setBusy(true);
+      setPickerOpen(false);
+      setStatus('初始化模板…');
+      try {
+        if (resume) {
+          const updated = await api.patchResume(resume.id, { templateId });
+          setResume(updated);
+          setStatus(statusLine('模板', updated.title));
+        } else {
+          const doc = await api.createResume({
+            title: '我的简历',
+            templateId,
+          });
+          setResume(doc);
+          setProfile(null);
+          setStatus(statusLine('就绪', doc.title));
+        }
+      } catch (e) {
+        setStatus(
+          `模板失败: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      } finally {
+        setBusy(false);
+      }
+    },
+    [resume],
+  );
 
-  const seedDemo = useCallback(async () => {
-    setBusy(true);
-    setStatus('写入演示数据…');
-    try {
-      const p = await api.putProfile({
-        name: '演示候选人',
-        phone: '13800000000',
-        email: 'demo@example.com',
-        location: '示例市',
-        summary: '软件工程本科生 · 全栈 / Agent / 工程化',
-        education: [
-          {
-            id: '',
-            school: '示例大学',
-            degree: '本科',
-            major: '软件工程',
-            timeRange: '2018.09 - 2022.06',
-          },
-        ],
-      });
-      setProfile(p);
-
-      const skill = await api.createModule({
-        category: 'skill',
-        title: '编程语言',
-        body: 'TypeScript、Python、JavaScript',
-        tags: ['TypeScript'],
-      });
-      const project = await api.createModule({
-        category: 'project',
-        title: '模块化简历系统',
-        subtitle: '个人项目',
-        projectType: 'TypeScript / Fastify / TipTap',
-        timeRange: '2026.01.01 - 2026.09.01',
-        body: '内容库标签检索与快照组装。\n导出对齐林氏简历版式。',
-        tags: ['TypeScript', '简历'],
-      });
-      const internship = await api.createModule({
-        category: 'internship',
-        title: '示例科技有限公司',
-        subtitle: '珠海',
-        projectType: '实习助理',
-        timeRange: '2024.07.01',
-        body: '参与展会策划与现场执行。',
-        tags: ['实习'],
-      });
-      await api.createModule({
-        category: 'award',
-        title: '校级二等奖学金',
-        body: '2024',
-        tags: ['获奖'],
-      });
-
-      const doc = await api.createResume('演示简历');
-      await api.addPlacement(doc.id, 'projects', project.id);
-      await api.addPlacement(doc.id, 'skills', skill.id);
-      await api.addPlacement(doc.id, 'internships', internship.id);
-      const full = await refreshResume(doc.id);
-      setLibraryKey((k) => k + 1);
-      setLibraryCount((c) => (c == null ? 4 : c + 4));
-      setConnection('ok');
-      setStatus(statusLine('演示', `${full.placements.length} 条已落入`));
-    } catch (e) {
-      setStatus(`种子失败: ${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      setBusy(false);
-    }
-  }, [refreshResume]);
+  const onApplyProfile = useCallback(
+    async (profileId: string) => {
+      if (!resume) {
+        setStatus('请先选择简历模板');
+        return;
+      }
+      setBusy(true);
+      try {
+        const updated = await api.patchResume(resume.id, { profileId });
+        setResume(updated);
+        const p = await api.getProfile(profileId);
+        setProfile(p);
+        setStatus(`已应用基本信息：${p.name}`);
+      } catch (e) {
+        setStatus(
+          `应用失败: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      } finally {
+        setBusy(false);
+      }
+    },
+    [resume],
+  );
 
   const onDropModule = useCallback(
     async (section: SectionId, moduleId: string) => {
+      if (!resume) {
+        setStatus('请先选择简历模板');
+        return;
+      }
       setBusy(true);
       try {
-        const doc = await ensureResume();
-        await api.addPlacement(doc.id, section, moduleId);
-        await refreshResume(doc.id);
+        await api.addPlacement(resume.id, section, moduleId);
+        await refreshResume(resume.id);
         setStatus(`已落入 ${section}`);
       } catch (e) {
         setStatus(`落入失败: ${e instanceof Error ? e.message : String(e)}`);
@@ -147,7 +148,7 @@ export function Workbench() {
         setBusy(false);
       }
     },
-    [ensureResume, refreshResume],
+    [resume, refreshResume],
   );
 
   const onDeletePlacement = useCallback(
@@ -196,7 +197,7 @@ export function Workbench() {
 
   const exportDocx = useCallback(async () => {
     if (!resume) {
-      setStatus('请先创建简历或写入演示数据');
+      setStatus('请先选择简历模板');
       return;
     }
     setBusy(true);
@@ -228,6 +229,10 @@ export function Workbench() {
     [connection, resume, libraryCount],
   );
 
+  const templateLabel =
+    templates.find((t) => t.id === (resume?.templateId ?? DEFAULT_TEMPLATE_ID))
+      ?.label ?? '林氏简历 lin-v1';
+
   return (
     <div className="workbench">
       <header className="workbench__header">
@@ -236,14 +241,43 @@ export function Workbench() {
           <p className="workbench__phase">{status}</p>
         </div>
         <div className="workbench__actions">
-          <button
-            type="button"
-            className="workbench__secondary"
-            disabled={busy || connection === 'error'}
-            onClick={() => void seedDemo()}
-          >
-            演示数据
-          </button>
+          <div className="workbench__picker-wrap">
+            <button
+              type="button"
+              className="workbench__secondary"
+              disabled={busy || connection === 'error'}
+              onClick={() => setPickerOpen((o) => !o)}
+            >
+              选择简历模板
+            </button>
+            {pickerOpen && (
+              <div className="workbench__picker" role="listbox">
+                {(templates.length
+                  ? templates
+                  : [
+                      {
+                        id: DEFAULT_TEMPLATE_ID,
+                        label: '林氏简历 lin-v1',
+                        description: '',
+                      },
+                    ]
+                ).map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className="workbench__picker-item"
+                    onClick={() => void selectTemplate(t.id)}
+                  >
+                    <strong>{t.label}</strong>
+                    {t.description && <span>{t.description}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {resume && (
+            <span className="workbench__template-chip">{templateLabel}</span>
+          )}
           <button
             type="button"
             className="workbench__export"
@@ -267,7 +301,6 @@ export function Workbench() {
           resume={resume}
           profile={profile}
           connectionError={connection === 'error'}
-          onProfileChange={setProfile}
           onDropModule={onDropModule}
           onDeletePlacement={onDeletePlacement}
           onMovePlacement={onMovePlacement}
@@ -276,8 +309,16 @@ export function Workbench() {
         <ContentDatabase
           refreshKey={libraryKey}
           disabled={connection === 'error'}
+          appliedProfileId={resume?.profileId}
           onStatus={setStatus}
           onCountChange={setLibraryCount}
+          onApplyProfile={onApplyProfile}
+          onProfilesChanged={() => {
+            setLibraryKey((k) => k + 1);
+            if (resume?.profileId) {
+              void api.getProfile(resume.profileId).then(setProfile).catch(() => undefined);
+            }
+          }}
         />
       </div>
     </div>

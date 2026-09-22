@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Category, ContentModule } from '@resume/domain';
-import { CATEGORIES } from '@resume/domain';
+import type { Category, ContentModule, LibraryModuleCategory } from '@resume/domain';
+import { LIBRARY_MODULE_CATEGORIES } from '@resume/domain';
 import { api } from '../../api/client';
 import {
   emptyForm,
@@ -11,11 +11,10 @@ import {
 } from './moduleForm';
 import './moduleEditor.css';
 
-const CATEGORY_LABEL: Record<Category, string> = {
-  skill: '技术能力',
+const CATEGORY_LABEL: Record<LibraryModuleCategory, string> = {
   project: '项目经历',
   internship: '实习经历',
-  award: '获奖证书',
+  award: '获奖与证书',
 };
 
 export interface ModuleEditorProps {
@@ -37,15 +36,19 @@ export function ModuleEditor({
   onSaved,
   onStatus,
 }: ModuleEditorProps) {
-  const [values, setValues] = useState<ModuleFormValues>(emptyForm(defaultCategory));
+  const initialCat: LibraryModuleCategory =
+    defaultCategory === 'internship' || defaultCategory === 'award'
+      ? defaultCategory
+      : 'project';
+  const [values, setValues] = useState<ModuleFormValues>(emptyForm(initialCat));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
-    setValues(editing ? moduleToForm(editing) : emptyForm(defaultCategory));
-  }, [open, editing, defaultCategory]);
+    setValues(editing ? moduleToForm(editing) : emptyForm(initialCat));
+  }, [open, editing, initialCat]);
 
   const labels = useMemo(
     () => labelsForCategory(values.category),
@@ -98,11 +101,15 @@ export function ModuleEditor({
         <label className="moded__field">
           <span>大类</span>
           <select
-            value={values.category}
+            value={
+              values.category === 'skill' ? 'project' : values.category
+            }
             disabled={Boolean(editing)}
-            onChange={(e) => set('category', e.target.value as Category)}
+            onChange={(e) =>
+              set('category', e.target.value as LibraryModuleCategory)
+            }
           >
-            {CATEGORIES.map((c) => (
+            {LIBRARY_MODULE_CATEGORIES.map((c) => (
               <option key={c} value={c}>
                 {CATEGORY_LABEL[c]}
               </option>

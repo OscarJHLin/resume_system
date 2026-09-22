@@ -1,5 +1,5 @@
 /**
- * Workbench UX copy helpers for empty / error / seed states (S4).
+ * Workbench UX copy helpers for empty / error states.
  */
 
 export type ConnectionState = 'loading' | 'ok' | 'error';
@@ -22,19 +22,22 @@ export function workbenchBanner(input: {
   if (!input.hasResume) {
     return {
       tone: 'warn',
-      message: '还没有简历。点击「写入演示数据」一键生成可读样例，或稍后再创建。',
+      message:
+        '还没有简历。点击顶部「选择简历模板」初始化左侧空白模板，再在右侧维护内容。',
     };
   }
   if (input.libraryCount === 0) {
     return {
       tone: 'warn',
-      message: '内容库为空。写入演示数据后可从左侧拖模块到右侧区块。',
+      message:
+        '内容库为空。在右侧标签下点 + 新建项目 / 实习 / 获奖或基本信息卡。',
     };
   }
   if (input.placementCount === 0) {
     return {
       tone: 'info',
-      message: '简历区块仍为空：从左侧拖入模块，或重新写入演示数据（会预置条目）。',
+      message:
+        '经历区块仍为空：从右侧拖入项目 / 实习 / 获奖；基本信息点「应用到简历」。',
     };
   }
   return null;

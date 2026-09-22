@@ -26,6 +26,9 @@ const profile: Profile = {
       timeRange: '2018-2022',
     },
   ],
+  skills: [],
+  tags: [],
+  createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
@@ -53,15 +56,15 @@ describe('TipTap doc model bridge (S3)', () => {
   it('places snapshot items under the matching section only', () => {
     const resume = resumeWith([
       {
-        id: 'pl-skill',
-        section: 'skills',
+        id: 'pl-intern',
+        section: 'internships',
         sortOrder: 0,
         snapshot: {
           sourceModuleId: 'm1',
-          category: 'skill',
-          title: 'TypeScript',
-          body: '工程化',
-          tags: ['TS'],
+          category: 'internship',
+          title: '示例公司',
+          body: '实习助理',
+          tags: ['实习'],
           snapshottedAt: '2026-01-01T00:00:00.000Z',
         },
       },
@@ -80,17 +83,17 @@ describe('TipTap doc model bridge (S3)', () => {
       },
     ]);
 
-    assert.equal(placementsForSection(resume, 'skills').length, 1);
+    assert.equal(placementsForSection(resume, 'internships').length, 1);
     assert.equal(placementsForSection(resume, 'projects').length, 1);
 
     const doc = buildResumeTipTapDoc({ resume, profile });
-    assert.deepEqual(listPlacementIdsInDoc(doc), ['pl-skill', 'pl-proj']);
+    assert.deepEqual(listPlacementIdsInDoc(doc), ['pl-proj', 'pl-intern']);
     assert.deepEqual(placementIdsBySectionInDoc(doc), {
       basic: [],
       education: [],
-      skills: ['pl-skill'],
+      skills: [],
       projects: ['pl-proj'],
-      internships: [],
+      internships: ['pl-intern'],
       awards: [],
     });
   });

@@ -157,3 +157,39 @@
   font-size: 0.72rem;
   padding: 0.15rem 0.45rem;
 }
+
+.cdb__card--profile {
+  cursor: default;
+  padding-bottom: 2.4rem;
+}
+
+.cdb__card--profile .cdb__card-row {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.cdb__badge {
+  font-size: 0.7rem;
+  color: #0b6e6e;
+  border: 1px solid #9ec9c9;
+  padding: 0.1rem 0.4rem;
+  background: #f0f7f7;
+}
+
+.cdb__card-actions {
+  position: absolute;
+  right: 0.55rem;
+  bottom: 0.4rem;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.cdb__card-actions .cdb__edit {
+  position: static;
+}
+
+.cdb__edit--primary {
+  border-color: #0b6e6e;
+  color: #0b6e6e;
+  font-weight: 600;
+}

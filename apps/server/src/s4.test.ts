@@ -74,13 +74,13 @@ describe('S4 placement delete + reorder', () => {
 
   it('reorders placements within a section then exports', async () => {
     const m1 = await json<{ id: string }>('POST', '/api/modules', {
-      category: 'skill',
+      category: 'project',
       title: 'First',
       body: '1',
       tags: ['x'],
     });
     const m2 = await json<{ id: string }>('POST', '/api/modules', {
-      category: 'skill',
+      category: 'project',
       title: 'Second',
       body: '2',
       tags: ['x'],
@@ -91,25 +91,25 @@ describe('S4 placement delete + reorder', () => {
     const p1 = await json<{ id: string }>(
       'POST',
       `/api/resumes/${resume.id}/placements`,
-      { section: 'skills', moduleId: m1.id },
+      { section: 'projects', moduleId: m1.id },
     );
     const p2 = await json<{ id: string }>(
       'POST',
       `/api/resumes/${resume.id}/placements`,
-      { section: 'skills', moduleId: m2.id },
+      { section: 'projects', moduleId: m2.id },
     );
 
     const reordered = await json<{
       placements: Array<{ id: string; sortOrder: number }>;
     }>('PATCH', `/api/resumes/${resume.id}/placements/reorder`, {
-      section: 'skills',
+      section: 'projects',
       orderedPlacementIds: [p2.id, p1.id],
     });
-    const skills = reordered.placements
+    const projects = reordered.placements
       .filter((p) => p.id === p1.id || p.id === p2.id)
       .sort((a, b) => a.sortOrder - b.sortOrder);
-    assert.equal(skills[0]?.id, p2.id);
-    assert.equal(skills[1]?.id, p1.id);
+    assert.equal(projects[0]?.id, p2.id);
+    assert.equal(projects[1]?.id, p1.id);
 
     const exportRes = await fetch(
       `${baseUrl}/api/resumes/${resume.id}/export`,

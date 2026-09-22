@@ -5,12 +5,78 @@ import {
   isCategory,
   isPlaceableSection,
   isSectionId,
+  isTemplateId,
   snapshotFromModule,
+  TEMPLATES,
+  validateProfileRequired,
 } from '@resume/domain';
 import type { Store } from '../db/store.js';
 import { HttpError, badRequest } from '../errors.js';
-import { renderToIR } from '../modules/template/index.js';
+import {
+  placeholderProfile,
+  renderToIR,
+} from '../modules/template/index.js';
 import { exportDocx } from '../modules/export/index.js';
+
+type ProfileBody = {
+  name: string;
+  gender: string;
+  phone: string;
+  email: string;
+  wechat: string;
+  qq?: string;
+  location?: string;
+  summary?: string;
+  education?: Array<{
+    id?: string;
+    school: string;
+    degree?: string;
+    major?: string;
+    startDate?: string;
+    endDate?: string;
+    timeRange?: string;
+    gpa?: string;
+    rank?: string;
+    courses?: string;
+  }>;
+  skills?: Array<{ id?: string; title: string; body: string }>;
+  tags?: string[];
+  notes?: string;
+};
+
+function mapProfileBody(body: ProfileBody) {
+  const checked = validateProfileRequired(body);
+  if (!checked.ok) throw badRequest(checked.error);
+  return {
+    name: body.name,
+    gender: body.gender,
+    phone: body.phone,
+    email: body.email,
+    wechat: body.wechat,
+    qq: body.qq,
+    location: body.location,
+    summary: body.summary,
+    education: body.education?.map((e) => ({
+      id: e.id ?? '',
+      school: e.school,
+      degree: e.degree,
+      major: e.major,
+      startDate: e.startDate,
+      endDate: e.endDate,
+      timeRange: e.timeRange,
+      gpa: e.gpa,
+      rank: e.rank,
+      courses: e.courses,
+    })),
+    skills: body.skills?.map((s) => ({
+      id: s.id ?? '',
+      title: s.title,
+      body: s.body ?? '',
+    })),
+    tags: body.tags,
+    notes: body.notes,
+  };
+}
 
 export async function registerApiRoutes(app: FastifyInstance, store: Store) {
   app.setErrorHandler((err, _req, reply) => {
@@ -27,9 +93,10 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
 
   app.get('/api/meta', async () => ({
     templateId: DEFAULT_TEMPLATE_ID,
-    phase: 'S1',
+    templates: TEMPLATES,
+    phase: 'S5',
     modules: [
-      'profile',
+      'profile-cards',
       'content-library',
       'resume-assembly',
       'template-engine',
@@ -38,78 +105,81 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
     status: 'ready',
   }));
 
-  // —— Profile ——
-  app.get('/api/profile', async () => store.ensureDefaultProfile());
+  app.get('/api/templates', async () => TEMPLATES);
 
-  app.put<{
-    Body: {
-      name: string;
-      phone?: string;
-      email?: string;
-      location?: string;
-      summary?: string;
-      education?: Array<{
-        id?: string;
-        school: string;
-        degree?: string;
-        major?: string;
-        timeRange?: string;
-      }>;
-    };
-  }>('/api/profile', async (req) => {
-    const body = req.body;
-    if (!body || typeof body !== 'object') {
+  // —— Profile cards (基本信息) ——
+  app.get<{
+    Querystring: { q?: string; tag?: string };
+  }>('/api/profiles', async (req) =>
+    store.listProfiles({ q: req.query.q, tag: req.query.tag }),
+  );
+
+  app.post<{ Body: ProfileBody }>('/api/profiles', async (req, reply) => {
+    if (!req.body || typeof req.body !== 'object') {
       throw badRequest('JSON body required');
     }
-    return store.updateProfile({
-      name: body.name,
-      phone: body.phone,
-      email: body.email,
-      location: body.location,
-      summary: body.summary,
-      education: body.education?.map((e) => ({
-        id: e.id ?? '',
-        school: e.school,
-        degree: e.degree,
-        major: e.major,
-        timeRange: e.timeRange,
-      })),
-    });
+    const created = store.createProfile(mapProfileBody(req.body));
+    return reply.code(201).send(created);
   });
 
-  app.get('/api/profile/photo', async (_req, reply) => {
-    const photo = store.getProfilePhoto();
-    if (!photo) {
-      return reply.code(404).send({ error: 'NotFound', message: 'No photo' });
-    }
-    return reply
-      .type(photo.mime)
-      .header('cache-control', 'no-cache')
-      .send(photo.buffer);
-  });
+  app.get<{ Params: { id: string } }>('/api/profiles/:id', async (req) =>
+    store.getProfileById(req.params.id),
+  );
+
+  app.put<{ Params: { id: string }; Body: ProfileBody }>(
+    '/api/profiles/:id',
+    async (req) => {
+      if (!req.body || typeof req.body !== 'object') {
+        throw badRequest('JSON body required');
+      }
+      return store.updateProfile(req.params.id, mapProfileBody(req.body));
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>(
+    '/api/profiles/:id',
+    async (req, reply) => {
+      store.deleteProfile(req.params.id);
+      return reply.code(204).send();
+    },
+  );
+
+  app.get<{ Params: { id: string } }>(
+    '/api/profiles/:id/photo',
+    async (req, reply) => {
+      const photo = store.getProfilePhoto(req.params.id);
+      if (!photo) {
+        return reply.code(404).send({ error: 'NotFound', message: 'No photo' });
+      }
+      return reply
+        .type(photo.mime)
+        .header('cache-control', 'no-cache')
+        .send(photo.buffer);
+    },
+  );
 
   app.put<{
+    Params: { id: string };
     Body: { dataBase64: string; mime?: string };
-  }>('/api/profile/photo', async (req) => {
+  }>('/api/profiles/:id/photo', async (req) => {
     const body = req.body;
     if (!body?.dataBase64) throw badRequest('dataBase64 required');
     const mime = body.mime ?? 'image/jpeg';
     const ext =
-      mime.includes('png')
-        ? 'png'
-        : mime.includes('webp')
-          ? 'webp'
-          : 'jpg';
+      mime.includes('png') ? 'png' : mime.includes('webp') ? 'webp' : 'jpg';
     const raw = body.dataBase64.replace(/^data:[^;]+;base64,/, '');
     const bytes = Buffer.from(raw, 'base64');
     if (bytes.length === 0) throw badRequest('empty photo');
     if (bytes.length > 5 * 1024 * 1024) {
       throw badRequest('photo too large (max 5MB)');
     }
-    return store.saveProfilePhoto(bytes, ext);
+    return store.saveProfilePhoto(req.params.id, bytes, ext);
   });
 
-  app.delete('/api/profile/photo', async () => store.clearProfilePhoto());
+  app.delete<{ Params: { id: string } }>(
+    '/api/profiles/:id/photo',
+    async (req) => store.clearProfilePhoto(req.params.id),
+  );
 
   // —— Content modules ——
   app.get<{
@@ -188,8 +258,18 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
   // —— Resumes ——
   app.get('/api/resumes', async () => store.listResumes());
 
-  app.post<{ Body: { title?: string } }>('/api/resumes', async (req, reply) => {
-    const created = store.createResume(req.body?.title);
+  app.post<{
+    Body: { title?: string; templateId?: string; profileId?: string };
+  }>('/api/resumes', async (req, reply) => {
+    const body = req.body ?? {};
+    if (body.templateId && !isTemplateId(body.templateId)) {
+      throw badRequest(`unknown template: ${body.templateId}`);
+    }
+    const created = store.createResume({
+      title: body.title,
+      templateId: body.templateId,
+      profileId: body.profileId,
+    });
     return reply.code(201).send(created);
   });
 
@@ -199,9 +279,13 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
 
   app.patch<{
     Params: { id: string };
-    Body: { title?: string };
+    Body: { title?: string; profileId?: string | null; templateId?: string };
   }>('/api/resumes/:id', async (req) =>
-    store.patchResume(req.params.id, { title: req.body?.title }),
+    store.patchResume(req.params.id, {
+      title: req.body?.title,
+      profileId: req.body?.profileId,
+      templateId: req.body?.templateId,
+    }),
   );
 
   app.post<{
@@ -258,18 +342,16 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
     '/api/resumes/:id/export',
     async (req, reply) => {
       const resume = store.getResume(req.params.id);
-      const profile = store.getProfile();
+      const profile = resume.profileId
+        ? store.getProfileById(resume.profileId)
+        : placeholderProfile();
       const ir = renderToIR({
-        templateId: DEFAULT_TEMPLATE_ID,
+        templateId: resume.templateId,
         profile,
         placements: resume.placements,
       });
-      const photo = store.getProfilePhoto();
-      const buffer = await exportDocx(ir, {
-        photo: photo
-          ? { buffer: photo.buffer, mime: photo.mime }
-          : null,
-      });
+      // Photo intentionally omitted from DOCX (template has no photo column).
+      const buffer = await exportDocx(ir, { photo: null });
       const filename = `${sanitizeFilename(resume.title)}.docx`;
       const encoded = encodeURIComponent(filename);
       return reply

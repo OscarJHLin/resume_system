@@ -1,6 +1,10 @@
 /** Domain enums, entities, compatibility matrix, and ResumeIR — no IO. */
 
+/** Experience modules in the content library (not 基本信息). */
 export type Category = 'skill' | 'project' | 'internship' | 'award';
+
+/** Library tabs that create modules (技能已并入基本信息卡). */
+export type LibraryModuleCategory = 'project' | 'internship' | 'award';
 
 export type SectionId =
   | 'basic'
@@ -14,9 +18,37 @@ export const DEFAULT_TEMPLATE_ID = 'default-v1' as const;
 
 export type TemplateId = typeof DEFAULT_TEMPLATE_ID;
 
-/** category → allowed resume sections */
+export interface TemplateMeta {
+  id: TemplateId;
+  label: string;
+  description: string;
+}
+
+/** Single shipped template (lin-v1 / 林氏简历版式). */
+export const TEMPLATES: readonly TemplateMeta[] = [
+  {
+    id: DEFAULT_TEMPLATE_ID,
+    label: '林氏简历 lin-v1',
+    description: '对齐参考简历模板：教育→技术→项目→实习→获奖；无证件照栏',
+  },
+] as const;
+
+export type Gender = '男' | '女';
+
+export type DegreeOption = '本科' | '硕士' | '博士' | '其他';
+
+export const GENDERS: readonly Gender[] = ['男', '女'];
+
+export const DEGREE_OPTIONS: readonly DegreeOption[] = [
+  '本科',
+  '硕士',
+  '博士',
+  '其他',
+];
+
+/** category → allowed resume sections (技能由 Profile.skills 渲染，不可拖放) */
 export const CATEGORY_SECTION_MATRIX: Record<Category, readonly SectionId[]> = {
-  skill: ['skills'],
+  skill: [],
   project: ['projects'],
   internship: ['internships'],
   award: ['awards'],
@@ -34,19 +66,46 @@ export interface EducationItem {
   school: string;
   degree?: string;
   major?: string;
+  /** ISO date YYYY-MM-DD or empty */
+  startDate?: string;
+  endDate?: string;
+  /** Display range; derived from start/end when present */
   timeRange?: string;
+  gpa?: string;
+  /** e.g. 专业前 5% */
+  rank?: string;
+  courses?: string;
 }
 
+/** Skill block under 基本信息 — title bold on resume, body as detail. */
+export interface SkillBlock {
+  id: string;
+  title: string;
+  body: string;
+}
+
+/**
+ * Storable 基本信息 card (multi-profile).
+ * Required identity: name, gender, email, phone, wechat.
+ */
 export interface Profile {
   id: string;
   name: string;
+  gender?: Gender | '';
   phone?: string;
   email?: string;
+  wechat?: string;
+  /** Optional */
+  qq?: string;
   location?: string;
   summary?: string;
   education: EducationItem[];
-  /** True when a local photo file is stored for this profile. */
+  skills: SkillBlock[];
+  tags: string[];
+  notes?: string;
+  /** True when a local photo file is stored for this profile card. */
   hasPhoto?: boolean;
+  createdAt: string;
   updatedAt: string;
 }
 
@@ -94,6 +153,7 @@ export interface ResumeDocument {
   id: string;
   title: string;
   templateId: TemplateId;
+  /** Applied 基本信息 card id; empty string = none (placeholders on canvas). */
   profileId: string;
   placements: SectionPlacement[];
   updatedAt: string;
@@ -224,8 +284,8 @@ export const SECTION_LABELS: Record<SectionId, string> = {
   awards: '获奖与证书',
 };
 
+/** Experience sections that accept drag-drop placements. */
 export const PLACEABLE_SECTIONS: readonly SectionId[] = [
-  'skills',
   'projects',
   'internships',
   'awards',
@@ -242,10 +302,98 @@ export const CATEGORIES: readonly Category[] = [
   'award',
 ];
 
+export const LIBRARY_MODULE_CATEGORIES: readonly LibraryModuleCategory[] = [
+  'project',
+  'internship',
+  'award',
+];
+
 export function isCategory(value: string): value is Category {
   return (CATEGORIES as readonly string[]).includes(value);
 }
 
+export function isLibraryModuleCategory(
+  value: string,
+): value is LibraryModuleCategory {
+  return (LIBRARY_MODULE_CATEGORIES as readonly string[]).includes(value);
+}
+
 export function isSectionId(value: string): value is SectionId {
   return value in SECTION_LABELS;
+}
+
+export function isGender(value: string): value is Gender {
+  return (GENDERS as readonly string[]).includes(value);
+}
+
+export function isDegreeOption(value: string): value is DegreeOption {
+  return (DEGREE_OPTIONS as readonly string[]).includes(value);
+}
+
+export function isTemplateId(value: string): value is TemplateId {
+  return value === DEFAULT_TEMPLATE_ID;
+}
+
+/** Build display timeRange from optional date pickers. */
+export function educationTimeRange(
+  startDate?: string,
+  endDate?: string,
+  fallback?: string,
+): string | undefined {
+  const a = startDate?.trim();
+  const b = endDate?.trim();
+  if (a && b) return `${formatEduDate(a)} - ${formatEduDate(b)}`;
+  if (a) return formatEduDate(a);
+  if (b) return formatEduDate(b);
+  return fallback?.trim() || undefined;
+}
+
+function formatEduDate(iso: string): string {
+  // YYYY-MM-DD → YYYY.MM ; YYYY-MM → YYYY.MM
+  const m = iso.match(/^(\d{4})-(\d{2})(?:-(\d{2}))?/);
+  if (m) return `${m[1]}.${m[2]}`;
+  return iso;
+}
+
+export interface ProfileRequiredFields {
+  name: string;
+  gender: string;
+  email: string;
+  phone: string;
+  wechat: string;
+}
+
+/** Validate required identity fields for a 基本信息 card. */
+export function validateProfileRequired(
+  input: Partial<ProfileRequiredFields>,
+): { ok: true } | { ok: false; error: string } {
+  if (!input.name?.trim()) return { ok: false, error: '姓名为必填项' };
+  if (!input.gender?.trim() || !isGender(input.gender.trim())) {
+    return { ok: false, error: '性别为必填项（男/女）' };
+  }
+  if (!input.email?.trim()) return { ok: false, error: '邮箱为必填项' };
+  if (!input.phone?.trim()) return { ok: false, error: '手机号为必填项' };
+  if (!input.wechat?.trim()) return { ok: false, error: '微信号为必填项' };
+  return { ok: true };
+}
+
+/** Empty education row for guided forms. */
+export function emptyEducationItem(id = ''): EducationItem {
+  return {
+    id,
+    school: '',
+    degree: '本科',
+    major: '',
+    startDate: '',
+    endDate: '',
+    timeRange: '',
+    gpa: '',
+    rank: '',
+    courses: '',
+  };
+}
+
+/** Empty skill block for guided forms. */
+export function emptySkillBlock(id = ''): SkillBlock {
+  return { id, title: '', body: '' };
 }

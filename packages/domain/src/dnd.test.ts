@@ -31,5 +31,7 @@ describe('domain drag/drop contracts', () => {
     assert.equal(decideModuleDrop('project', 'projects'), 'accept');
     assert.equal(decideModuleDrop('skill', 'projects'), 'reject-category');
     assert.equal(decideModuleDrop('skill', 'basic'), 'reject-section');
+    assert.equal(decideModuleDrop('skill', 'skills'), 'reject-section');
+    assert.equal(decideModuleDrop('award', 'awards'), 'accept');
   });
 });

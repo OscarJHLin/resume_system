@@ -1,6 +1,6 @@
 # 模块化简历组装系统
 
-本地优先的简历组装系统：**S1–S4 + 内容库表单编辑器 + lin-v1 模板导出 + 一键验收启动**。
+本地优先的简历组装系统：**S5 工作台（模板选择 + 四标签内容库 + 多基本信息卡）+ lin-v1 导出**。
 
 > 当前状态：**可验收**。清单 [docs/05-acceptance.md](docs/05-acceptance.md)；模板说明 [docs/06-template-lin-v1.md](docs/06-template-lin-v1.md)。
 
@@ -61,101 +61,51 @@ open dist-app/简历组装系统.app
 健康检查：`curl http://127.0.0.1:8787/health`  
 元信息：`curl http://127.0.0.1:8787/api/meta`
 
-## S4 演示与验收
+## S5 演示与验收
 
 完整步骤见 **[docs/05-acceptance.md](docs/05-acceptance.md)**。摘要：
 
-1. `npm run app` → 左 **模板简历** / 右 **内容库**
-2. 上传照片；编辑基本信息；右侧 **项目|实习** + 新建（技术栈→`projectType`）
-3. 拖入左侧落点 → **导出**
+1. `npm run app` → http://127.0.0.1:8787/（**勿** `SKIP_WEB_BUILD`）
+2. 顶栏 **选择简历模板** → 林氏 lin-v1（左空白稿，无照片栏）
+3. 右四标签：项目 / 实习 / 获奖与证书 / 基本信息；+ 按当前标签新建
+4. 基本信息卡 **应用到简历** → 左填姓名/教育/技术能力
+5. 拖项目/实习/获奖到左 → **导出**（DOCX 不含照片）
 
-## S3 TipTap 演示
+## S3 TipTap 演示（遗留投影）
 
 ```bash
 npm run dev:server
 npm run dev:web
 ```
 
-1. 打开 http://127.0.0.1:5173  
-2. **写入演示数据**  
-3. 左侧按标签过滤，拖模块到右侧 **TipTap** section 落点  
-4. 主区应出现只读快照条目；**导出 DOCX**（仍由服务端 placements→IR 生成）
+TipTap 壳仍在代码中，主路径为左侧模板画布。
 
-## S2 拖拽演示（同路径）
+## S1 API 演示
 
 ```bash
-npm run dev:server   # :8787
-npm run dev:web      # :5173
-```
-
-1. 打开 http://127.0.0.1:5173  
-2. 点 **写入演示数据**（生成空简历 + 带标签模块）  
-3. 左侧可用「标签 / 大类 / 关键字」过滤  
-4. 将模块拖到右侧匹配区块（不匹配会拒绝）  
-5. **导出 DOCX**
-
-## S1 API 演示（仍可用）
-
-### A. 一键脚本（推荐）
-
-```bash
-# 先启动 API
 npm run dev:server
-
-# 另开终端
-chmod +x scripts/s1-demo.sh
-./scripts/s1-demo.sh
-# 产出 ./data/s1-demo.docx
+./scripts/s1-demo.sh   # 创建基本信息卡 + 项目 + 导出
 ```
-
-### B. Web 薄 UI
-
-打开 http://127.0.0.1:5173 → **写入演示数据** → **导出 DOCX**。
-
-### C. 手工 curl
-
-```bash
-API=http://127.0.0.1:8787
-
-curl -sS -X PUT "$API/api/profile" -H 'content-type: application/json' \
-  -d '{"name":"张三","email":"z@example.com","education":[{"school":"示例大学","degree":"本科","timeRange":"2018-2022"}]}'
-
-MOD=$(curl -sS -X POST "$API/api/modules" -H 'content-type: application/json' \
-  -d '{"category":"project","title":"示例项目","subtitle":"基础站","timeRange":"2024-2025","body":"纯文本正文","tags":["React"]}')
-MOD_ID=$(node -e "console.log(JSON.parse(process.argv[1]).id)" "$MOD")
-
-RESUME=$(curl -sS -X POST "$API/api/resumes" -H 'content-type: application/json' -d '{"title":"投递稿"}')
-RESUME_ID=$(node -e "console.log(JSON.parse(process.argv[1]).id)" "$RESUME")
-
-curl -sS -X POST "$API/api/resumes/$RESUME_ID/placements" -H 'content-type: application/json' \
-  -d "{\"section\":\"projects\",\"moduleId\":\"$MOD_ID\"}"
-
-curl -sS -X POST "$API/api/resumes/$RESUME_ID/export" -o resume.docx
-```
-
-按标签检索：`curl "$API/api/modules?tag=React"`
 
 ### 测试
 
 ```bash
 npm test
-# 或
-npm run test -w @resume/server
 ```
 
-覆盖：快照隔离（改库 ≠ 改简历）、分字段 IR、DOCX `PK` 魔数。
-
-## 主要 API（S1）
+## 主要 API
 
 | Method | Path | 说明 |
 |---|---|---|
-| GET/PUT | `/api/profile` | 个人资料（含教育） |
-| GET/POST | `/api/modules` | 内容模块；查询 `?category=&tag=&q=` |
-| GET/PUT/DELETE | `/api/modules/:id` | 模块详情/更新/删除 |
-| GET/POST | `/api/resumes` | 简历列表/创建 |
-| GET/PATCH | `/api/resumes/:id` | 详情/改标题 |
-| POST | `/api/resumes/:id/placements` | `{ section, moduleId }` → **深拷贝快照** |
-| POST | `/api/resumes/:id/export` | 下载 DOCX |
+| GET/POST | `/api/profiles` | 基本信息卡列表/创建 |
+| GET/PUT/DELETE | `/api/profiles/:id` | 卡详情/更新/删除 |
+| PUT/GET/DELETE | `/api/profiles/:id/photo` | 照片存档（导出不含） |
+| GET | `/api/templates` | 模板列表（目前仅 lin-v1） |
+| GET/POST | `/api/modules` | 经历模块；`?category=&tag=&q=` |
+| GET/POST | `/api/resumes` | 简历；POST 可带 `templateId`/`profileId` |
+| PATCH | `/api/resumes/:id` | 改标题 / 应用 profileId / templateId |
+| POST | `/api/resumes/:id/placements` | `{ section, moduleId }` → 快照 |
+| POST | `/api/resumes/:id/export` | 下载 DOCX（无照片） |
 
 ## 开发约定
 

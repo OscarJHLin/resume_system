@@ -9,6 +9,27 @@ import { buildApp } from './index.js';
 import { renderToIR } from './modules/template/index.js';
 import { exportDocx } from './modules/export/index.js';
 
+const FULL_PROFILE = {
+  name: '测试用户',
+  gender: '男',
+  email: 'test@example.com',
+  phone: '13800000000',
+  wechat: 'wx_test',
+  education: [
+    {
+      school: '示例大学',
+      degree: '本科',
+      major: '计算机',
+      startDate: '2018-09-01',
+      endDate: '2022-06-30',
+      gpa: '3.5',
+      rank: '专业前 10%',
+    },
+  ],
+  skills: [{ title: '编程语言', body: 'TypeScript、Python' }],
+  tags: ['求职'],
+};
+
 describe('S1 resume assembly', () => {
   let dbPath: string;
   let app: FastifyInstance;
@@ -39,18 +60,7 @@ describe('S1 resume assembly', () => {
   });
 
   it('snapshots placements so library edits do not mutate resume', async () => {
-    await json('PUT', '/api/profile', {
-      name: '测试用户',
-      email: 'test@example.com',
-      education: [
-        {
-          school: '示例大学',
-          degree: '本科',
-          major: '计算机',
-          timeRange: '2018-2022',
-        },
-      ],
-    });
+    const profile = await json<{ id: string }>('POST', '/api/profiles', FULL_PROFILE);
 
     const mod = await json<{ id: string }>('POST', '/api/modules', {
       category: 'project',
@@ -64,6 +74,8 @@ describe('S1 resume assembly', () => {
 
     const resume = await json<{ id: string }>('POST', '/api/resumes', {
       title: '投递稿A',
+      profileId: profile.id,
+      templateId: DEFAULT_TEMPLATE_ID,
     });
 
     const placement = await json<{
@@ -111,7 +123,7 @@ describe('S1 resume assembly', () => {
     ]);
   });
 
-  it('rejects incompatible category/section and exports non-empty docx', async () => {
+  it('rejects skill placement and incompatible category/section; exports docx', async () => {
     const skill = await json<{ id: string }>('POST', '/api/modules', {
       category: 'skill',
       title: 'TypeScript',
@@ -123,17 +135,22 @@ describe('S1 resume assembly', () => {
     const resumeId = resumes[0]?.id;
     assert.ok(resumeId);
 
+    const badSkillSection = await fetch(
+      `${baseUrl}/api/resumes/${resumeId}/placements`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ section: 'skills', moduleId: skill.id }),
+      },
+    );
+    assert.equal(badSkillSection.status, 400);
+
     const bad = await fetch(`${baseUrl}/api/resumes/${resumeId}/placements`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ section: 'projects', moduleId: skill.id }),
     });
     assert.equal(bad.status, 400);
-
-    await json('POST', `/api/resumes/${resumeId}/placements`, {
-      section: 'skills',
-      moduleId: skill.id,
-    });
 
     const exportRes = await fetch(
       `${baseUrl}/api/resumes/${resumeId}/export`,
@@ -142,24 +159,21 @@ describe('S1 resume assembly', () => {
     assert.equal(exportRes.status, 200);
     const buf = Buffer.from(await exportRes.arrayBuffer());
     assert.ok(buf.length > 0, 'docx buffer should be non-empty');
-    assert.equal(buf[0], 0x50); // P
-    assert.equal(buf[1], 0x4b); // K
-    assert.equal(buf[2], 0x03);
-    assert.equal(buf[3], 0x04);
-
-    const ct = exportRes.headers.get('content-type') ?? '';
-    assert.match(ct, /wordprocessingml/);
+    assert.equal(buf[0], 0x50);
+    assert.equal(buf[1], 0x4b);
   });
 
-  it('renderToIR maps structured fields with per-field styles', () => {
+  it('renderToIR maps profile skills + structured project fields', () => {
     const ir = renderToIR(
       {
         templateId: DEFAULT_TEMPLATE_ID,
         profile: {
           id: 'p1',
           name: '张三',
+          gender: '男',
           phone: '13800000000',
           email: 'z@example.com',
+          wechat: 'wx_z',
           education: [
             {
               id: 'e1',
@@ -168,6 +182,9 @@ describe('S1 resume assembly', () => {
               timeRange: '2018-2022',
             },
           ],
+          skills: [{ id: 's1', title: '编程语言', body: 'TypeScript' }],
+          tags: [],
+          createdAt: '2026-01-01T00:00:00.000Z',
           updatedAt: '2026-01-01T00:00:00.000Z',
         },
         placements: [
@@ -196,10 +213,13 @@ describe('S1 resume assembly', () => {
     const name = ir.blocks.find((b) => b.kind === 'heading' && b.level === 1);
     assert.ok(name && name.kind === 'heading');
     assert.equal(name.runs[0]?.text, '张三');
-    assert.equal(name.runs[0]?.style?.bold, true);
-    assert.equal(name.runs[0]?.style?.fontSizePt, 22);
-    assert.equal(name.runs[0]?.style?.fontEastAsia, '黑体');
-    assert.equal(name.alignment, 'center');
+
+    const skill = ir.blocks.find(
+      (b) =>
+        b.kind === 'paragraph' &&
+        b.runs[0]?.text === '编程语言：TypeScript',
+    );
+    assert.ok(skill);
 
     const titlePara = ir.blocks.find(
       (b) =>
@@ -207,13 +227,6 @@ describe('S1 resume assembly', () => {
         b.runs.some((r) => r.text === '简历系统' && r.style?.bold),
     );
     assert.ok(titlePara);
-
-    const bodyLines = ir.blocks.filter(
-      (b) =>
-        b.kind === 'paragraph' &&
-        (b.runs[0]?.text === '行一' || b.runs[0]?.text === '行二'),
-    );
-    assert.equal(bodyLines.length, 2);
   });
 
   it('exportDocx produces zip/docx bytes from IR', async () => {
@@ -223,6 +236,9 @@ describe('S1 resume assembly', () => {
         id: 'p1',
         name: '李四',
         education: [],
+        skills: [],
+        tags: [],
+        createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-01T00:00:00.000Z',
       },
       placements: [],

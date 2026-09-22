@@ -6,9 +6,15 @@ import type {
   ResumeDocument,
   SectionId,
   SectionPlacement,
+  SkillBlock,
   TemplateId,
 } from '@resume/domain';
-import { DEFAULT_TEMPLATE_ID } from '@resume/domain';
+import {
+  DEFAULT_TEMPLATE_ID,
+  educationTimeRange,
+  isTemplateId,
+  validateProfileRequired,
+} from '@resume/domain';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Db } from './client.js';
@@ -16,7 +22,8 @@ import { defaultDbPath, photosDir } from './client.js';
 import { newId, nowIso } from '../util.js';
 import { badRequest, notFound } from '../errors.js';
 
-function parseJson<T>(raw: string, fallback: T): T {
+function parseJson<T>(raw: string | null | undefined, fallback: T): T {
+  if (!raw) return fallback;
   try {
     return JSON.parse(raw) as T;
   } catch {
@@ -27,13 +34,35 @@ function parseJson<T>(raw: string, fallback: T): T {
 type ProfileRow = {
   id: string;
   name: string;
+  gender: string | null;
   phone: string | null;
   email: string | null;
+  wechat: string | null;
+  qq: string | null;
   location: string | null;
   summary: string | null;
   education_json: string;
+  skills_json: string | null;
+  tags_json: string | null;
+  notes: string | null;
   photo_filename?: string | null;
+  created_at: string | null;
   updated_at: string;
+};
+
+export type ProfileInput = {
+  name: string;
+  gender: string;
+  phone: string;
+  email: string;
+  wechat: string;
+  qq?: string;
+  location?: string;
+  summary?: string;
+  education?: EducationItem[];
+  skills?: SkillBlock[];
+  tags?: string[];
+  notes?: string;
 };
 
 export class Store {
@@ -42,109 +71,190 @@ export class Store {
     private readonly dbPath: string = defaultDbPath(),
   ) {}
 
-  ensureDefaultProfile(): Profile {
-    const row = this.db
-      .prepare('SELECT id FROM profile LIMIT 1')
-      .get() as { id: string } | undefined;
-    if (row) {
-      return this.getProfile();
-    }
-    const profile: Profile = {
-      id: newId(),
-      name: '未命名',
-      education: [],
-      updatedAt: nowIso(),
-    };
-    this.db
-      .prepare(
-        `INSERT INTO profile (id, name, phone, email, location, summary, education_json, photo_filename, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        profile.id,
-        profile.name,
-        null,
-        null,
-        null,
-        null,
-        '[]',
-        null,
-        profile.updatedAt,
-      );
-    return profile;
+  listProfiles(filter: { q?: string; tag?: string } = {}): Profile[] {
+    const rows = this.db
+      .prepare('SELECT * FROM profile ORDER BY updated_at DESC')
+      .all() as ProfileRow[];
+    return rows
+      .map((r) => this.rowToProfile(r))
+      .filter((p) => {
+        if (filter.tag) {
+          const needle = filter.tag.toLowerCase();
+          if (!p.tags.some((t) => t.toLowerCase().includes(needle))) {
+            return false;
+          }
+        }
+        if (filter.q) {
+          const q = filter.q.toLowerCase();
+          const hay = [
+            p.name,
+            p.email,
+            p.phone,
+            p.wechat,
+            p.notes,
+            ...p.tags,
+            ...p.education.map((e) => e.school),
+            ...p.skills.map((s) => `${s.title} ${s.body}`),
+          ]
+            .filter(Boolean)
+            .join('\n')
+            .toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
   }
 
+  getProfileById(id: string): Profile {
+    const row = this.db.prepare('SELECT * FROM profile WHERE id = ?').get(id) as
+      | ProfileRow
+      | undefined;
+    if (!row) throw notFound(`Profile ${id} not found`);
+    return this.rowToProfile(row);
+  }
+
+  /** @deprecated Prefer getProfileById — returns first profile if any. */
   getProfile(): Profile {
     const row = this.db.prepare('SELECT * FROM profile LIMIT 1').get() as
       | ProfileRow
       | undefined;
-    if (!row) {
-      throw notFound('Profile not found');
-    }
+    if (!row) throw notFound('Profile not found');
     return this.rowToProfile(row);
   }
 
-  updateProfile(input: {
-    name: string;
-    phone?: string;
-    email?: string;
-    location?: string;
-    summary?: string;
-    education?: EducationItem[];
-  }): Profile {
-    if (!input.name?.trim()) {
-      throw badRequest('name is required');
-    }
-    const current = this.ensureDefaultProfile();
-    const education = (input.education ?? current.education).map((e) => ({
-      ...e,
-      id: e.id || newId(),
-    }));
+  createProfile(input: ProfileInput): Profile {
+    const checked = validateProfileRequired(input);
+    if (!checked.ok) throw badRequest(checked.error);
+
+    const ts = nowIso();
+    const education = normalizeEducation(input.education);
+    const skills = normalizeSkills(input.skills);
+    const profile: Profile = {
+      id: newId(),
+      name: input.name.trim(),
+      gender: input.gender.trim() as Profile['gender'],
+      phone: input.phone.trim(),
+      email: input.email.trim(),
+      wechat: input.wechat.trim(),
+      qq: input.qq?.trim() || undefined,
+      location: input.location?.trim() || undefined,
+      summary: input.summary?.trim() || undefined,
+      education,
+      skills,
+      tags: normalizeTags(input.tags),
+      notes: input.notes?.trim() || undefined,
+      createdAt: ts,
+      updatedAt: ts,
+    };
+    this.db
+      .prepare(
+        `INSERT INTO profile (
+          id, name, gender, phone, email, wechat, qq, location, summary,
+          education_json, skills_json, tags_json, notes, photo_filename,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        profile.id,
+        profile.name,
+        profile.gender ?? null,
+        profile.phone ?? null,
+        profile.email ?? null,
+        profile.wechat ?? null,
+        profile.qq ?? null,
+        profile.location ?? null,
+        profile.summary ?? null,
+        JSON.stringify(profile.education),
+        JSON.stringify(profile.skills),
+        JSON.stringify(profile.tags),
+        profile.notes ?? null,
+        null,
+        profile.createdAt,
+        profile.updatedAt,
+      );
+    return this.getProfileById(profile.id);
+  }
+
+  updateProfile(id: string, input: ProfileInput): Profile {
+    this.getProfileById(id);
+    const checked = validateProfileRequired(input);
+    if (!checked.ok) throw badRequest(checked.error);
+
+    const education = normalizeEducation(input.education);
+    const skills = normalizeSkills(input.skills);
     const updatedAt = nowIso();
     this.db
       .prepare(
-        `UPDATE profile SET name = ?, phone = ?, email = ?, location = ?, summary = ?,
-         education_json = ?, updated_at = ? WHERE id = ?`,
+        `UPDATE profile SET
+          name = ?, gender = ?, phone = ?, email = ?, wechat = ?, qq = ?,
+          location = ?, summary = ?, education_json = ?, skills_json = ?,
+          tags_json = ?, notes = ?, updated_at = ?
+         WHERE id = ?`,
       )
       .run(
         input.name.trim(),
-        input.phone ?? null,
-        input.email ?? null,
-        input.location ?? null,
-        input.summary ?? null,
+        input.gender.trim(),
+        input.phone.trim(),
+        input.email.trim(),
+        input.wechat.trim(),
+        input.qq?.trim() || null,
+        input.location?.trim() || null,
+        input.summary?.trim() || null,
         JSON.stringify(education),
+        JSON.stringify(skills),
+        JSON.stringify(normalizeTags(input.tags)),
+        input.notes?.trim() || null,
         updatedAt,
-        current.id,
+        id,
       );
-    return this.getProfile();
+    return this.getProfileById(id);
   }
 
-  saveProfilePhoto(bytes: Buffer, ext: string): Profile {
-    const profile = this.ensureDefaultProfile();
+  deleteProfile(id: string): void {
+    this.getProfileById(id);
+    this.clearProfilePhoto(id);
+    this.db.prepare('DELETE FROM profile WHERE id = ?').run(id);
+    // Detach resumes that pointed at this card
+    this.db
+      .prepare(
+        `UPDATE resume SET profile_id = '', updated_at = ? WHERE profile_id = ?`,
+      )
+      .run(nowIso(), id);
+  }
+
+  saveProfilePhoto(profileId: string, bytes: Buffer, ext: string): Profile {
+    this.getProfileById(profileId);
     const safeExt = ext.replace(/^\./, '').toLowerCase();
     if (!['jpg', 'jpeg', 'png', 'webp'].includes(safeExt)) {
       throw badRequest('photo must be jpg, png, or webp');
     }
-    const filename = `profile.${safeExt === 'jpeg' ? 'jpg' : safeExt}`;
+    const filename = `${profileId}.${safeExt === 'jpeg' ? 'jpg' : safeExt}`;
     const dir = photosDir(this.dbPath);
     for (const f of fs.readdirSync(dir)) {
-      if (f.startsWith('profile.')) fs.unlinkSync(path.join(dir, f));
+      if (f.startsWith(`${profileId}.`)) fs.unlinkSync(path.join(dir, f));
+    }
+    // Also clear legacy singleton filenames if migrating
+    for (const legacy of ['profile.jpg', 'profile.png', 'profile.webp']) {
+      const full = path.join(dir, legacy);
+      if (fs.existsSync(full)) {
+        /* keep other profiles' files; only remove when this is sole legacy */
+      }
     }
     fs.writeFileSync(path.join(dir, filename), bytes);
     this.db
       .prepare(
         'UPDATE profile SET photo_filename = ?, updated_at = ? WHERE id = ?',
       )
-      .run(filename, nowIso(), profile.id);
-    return this.getProfile();
+      .run(filename, nowIso(), profileId);
+    return this.getProfileById(profileId);
   }
 
-  clearProfilePhoto(): Profile {
-    const profile = this.ensureDefaultProfile();
+  clearProfilePhoto(profileId: string): Profile {
     const row = this.db
       .prepare('SELECT photo_filename FROM profile WHERE id = ?')
-      .get(profile.id) as { photo_filename: string | null } | undefined;
-    if (row?.photo_filename) {
+      .get(profileId) as { photo_filename: string | null } | undefined;
+    if (!row) throw notFound(`Profile ${profileId} not found`);
+    if (row.photo_filename) {
       const full = path.join(photosDir(this.dbPath), row.photo_filename);
       if (fs.existsSync(full)) fs.unlinkSync(full);
     }
@@ -152,14 +262,16 @@ export class Store {
       .prepare(
         'UPDATE profile SET photo_filename = NULL, updated_at = ? WHERE id = ?',
       )
-      .run(nowIso(), profile.id);
-    return this.getProfile();
+      .run(nowIso(), profileId);
+    return this.getProfileById(profileId);
   }
 
-  getProfilePhoto(): { buffer: Buffer; mime: string; filename: string } | null {
-    const row = this.db.prepare('SELECT photo_filename FROM profile LIMIT 1').get() as
-      | { photo_filename: string | null }
-      | undefined;
+  getProfilePhoto(
+    profileId: string,
+  ): { buffer: Buffer; mime: string; filename: string } | null {
+    const row = this.db
+      .prepare('SELECT photo_filename FROM profile WHERE id = ?')
+      .get(profileId) as { photo_filename: string | null } | undefined;
     if (!row?.photo_filename) return null;
     const full = path.join(photosDir(this.dbPath), row.photo_filename);
     if (!fs.existsSync(full)) return null;
@@ -182,15 +294,28 @@ export class Store {
     const photoPath = name
       ? path.join(photosDir(this.dbPath), name)
       : null;
+    // Legacy singleton photo filename support
+    let hasPhoto = Boolean(photoPath && fs.existsSync(photoPath));
+    if (!hasPhoto && name === null) {
+      const legacy = path.join(photosDir(this.dbPath), 'profile.jpg');
+      if (fs.existsSync(legacy)) hasPhoto = true;
+    }
     return {
       id: row.id,
       name: row.name,
+      gender: (row.gender as Profile['gender']) || '',
       phone: row.phone ?? undefined,
       email: row.email ?? undefined,
+      wechat: row.wechat ?? undefined,
+      qq: row.qq ?? undefined,
       location: row.location ?? undefined,
       summary: row.summary ?? undefined,
       education: parseJson<EducationItem[]>(row.education_json, []),
-      hasPhoto: Boolean(photoPath && fs.existsSync(photoPath)),
+      skills: parseJson<SkillBlock[]>(row.skills_json, []),
+      tags: parseJson<string[]>(row.tags_json, []),
+      notes: row.notes ?? undefined,
+      hasPhoto,
+      createdAt: row.created_at || row.updated_at,
       updatedAt: row.updated_at,
     };
   }
@@ -340,7 +465,9 @@ export class Store {
     this.db.prepare('DELETE FROM content_module WHERE id = ?').run(id);
   }
 
-  listResumes(): Array<Pick<ResumeDocument, 'id' | 'title' | 'templateId' | 'profileId' | 'updatedAt'>> {
+  listResumes(): Array<
+    Pick<ResumeDocument, 'id' | 'title' | 'templateId' | 'profileId' | 'updatedAt'>
+  > {
     const rows = this.db
       .prepare(
         'SELECT id, title, template_id, profile_id, updated_at FROM resume ORDER BY updated_at DESC',
@@ -356,21 +483,31 @@ export class Store {
       id: r.id,
       title: r.title,
       templateId: r.template_id as TemplateId,
-      profileId: r.profile_id,
+      profileId: r.profile_id ?? '',
       updatedAt: r.updated_at,
     }));
   }
 
-  createResume(title?: string): ResumeDocument {
-    const profile = this.ensureDefaultProfile();
+  createResume(input: {
+    title?: string;
+    templateId?: string;
+    profileId?: string;
+  } = {}): ResumeDocument {
+    const templateId = input.templateId ?? DEFAULT_TEMPLATE_ID;
+    if (!isTemplateId(templateId)) {
+      throw badRequest(`unknown template: ${templateId}`);
+    }
+    if (input.profileId) {
+      this.getProfileById(input.profileId);
+    }
     const id = newId();
     const updatedAt = nowIso();
-    const docTitle = title?.trim() || '未命名简历';
+    const docTitle = input.title?.trim() || '未命名简历';
     this.db
       .prepare(
         `INSERT INTO resume (id, title, template_id, profile_id, updated_at) VALUES (?, ?, ?, ?, ?)`,
       )
-      .run(id, docTitle, DEFAULT_TEMPLATE_ID, profile.id, updatedAt);
+      .run(id, docTitle, templateId, input.profileId ?? '', updatedAt);
     return this.getResume(id);
   }
 
@@ -404,7 +541,7 @@ export class Store {
       sortOrder: p.sort_order,
       snapshot: parseJson<ModuleSnapshot>(p.snapshot_json, {
         sourceModuleId: '',
-        category: 'skill',
+        category: 'project',
         title: '',
         body: '',
         tags: [],
@@ -416,19 +553,37 @@ export class Store {
       id: row.id,
       title: row.title,
       templateId: row.template_id as TemplateId,
-      profileId: row.profile_id,
+      profileId: row.profile_id ?? '',
       placements,
       updatedAt: row.updated_at,
     };
   }
 
-  patchResume(id: string, input: { title?: string }): ResumeDocument {
+  patchResume(
+    id: string,
+    input: { title?: string; profileId?: string | null; templateId?: string },
+  ): ResumeDocument {
     this.getResume(id);
     if (input.title !== undefined) {
       if (!input.title.trim()) throw badRequest('title cannot be empty');
       this.db
         .prepare('UPDATE resume SET title = ?, updated_at = ? WHERE id = ?')
         .run(input.title.trim(), nowIso(), id);
+    }
+    if (input.templateId !== undefined) {
+      if (!isTemplateId(input.templateId)) {
+        throw badRequest(`unknown template: ${input.templateId}`);
+      }
+      this.db
+        .prepare('UPDATE resume SET template_id = ?, updated_at = ? WHERE id = ?')
+        .run(input.templateId, nowIso(), id);
+    }
+    if (input.profileId !== undefined) {
+      const pid = input.profileId ?? '';
+      if (pid) this.getProfileById(pid);
+      this.db
+        .prepare('UPDATE resume SET profile_id = ?, updated_at = ? WHERE id = ?')
+        .run(pid, nowIso(), id);
     }
     return this.getResume(id);
   }
@@ -485,8 +640,8 @@ export class Store {
     const stmt = this.db.prepare(
       'UPDATE section_placement SET sort_order = ? WHERE id = ? AND resume_id = ?',
     );
-    orderedPlacementIds.forEach((id, index) => {
-      stmt.run(index, id, resumeId);
+    orderedPlacementIds.forEach((pid, index) => {
+      stmt.run(index, pid, resumeId);
     });
     this.db
       .prepare('UPDATE resume SET updated_at = ? WHERE id = ?')
@@ -539,4 +694,37 @@ export class Store {
 function normalizeTags(tags: string[] | undefined): string[] {
   if (!tags) return [];
   return [...new Set(tags.map((t) => t.trim()).filter(Boolean))];
+}
+
+function normalizeEducation(
+  items: EducationItem[] | undefined,
+): EducationItem[] {
+  if (!items?.length) return [];
+  return items.map((e) => {
+    const startDate = e.startDate?.trim() || undefined;
+    const endDate = e.endDate?.trim() || undefined;
+    return {
+      id: e.id || newId(),
+      school: (e.school ?? '').trim(),
+      degree: e.degree?.trim() || undefined,
+      major: e.major?.trim() || undefined,
+      startDate,
+      endDate,
+      timeRange: educationTimeRange(startDate, endDate, e.timeRange),
+      gpa: e.gpa?.trim() || undefined,
+      rank: e.rank?.trim() || undefined,
+      courses: e.courses?.trim() || undefined,
+    };
+  });
+}
+
+function normalizeSkills(items: SkillBlock[] | undefined): SkillBlock[] {
+  if (!items?.length) return [];
+  return items
+    .map((s) => ({
+      id: s.id || newId(),
+      title: (s.title ?? '').trim(),
+      body: (s.body ?? '').trim(),
+    }))
+    .filter((s) => s.title || s.body);
 }

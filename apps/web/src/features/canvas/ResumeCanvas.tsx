@@ -1,16 +1,17 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type {
   Profile,
   ResumeDocument,
   SectionId,
   SectionPlacement,
+  SkillBlock,
 } from '@resume/domain';
 import {
   SECTION_LABELS,
   decideModuleDrop,
+  educationTimeRange,
   isPlaceableSection,
 } from '@resume/domain';
-import { api } from '../../api/client';
 import {
   clearModuleDrag,
   dropZoneClassName,
@@ -24,7 +25,6 @@ export interface ResumeCanvasProps {
   resume: ResumeDocument | null;
   profile: Profile | null;
   connectionError?: boolean;
-  onProfileChange: (profile: Profile) => void;
   onDropModule: (section: SectionId, moduleId: string) => Promise<void>;
   onDeletePlacement: (placementId: string) => Promise<void>;
   onMovePlacement: (
@@ -36,14 +36,13 @@ export interface ResumeCanvasProps {
 }
 
 /**
- * Left column: lin-v1-looking resume template surface (wireframe).
- * Export SoT remains placements → IR; this canvas is interactive preview + profile edit.
+ * Left column: lin-v1 template preview (no photo column).
+ * Identity / education / skills come from applied 基本信息 card (read-only here).
  */
 export function ResumeCanvas({
   resume,
   profile,
   connectionError,
-  onProfileChange,
   onDropModule,
   onDeletePlacement,
   onMovePlacement,
@@ -62,128 +61,105 @@ export function ResumeCanvas({
     );
   }
 
-  if (!resume || !profile) {
+  if (!resume) {
     return (
       <main className="canvas">
         <div className="canvas__page canvas__empty">
           <h2>尚无简历</h2>
-          <p>点击顶部「演示数据」生成样例，或先在右侧新建模块。</p>
+          <p>点击顶部「选择简历模板」初始化左侧空白模板。</p>
         </div>
       </main>
     );
   }
 
+  const name = profile?.name?.trim() || '';
+  const summary = profile?.summary?.trim() || '';
+  const contactParts = [
+    profile?.location,
+    profile?.phone,
+    profile?.email,
+    profile?.wechat ? `微信: ${profile.wechat}` : undefined,
+  ].filter(Boolean);
+
   return (
     <main className="canvas">
       <div className="canvas__page">
-        <header className="canvas__hero">
-          <PhotoBlock
-            profile={profile}
-            onProfileChange={onProfileChange}
-            onStatus={onStatus}
-          />
+        <header className="canvas__hero canvas__hero--no-photo">
           <div className="canvas__identity">
-            <input
-              className="canvas__name"
-              value={profile.name}
-              aria-label="姓名"
-              onBlur={(e) =>
-                void saveProfile(
-                  { ...profile, name: e.target.value },
-                  onProfileChange,
-                  onStatus,
-                )
-              }
-              onChange={(e) =>
-                onProfileChange({ ...profile, name: e.target.value })
-              }
-            />
-            <input
-              className="canvas__tagline"
-              value={profile.summary ?? ''}
-              placeholder="标语 / 定位（可留空）"
-              aria-label="标语"
-              onBlur={(e) =>
-                void saveProfile(
-                  { ...profile, summary: e.target.value },
-                  onProfileChange,
-                  onStatus,
-                )
-              }
-              onChange={(e) =>
-                onProfileChange({ ...profile, summary: e.target.value })
-              }
-            />
-            <div className="canvas__contact-row">
-              <input
-                placeholder="城市"
-                value={profile.location ?? ''}
-                onBlur={(e) =>
-                  void saveProfile(
-                    { ...profile, location: e.target.value },
-                    onProfileChange,
-                    onStatus,
-                  )
-                }
-                onChange={(e) =>
-                  onProfileChange({ ...profile, location: e.target.value })
-                }
-              />
-              <span>|</span>
-              <input
-                placeholder="电话"
-                value={profile.phone ?? ''}
-                onBlur={(e) =>
-                  void saveProfile(
-                    { ...profile, phone: e.target.value },
-                    onProfileChange,
-                    onStatus,
-                  )
-                }
-                onChange={(e) =>
-                  onProfileChange({ ...profile, phone: e.target.value })
-                }
-              />
-              <span>|</span>
-              <input
-                placeholder="邮箱"
-                value={profile.email ?? ''}
-                onBlur={(e) =>
-                  void saveProfile(
-                    { ...profile, email: e.target.value },
-                    onProfileChange,
-                    onStatus,
-                  )
-                }
-                onChange={(e) =>
-                  onProfileChange({ ...profile, email: e.target.value })
-                }
-              />
-            </div>
+            <p className={`canvas__name${name ? '' : ' canvas__ph'}`}>
+              {name || '姓名'}
+            </p>
+            <p className={`canvas__tagline${summary ? '' : ' canvas__ph'}`}>
+              {summary || '标语 / 定位（在「基本信息」中填写）'}
+            </p>
+            <p
+              className={`canvas__contact-row canvas__contact-static${
+                contactParts.length ? '' : ' canvas__ph'
+              }`}
+            >
+              {contactParts.length
+                ? contactParts.join(' | ')
+                : '手机 | 邮箱 | 微信（应用到简历后显示）'}
+            </p>
+            {profile?.gender && (
+              <p className="canvas__muted">性别：{profile.gender}</p>
+            )}
           </div>
         </header>
 
-        <CanvasSection title="基本信息">
-          <p className="canvas__hint">上方姓名 / 标语 / 联系方式即基本信息，修改后自动保存。</p>
-        </CanvasSection>
-
         <CanvasSection title="教育背景">
-          <EducationEditor
-            profile={profile}
-            onProfileChange={onProfileChange}
-            onStatus={onStatus}
-          />
+          {!profile || profile.education.length === 0 ? (
+            <p className="canvas__hint canvas__ph">
+              教育背景占位 — 在右侧「基本信息」填写并应用到简历
+            </p>
+          ) : (
+            <div className="canvas__edu">
+              {profile.education.map((edu) => {
+                const range =
+                  edu.timeRange ||
+                  educationTimeRange(edu.startDate, edu.endDate);
+                const major = [edu.degree, edu.major]
+                  .filter(Boolean)
+                  .join(' · ');
+                const detail = [
+                  edu.gpa ? `GPA：${edu.gpa}` : null,
+                  edu.rank || null,
+                  edu.courses ? `课程：${edu.courses}` : null,
+                ]
+                  .filter(Boolean)
+                  .join('；');
+                return (
+                  <div key={edu.id} className="canvas__edu-preview">
+                    <div className="canvas__item-head">
+                      <strong>{edu.school || '学校'}</strong>
+                      <span className="canvas__muted">{range}</span>
+                    </div>
+                    {major && <p className="canvas__muted">{major}</p>}
+                    {detail && <p className="canvas__body-line">{detail}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CanvasSection>
 
-        <PlaceableSection
-          sectionId="skills"
-          title="技术能力"
-          resume={resume}
-          onDropModule={onDropModule}
-          onDeletePlacement={onDeletePlacement}
-          onMovePlacement={onMovePlacement}
-          onStatus={onStatus}
-        />
+        <CanvasSection title="技术能力">
+          {!profile || profile.skills.length === 0 ? (
+            <p className="canvas__hint canvas__ph">
+              技术能力占位 — 在基本信息中添加「标题 + 正文」能力块
+            </p>
+          ) : (
+            <ul className="canvas__skills">
+              {profile.skills.map((s: SkillBlock) => (
+                <li key={s.id}>
+                  <strong>{s.title}</strong>
+                  {s.body ? `：${s.body}` : ''}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CanvasSection>
+
         <PlaceableSection
           sectionId="projects"
           title="项目"
@@ -228,175 +204,6 @@ function CanvasSection({
       <h2>{title}</h2>
       {children}
     </section>
-  );
-}
-
-function PhotoBlock({
-  profile,
-  onProfileChange,
-  onStatus,
-}: {
-  profile: Profile;
-  onProfileChange: (p: Profile) => void;
-  onStatus?: (m: string) => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const src = profile.hasPhoto
-    ? api.profilePhotoUrl(profile.updatedAt)
-    : undefined;
-
-  return (
-    <div className="canvas__photo">
-      {src ? (
-        <img src={src} alt="证件照" />
-      ) : (
-        <button
-          type="button"
-          className="canvas__photo-ph"
-          onClick={() => inputRef.current?.click()}
-        >
-          照片
-        </button>
-      )}
-      <div className="canvas__photo-actions">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => inputRef.current?.click()}
-        >
-          上传
-        </button>
-        {profile.hasPhoto && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => {
-              void (async () => {
-                setBusy(true);
-                try {
-                  const p = await api.clearProfilePhoto();
-                  onProfileChange(p);
-                  onStatus?.('已移除照片');
-                } catch (e) {
-                  onStatus?.(
-                    `移除失败: ${e instanceof Error ? e.message : String(e)}`,
-                  );
-                } finally {
-                  setBusy(false);
-                }
-              })();
-            }}
-          >
-            清除
-          </button>
-        )}
-      </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        hidden
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          e.target.value = '';
-          if (!file) return;
-          void (async () => {
-            setBusy(true);
-            try {
-              const dataUrl = await readFileAsDataUrl(file);
-              const p = await api.uploadProfilePhoto(dataUrl, file.type);
-              onProfileChange(p);
-              onStatus?.('照片已保存');
-            } catch (err) {
-              onStatus?.(
-                `上传失败: ${err instanceof Error ? err.message : String(err)}`,
-              );
-            } finally {
-              setBusy(false);
-            }
-          })();
-        }}
-      />
-    </div>
-  );
-}
-
-function EducationEditor({
-  profile,
-  onProfileChange,
-  onStatus,
-}: {
-  profile: Profile;
-  onProfileChange: (p: Profile) => void;
-  onStatus?: (m: string) => void;
-}) {
-  const list = profile.education;
-
-  const persist = (education: Profile['education']) =>
-    void saveProfile({ ...profile, education }, onProfileChange, onStatus);
-
-  return (
-    <div className="canvas__edu">
-      {list.length === 0 && (
-        <p className="canvas__hint">暂无教育经历，点击下方添加。</p>
-      )}
-      {list.map((edu, idx) => (
-        <div key={edu.id || idx} className="canvas__edu-row">
-          <input
-            placeholder="学校"
-            value={edu.school}
-            onChange={(e) => {
-              const next = [...list];
-              next[idx] = { ...edu, school: e.target.value };
-              persist(next);
-            }}
-          />
-          <input
-            placeholder="学位 / 专业"
-            value={[edu.degree, edu.major].filter(Boolean).join(' · ')}
-            onChange={(e) => {
-              const parts = e.target.value.split('·').map((s) => s.trim());
-              const next = [...list];
-              next[idx] = {
-                ...edu,
-                degree: parts[0] || undefined,
-                major: parts.slice(1).join(' · ') || undefined,
-              };
-              persist(next);
-            }}
-          />
-          <input
-            placeholder="时间"
-            value={edu.timeRange ?? ''}
-            onChange={(e) => {
-              const next = [...list];
-              next[idx] = { ...edu, timeRange: e.target.value };
-              persist(next);
-            }}
-          />
-          <button
-            type="button"
-            className="canvas__mini"
-            onClick={() => persist(list.filter((_, i) => i !== idx))}
-          >
-            删
-          </button>
-        </div>
-      ))}
-      <button
-        type="button"
-        className="canvas__mini"
-        onClick={() =>
-          persist([
-            ...list,
-            { id: '', school: '', degree: '', major: '', timeRange: '' },
-          ])
-        }
-      >
-        + 教育经历
-      </button>
-    </div>
   );
 }
 
@@ -530,33 +337,4 @@ function PlacementRow({
       {s.body && <pre className="canvas__body">{s.body}</pre>}
     </article>
   );
-}
-
-async function saveProfile(
-  draft: Profile,
-  onProfileChange: (p: Profile) => void,
-  onStatus?: (m: string) => void,
-) {
-  try {
-    const saved = await api.putProfile({
-      name: draft.name || '未命名',
-      phone: draft.phone,
-      email: draft.email,
-      location: draft.location,
-      summary: draft.summary,
-      education: draft.education,
-    });
-    onProfileChange(saved);
-  } catch (e) {
-    onStatus?.(`保存资料失败: ${e instanceof Error ? e.message : String(e)}`);
-  }
-}
-
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error ?? new Error('read failed'));
-    reader.readAsDataURL(file);
-  });
 }

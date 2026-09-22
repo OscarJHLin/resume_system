@@ -4,12 +4,20 @@ import os from 'node:os';
 import path from 'node:path';
 import { after, before, describe, it } from 'node:test';
 import type { FastifyInstance } from 'fastify';
-import { DEFAULT_TEMPLATE_ID } from '@resume/domain';
 import { buildApp } from './index.js';
-import { exportDocx } from './modules/export/index.js';
-import { renderToIR } from './modules/template/index.js';
 
-describe('profile photo upload + DOCX embed', () => {
+const FULL_PROFILE = {
+  name: '有照片用户',
+  gender: '女',
+  email: 'photo@example.com',
+  phone: '13900000000',
+  wechat: 'wx_photo',
+  education: [],
+  skills: [],
+  tags: [],
+};
+
+describe('profile photo storage (DOCX omits photo)', () => {
   let dbPath: string;
   let app: FastifyInstance;
   let baseUrl: string;
@@ -43,13 +51,21 @@ describe('profile photo upload + DOCX embed', () => {
     }
   });
 
-  it('stores photo on disk and serves it; export includes image', async () => {
-    // 1x1 png
+  it('stores photo on profile card; export has no embedded image requirement', async () => {
+    const profile = await fetch(`${baseUrl}/api/profiles`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(FULL_PROFILE),
+    }).then(async (r) => {
+      assert.equal(r.status, 201);
+      return r.json() as Promise<{ id: string; hasPhoto: boolean }>;
+    });
+
     const png = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
       'base64',
     );
-    const put = await fetch(`${baseUrl}/api/profile/photo`, {
+    const put = await fetch(`${baseUrl}/api/profiles/${profile.id}/photo`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -58,17 +74,17 @@ describe('profile photo upload + DOCX embed', () => {
       }),
     });
     assert.equal(put.status, 200);
-    const profile = (await put.json()) as { hasPhoto: boolean };
-    assert.equal(profile.hasPhoto, true);
+    const updated = (await put.json()) as { hasPhoto: boolean };
+    assert.equal(updated.hasPhoto, true);
 
-    const get = await fetch(`${baseUrl}/api/profile/photo`);
+    const get = await fetch(`${baseUrl}/api/profiles/${profile.id}/photo`);
     assert.equal(get.status, 200);
     assert.match(get.headers.get('content-type') ?? '', /image\/png/);
 
     const resume = await fetch(`${baseUrl}/api/resumes`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title: '有照片' }),
+      body: JSON.stringify({ title: '有照片卡', profileId: profile.id }),
     }).then((r) => r.json() as Promise<{ id: string }>);
 
     const exportRes = await fetch(
@@ -78,23 +94,5 @@ describe('profile photo upload + DOCX embed', () => {
     assert.equal(exportRes.status, 200);
     const buf = Buffer.from(await exportRes.arrayBuffer());
     assert.equal(buf.subarray(0, 2).toString(), 'PK');
-    assert.ok(buf.length > 2000);
-
-    // unit: exportDocx with photo option produces larger zip than without
-    const ir = renderToIR({
-      templateId: DEFAULT_TEMPLATE_ID,
-      profile: {
-        id: 'p',
-        name: '测',
-        education: [],
-        updatedAt: '',
-      },
-      placements: [],
-    });
-    const withPhoto = await exportDocx(ir, {
-      photo: { buffer: png, mime: 'image/png' },
-    });
-    const without = await exportDocx(ir);
-    assert.ok(withPhoto.length > without.length);
   });
 });

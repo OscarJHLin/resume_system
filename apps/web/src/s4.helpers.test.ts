@@ -43,7 +43,7 @@ describe('S4 workbench empty/error banners', () => {
       libraryCount: 3,
     });
     assert.equal(b?.tone, 'warn');
-    assert.match(b?.message ?? '', /还没有简历/);
+    assert.match(b?.message ?? '', /选择简历模板/);
   });
 
   it('info when resume has no placements', () => {

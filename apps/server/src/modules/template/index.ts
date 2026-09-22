@@ -15,14 +15,15 @@ import {
 } from '@resume/domain';
 
 /**
- * `default-v1` typography is derived from 参考简历模板.docx (lin-v1 reference):
+ * `default-v1` typography from 参考简历模板.docx (lin-v1):
  * - Name 22pt 黑体 bold centered
  * - Tagline 11pt 黑体 centered
- * - Contact 9.5pt 宋体 centered
+ * - Contact 9.5pt 宋体 centered (phone | email | wechat | location)
  * - Section 13pt 黑体 bold + bottom rule
  * - Entry 10.5pt 黑体 title + 宋体 meta/time (tab columns)
+ * - Skills from Profile.skills as bold「标题：正文」
  * - Body 10.5pt 宋体 bullets
- * Photo / hyperlinks / exact tab twips: fidelity limits (see docs).
+ * Photo column removed from template + DOCX export.
  */
 export class UnknownTemplateError extends Error {
   constructor(templateId: string) {
@@ -81,7 +82,7 @@ export function renderToIR(
     level: 1,
     alignment: 'center',
     spacingAfterPt: 6,
-    runs: [{ text: profile.name, style: STYLE.name }],
+    runs: [{ text: profile.name || '姓名', style: STYLE.name }],
   });
 
   if (profile.summary?.trim()) {
@@ -93,7 +94,12 @@ export function renderToIR(
     );
   }
 
-  const contact = [profile.location, profile.phone, profile.email]
+  const contact = [
+    profile.location,
+    profile.phone,
+    profile.email,
+    profile.wechat ? `微信: ${profile.wechat}` : undefined,
+  ]
     .filter(Boolean)
     .join(' | ');
   if (contact) {
@@ -110,14 +116,47 @@ export function renderToIR(
     for (const edu of profile.education) {
       const major = [edu.degree, edu.major].filter(Boolean).join(' · ');
       blocks.push(
-        entryLine(edu.school, major || undefined, edu.timeRange, {
+        entryLine(edu.school || '学校', major || undefined, edu.timeRange, {
           spacingAfterPt: 0.8,
+        }),
+      );
+      const detail = [
+        edu.gpa ? `GPA：${edu.gpa}` : null,
+        edu.rank ? edu.rank : null,
+        edu.courses ? `课程：${edu.courses}` : null,
+      ]
+        .filter(Boolean)
+        .join('；');
+      if (detail) {
+        blocks.push(
+          para([{ text: detail, style: STYLE.body }], {
+            spacingAfterPt: 0.8,
+            bullet: true,
+          }),
+        );
+      }
+    }
+  }
+
+  // 技术能力 from profile.skills (not placements)
+  if (profile.skills.length > 0) {
+    blocks.push(sectionHeading(SECTION_LABELS.skills));
+    for (const skill of profile.skills) {
+      const line = skill.body.trim()
+        ? `${skill.title}：${skill.body.trim().replace(/\n/g, '；')}`
+        : skill.title;
+      if (!line.trim()) continue;
+      blocks.push(
+        para([{ text: line, style: STYLE.skillLine }], {
+          spacingAfterPt: 0.4,
+          bullet: true,
         }),
       );
     }
   }
 
   for (const section of SECTION_ORDER) {
+    if (section === 'skills') continue; // rendered from profile
     const items = placements
       .filter((p) => p.section === section)
       .sort((a, b) => a.sortOrder - b.sortOrder);
@@ -131,10 +170,10 @@ export function renderToIR(
 
   return {
     templateId: DEFAULT_TEMPLATE_ID,
-    templateVersion: '1.1-lin',
+    templateVersion: '1.2-lin',
     blocks,
     meta: {
-      title: profile.name,
+      title: profile.name || 'resume',
       generatedAt: clock(),
     },
   };
@@ -157,20 +196,6 @@ function renderSnapshot(
 ): IrBlock[] {
   const s: ModuleSnapshot = placement.snapshot;
   const out: IrBlock[] = [];
-
-  if (section === 'skills') {
-    // Reference skills are bold single lines: "标签：内容"
-    const line = s.body.trim()
-      ? `${s.title}：${s.body.trim().replace(/\n/g, '；')}`
-      : s.title;
-    out.push(
-      para([{ text: line, style: STYLE.skillLine }], {
-        spacingAfterPt: 0.4,
-        bullet: true,
-      }),
-    );
-    return out;
-  }
 
   if (section === 'awards') {
     const line = [s.title, s.timeRange, s.body.trim()]
@@ -262,4 +287,19 @@ export const LIN_V1_STYLE_PROBE = {
   heiti: HEITI,
   song: SONG,
   sectionOrder: SECTION_ORDER,
+  photoInTemplate: false,
 } as const;
+
+/** Placeholder profile when resume has no applied 基本信息 card. */
+export function placeholderProfile(): Profile {
+  return {
+    id: '',
+    name: '',
+    gender: '',
+    education: [],
+    skills: [],
+    tags: [],
+    createdAt: '',
+    updatedAt: '',
+  };
+}

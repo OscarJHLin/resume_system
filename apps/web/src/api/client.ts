@@ -1,10 +1,14 @@
 import type {
   Category,
   ContentModule,
+  EducationItem,
   Profile,
   ResumeDocument,
   SectionId,
   SectionPlacement,
+  SkillBlock,
+  TemplateId,
+  TemplateMeta,
 } from '@resume/domain';
 
 export class ApiError extends Error {
@@ -53,28 +57,63 @@ export function buildModulesQuery(filters: {
   return qs ? `/api/modules?${qs}` : '/api/modules';
 }
 
-export const api = {
-  getProfile: () => request<Profile>('/api/profile'),
+export type ProfilePayload = {
+  name: string;
+  gender: string;
+  phone: string;
+  email: string;
+  wechat: string;
+  qq?: string;
+  location?: string;
+  summary?: string;
+  education?: EducationItem[];
+  skills?: SkillBlock[];
+  tags?: string[];
+  notes?: string;
+};
 
-  putProfile: (body: Partial<Profile> & { name: string }) =>
-    request<Profile>('/api/profile', {
+export const api = {
+  listTemplates: () => request<TemplateMeta[]>('/api/templates'),
+
+  listProfiles: (filters: { q?: string; tag?: string } = {}) => {
+    const params = new URLSearchParams();
+    if (filters.q) params.set('q', filters.q);
+    if (filters.tag) params.set('tag', filters.tag);
+    const qs = params.toString();
+    return request<Profile[]>(qs ? `/api/profiles?${qs}` : '/api/profiles');
+  },
+
+  getProfile: (id: string) => request<Profile>(`/api/profiles/${id}`),
+
+  createProfile: (body: ProfilePayload) =>
+    request<Profile>('/api/profiles', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+
+  updateProfile: (id: string, body: ProfilePayload) =>
+    request<Profile>(`/api/profiles/${id}`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     }),
 
-  uploadProfilePhoto: (dataBase64: string, mime: string) =>
-    request<Profile>('/api/profile/photo', {
+  deleteProfile: (id: string) =>
+    request<void>(`/api/profiles/${id}`, { method: 'DELETE' }),
+
+  uploadProfilePhoto: (id: string, dataBase64: string, mime: string) =>
+    request<Profile>(`/api/profiles/${id}/photo`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ dataBase64, mime }),
     }),
 
-  clearProfilePhoto: () =>
-    request<Profile>('/api/profile/photo', { method: 'DELETE' }),
+  clearProfilePhoto: (id: string) =>
+    request<Profile>(`/api/profiles/${id}/photo`, { method: 'DELETE' }),
 
-  profilePhotoUrl: (updatedAt?: string) =>
-    `/api/profile/photo${updatedAt ? `?t=${encodeURIComponent(updatedAt)}` : ''}`,
+  profilePhotoUrl: (id: string, updatedAt?: string) =>
+    `/api/profiles/${id}/photo${updatedAt ? `?t=${encodeURIComponent(updatedAt)}` : ''}`,
 
   listModules: (filters: { category?: string; tag?: string; q?: string } = {}) =>
     request<ContentModule[]>(buildModulesQuery(filters)),
@@ -125,14 +164,28 @@ export const api = {
       }>
     >('/api/resumes'),
 
-  createResume: (title?: string) =>
+  createResume: (body?: {
+    title?: string;
+    templateId?: TemplateId | string;
+    profileId?: string;
+  }) =>
     request<ResumeDocument>('/api/resumes', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title }),
+      body: JSON.stringify(body ?? {}),
     }),
 
   getResume: (id: string) => request<ResumeDocument>(`/api/resumes/${id}`),
+
+  patchResume: (
+    id: string,
+    body: { title?: string; profileId?: string | null; templateId?: string },
+  ) =>
+    request<ResumeDocument>(`/api/resumes/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
 
   addPlacement: (resumeId: string, section: SectionId, moduleId: string) =>
     request<SectionPlacement>(`/api/resumes/${resumeId}/placements`, {
