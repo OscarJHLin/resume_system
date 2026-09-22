@@ -3,6 +3,7 @@ import type { Category, ContentModule } from '@resume/domain';
 import { CATEGORIES } from '@resume/domain';
 import { api } from '../../api/client';
 import { setModuleDragData, clearModuleDrag } from '../dnd/dragPayload';
+import { ModuleEditor } from './ModuleEditor';
 import './library.css';
 
 export interface LibrarySidebarProps {
@@ -20,7 +21,7 @@ const CATEGORY_LABEL: Record<Category, string> = {
 };
 
 /**
- * Content library: tag/category/q filter + HTML5 drag sources.
+ * Content library: tag filter + drag sources + create/edit form (S4+).
  */
 export function LibrarySidebar({
   refreshKey = 0,
@@ -34,6 +35,8 @@ export function LibrarySidebar({
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editing, setEditing] = useState<ContentModule | null>(null);
 
   const load = useCallback(async () => {
     if (disabled) {
@@ -69,15 +72,30 @@ export function LibrarySidebar({
   const hint = useMemo(() => {
     if (disabled) return '服务未连接，无法加载内容库。';
     if (modules.length === 0) {
-      return '无匹配模块。可改标签过滤，或先「写入演示数据」。';
+      return '无匹配模块。可「新建模块」或改过滤条件。';
     }
-    return `共 ${modules.length} 条 · 拖到右侧对应区块`;
+    return `共 ${modules.length} 条 · 拖到右侧 / 点编辑`;
   }, [modules.length, disabled]);
 
   return (
     <aside className={`library${disabled ? ' library--disabled' : ''}`}>
-      <h2 className="library__title">内容库</h2>
-      <p className="library__hint">按标签检索（无 JD）。拖拽模块到简历匹配区块。</p>
+      <div className="library__title-row">
+        <h2 className="library__title">内容库</h2>
+        <button
+          type="button"
+          className="library__new"
+          disabled={disabled}
+          onClick={() => {
+            setEditing(null);
+            setEditorOpen(true);
+          }}
+        >
+          新建模块
+        </button>
+      </div>
+      <p className="library__hint">
+        按标签检索（无 JD）。新建/编辑入库后可拖拽到简历匹配区块。
+      </p>
 
       <div className="library__filters">
         <label className="library__field">
@@ -146,9 +164,26 @@ export function LibrarySidebar({
           >
             <div className="library__item-top">
               <span className="library__cat">{CATEGORY_LABEL[m.category]}</span>
-              <span className="library__drag">拖</span>
+              <span className="library__item-actions">
+                <button
+                  type="button"
+                  className="library__edit"
+                  disabled={disabled}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditing(m);
+                    setEditorOpen(true);
+                  }}
+                >
+                  编辑
+                </button>
+                <span className="library__drag">拖</span>
+              </span>
             </div>
             <strong className="library__item-title">{m.title}</strong>
+            {m.timeRange && (
+              <p className="library__time">{m.timeRange}</p>
+            )}
             {m.tags.length > 0 && (
               <div className="library__tags">
                 {m.tags.map((t) => (
@@ -166,6 +201,16 @@ export function LibrarySidebar({
           </li>
         ))}
       </ul>
+
+      <ModuleEditor
+        open={editorOpen}
+        editing={editing}
+        onClose={() => setEditorOpen(false)}
+        onSaved={() => {
+          void load();
+        }}
+        onStatus={onStatus}
+      />
     </aside>
   );
 }

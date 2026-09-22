@@ -81,6 +81,26 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
+  updateModule: (
+    id: string,
+    body: {
+      category: Category;
+      title: string;
+      subtitle?: string;
+      projectType?: string;
+      timeRange?: string;
+      body: string;
+      tags?: string[];
+    },
+  ) =>
+    request<ContentModule>(`/api/modules/${id}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+
+  getModule: (id: string) => request<ContentModule>(`/api/modules/${id}`),
+
   listResumes: () =>
     request<
       Array<{

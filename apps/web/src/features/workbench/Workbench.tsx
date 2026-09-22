@@ -66,7 +66,7 @@ export function Workbench() {
         phone: '13800000000',
         email: 'demo@example.com',
         location: '上海',
-        summary: '关注工程化与可组装简历系统。',
+        summary: '软件工程本科生 · 全栈 / Agent / 工程化',
         education: [
           {
             id: '',
@@ -79,34 +79,40 @@ export function Workbench() {
       });
       setProfile(p);
 
+      const skill = await api.createModule({
+        category: 'skill',
+        title: '编程语言',
+        body: 'TypeScript、Python、JavaScript',
+        tags: ['TypeScript'],
+      });
+      await api.createModule({
+        category: 'skill',
+        title: '工程工具',
+        body: 'Git、Docker、SQLite、Fastify',
+        tags: ['工程'],
+      });
       const project = await api.createModule({
         category: 'project',
         title: '模块化简历系统',
-        subtitle: '个人项目',
-        projectType: '全栈',
+        subtitle: 'TypeScript + Fastify + TipTap',
+        projectType: '个人项目',
         timeRange: '2026.01 - 2026.09',
-        body: '内容库 + 快照组装 + TipTap 投影 + DOCX 导出',
+        body: '内容库标签检索与快照组装，导出对齐林氏简历版式。\nTipTap 仅作投影，DOCX 由 placements → ResumeIR 生成。',
         tags: ['TypeScript', '简历'],
-      });
-      const skill = await api.createModule({
-        category: 'skill',
-        title: 'TypeScript',
-        body: '类型安全与工程化',
-        tags: ['TypeScript'],
       });
       const internship = await api.createModule({
         category: 'internship',
-        title: '示例实习',
-        subtitle: '某科技公司',
-        timeRange: '2022.06 - 2022.09',
-        body: '参与后端接口开发',
+        title: '示例科技有限公司',
+        subtitle: '实习助理',
+        timeRange: '2024.07',
+        body: '参与展会策划与现场执行，协助资料整理与跨部门沟通。',
         tags: ['实习', '后端'],
       });
       // Extra module left unplaced so DnD remains demonstrable.
       await api.createModule({
         category: 'award',
-        title: '优秀奖学金',
-        body: '校级二等奖学金',
+        title: '校级二等奖学金',
+        body: '2024',
         tags: ['获奖'],
       });
 
@@ -117,7 +123,7 @@ export function Workbench() {
       const full = await refreshResume(doc.id);
 
       setLibraryKey((k) => k + 1);
-      setLibraryCount((c) => (c == null ? 4 : c + 4));
+      setLibraryCount((c) => (c == null ? 5 : c + 5));
       setConnection('ok');
       setStatus(
         statusLine(

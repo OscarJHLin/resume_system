@@ -26,9 +26,9 @@ interface ContentModule {
   id: string;
   category: Category;
   title: string;            // 结构化：标题
-  subtitle?: string;        // 结构化：副标题 / 基础站
-  projectType?: string;     // 结构化：项目类型
-  timeRange?: string;       // 结构化：时间；展示格式由模板决定
+  subtitle?: string;        // 结构化：副标题 / 工作站·基础站（可留空）
+  projectType?: string;     // 结构化：项目类型 / 岗位（可留空）
+  timeRange?: string;       // 结构化：时间；表单用日期选择器，可留空；存 `YYYY.MM.DD` 或起止
   body: string;             // 纯文本正文（保留 \n；非 MD / 非 HTML）
   tags: string[];           // 用户维护的多标签；检索主入口
   createdAt: string;        // ISO

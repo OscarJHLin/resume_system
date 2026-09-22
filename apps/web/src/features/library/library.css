@@ -7,8 +7,39 @@
 }
 
 .library__title {
-  margin: 0 0 0.5rem;
+  margin: 0;
   font-size: 1.05rem;
+}
+
+.library__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.library__new,
+.library__edit {
+  font: inherit;
+  font-size: 0.78rem;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--accent);
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+}
+
+.library__item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.library__time {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
 }
 
 .library__hint {
