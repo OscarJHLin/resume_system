@@ -101,6 +101,8 @@ export interface TextStyle {
   bold?: boolean;
   fontSizePt?: number;
   italic?: boolean;
+  /** CJK face hint from template (e.g. 黑体 / 宋体). */
+  fontEastAsia?: string;
 }
 
 export interface IrRun {
@@ -112,12 +114,26 @@ export interface IrParagraph {
   kind: 'paragraph';
   runs: IrRun[];
   spacingAfterPt?: number;
+  spacingBeforePt?: number;
+  alignment?: 'left' | 'center' | 'right';
+  /** Resume body bullet (hanging indent). */
+  bullet?: boolean;
+  /**
+   * Three-column entry row (title | meta | time) using tab stops,
+   * matching reference DOCX ResumeEntry layout.
+   */
+  entryTabs?: boolean;
 }
 
 export interface IrHeading {
   kind: 'heading';
   level: 1 | 2 | 3;
   runs: IrRun[];
+  alignment?: 'left' | 'center' | 'right';
+  spacingBeforePt?: number;
+  spacingAfterPt?: number;
+  /** Section underline rule (reference Heading1 bottom border). */
+  borderBottom?: boolean;
 }
 
 export type IrBlock = IrHeading | IrParagraph;

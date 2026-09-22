@@ -197,7 +197,9 @@ describe('S1 resume assembly', () => {
     assert.ok(name && name.kind === 'heading');
     assert.equal(name.runs[0]?.text, '张三');
     assert.equal(name.runs[0]?.style?.bold, true);
-    assert.equal(name.runs[0]?.style?.fontSizePt, 16);
+    assert.equal(name.runs[0]?.style?.fontSizePt, 22);
+    assert.equal(name.runs[0]?.style?.fontEastAsia, '黑体');
+    assert.equal(name.alignment, 'center');
 
     const titlePara = ir.blocks.find(
       (b) =>

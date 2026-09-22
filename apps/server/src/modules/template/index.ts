@@ -7,12 +7,23 @@ import type {
   ResumeIR,
   SectionId,
   SectionPlacement,
+  TextStyle,
 } from '@resume/domain';
 import {
   DEFAULT_TEMPLATE_ID,
   SECTION_LABELS,
 } from '@resume/domain';
 
+/**
+ * `default-v1` typography is derived from 参考简历模板.docx (lin-v1 reference):
+ * - Name 22pt 黑体 bold centered
+ * - Tagline 11pt 黑体 centered
+ * - Contact 9.5pt 宋体 centered
+ * - Section 13pt 黑体 bold + bottom rule
+ * - Entry 10.5pt 黑体 title + 宋体 meta/time (tab columns)
+ * - Body 10.5pt 宋体 bullets
+ * Photo / hyperlinks / exact tab twips: fidelity limits (see docs).
+ */
 export class UnknownTemplateError extends Error {
   constructor(templateId: string) {
     super(`Unknown template: ${templateId}`);
@@ -20,18 +31,33 @@ export class UnknownTemplateError extends Error {
   }
 }
 
+const HEITI = '黑体';
+const SONG = '宋体';
+
 const STYLE = {
-  name: { bold: true, fontSizePt: 16 },
-  contact: { fontSizePt: 10.5 },
-  sectionHeading: { bold: true, fontSizePt: 12 },
-  title: { bold: true, fontSizePt: 11 },
-  subtitle: { fontSizePt: 10.5 },
-  projectType: { fontSizePt: 10.5 },
-  timeRange: { fontSizePt: 10.5 },
-  body: { fontSizePt: 10.5 },
-  education: { fontSizePt: 10.5 },
+  name: { bold: true, fontSizePt: 22, fontEastAsia: HEITI } satisfies TextStyle,
+  tagline: { fontSizePt: 11, fontEastAsia: HEITI } satisfies TextStyle,
+  contact: { fontSizePt: 9.5, fontEastAsia: SONG } satisfies TextStyle,
+  sectionHeading: {
+    bold: true,
+    fontSizePt: 13,
+    fontEastAsia: HEITI,
+  } satisfies TextStyle,
+  entryTitle: {
+    bold: true,
+    fontSizePt: 10.5,
+    fontEastAsia: HEITI,
+  } satisfies TextStyle,
+  entryMeta: { fontSizePt: 10.5, fontEastAsia: SONG } satisfies TextStyle,
+  skillLine: {
+    bold: true,
+    fontSizePt: 10.5,
+    fontEastAsia: SONG,
+  } satisfies TextStyle,
+  body: { fontSizePt: 10.5, fontEastAsia: SONG } satisfies TextStyle,
 } as const;
 
+/** Module sections after profile header (matches reference DOCX order). */
 const SECTION_ORDER: SectionId[] = [
   'skills',
   'projects',
@@ -53,32 +79,41 @@ export function renderToIR(
   blocks.push({
     kind: 'heading',
     level: 1,
+    alignment: 'center',
+    spacingAfterPt: 6,
     runs: [{ text: profile.name, style: STYLE.name }],
   });
 
-  const contact = [profile.phone, profile.email, profile.location]
-    .filter(Boolean)
-    .join(' · ');
-  if (contact) {
-    blocks.push(para([{ text: contact, style: STYLE.contact }], 6));
-  }
   if (profile.summary?.trim()) {
-    blocks.push(para([{ text: profile.summary, style: STYLE.body }], 8));
+    blocks.push(
+      para([{ text: profile.summary.trim(), style: STYLE.tagline }], {
+        alignment: 'center',
+        spacingAfterPt: 4,
+      }),
+    );
+  }
+
+  const contact = [profile.location, profile.phone, profile.email]
+    .filter(Boolean)
+    .join(' | ');
+  if (contact) {
+    blocks.push(
+      para([{ text: contact, style: STYLE.contact }], {
+        alignment: 'center',
+        spacingAfterPt: 0,
+      }),
+    );
   }
 
   if (profile.education.length > 0) {
-    blocks.push({
-      kind: 'heading',
-      level: 2,
-      runs: [{ text: SECTION_LABELS.education, style: STYLE.sectionHeading }],
-    });
+    blocks.push(sectionHeading(SECTION_LABELS.education));
     for (const edu of profile.education) {
-      const line = [edu.school, edu.degree, edu.major, edu.timeRange]
-        .filter(Boolean)
-        .join(' · ');
-      if (line) {
-        blocks.push(para([{ text: line, style: STYLE.education }], 4));
-      }
+      const major = [edu.degree, edu.major].filter(Boolean).join(' · ');
+      blocks.push(
+        entryLine(edu.school, major || undefined, edu.timeRange, {
+          spacingAfterPt: 0.8,
+        }),
+      );
     }
   }
 
@@ -88,20 +123,15 @@ export function renderToIR(
       .sort((a, b) => a.sortOrder - b.sortOrder);
     if (items.length === 0) continue;
 
-    blocks.push({
-      kind: 'heading',
-      level: 2,
-      runs: [{ text: SECTION_LABELS[section], style: STYLE.sectionHeading }],
-    });
-
+    blocks.push(sectionHeading(SECTION_LABELS[section]));
     for (const item of items) {
-      blocks.push(...renderSnapshot(item));
+      blocks.push(...renderSnapshot(item, section));
     }
   }
 
   return {
     templateId: DEFAULT_TEMPLATE_ID,
-    templateVersion: '1',
+    templateVersion: '1.1-lin',
     blocks,
     meta: {
       title: profile.name,
@@ -110,39 +140,126 @@ export function renderToIR(
   };
 }
 
-function renderSnapshot(placement: SectionPlacement): IrBlock[] {
+function sectionHeading(text: string): IrBlock {
+  return {
+    kind: 'heading',
+    level: 2,
+    borderBottom: true,
+    spacingBeforePt: 10,
+    spacingAfterPt: 6,
+    runs: [{ text, style: STYLE.sectionHeading }],
+  };
+}
+
+function renderSnapshot(
+  placement: SectionPlacement,
+  section: SectionId,
+): IrBlock[] {
   const s: ModuleSnapshot = placement.snapshot;
   const out: IrBlock[] = [];
 
-  const titleLine: IrParagraph['runs'] = [
-    { text: s.title, style: STYLE.title },
-  ];
-  if (s.timeRange) {
-    titleLine.push({ text: `  ${s.timeRange}`, style: STYLE.timeRange });
-  }
-  out.push(para(titleLine, 2));
-
-  if (s.subtitle) {
-    out.push(para([{ text: s.subtitle, style: STYLE.subtitle }], 2));
-  }
-  if (s.projectType) {
+  if (section === 'skills') {
+    // Reference skills are bold single lines: "标签：内容"
+    const line = s.body.trim()
+      ? `${s.title}：${s.body.trim().replace(/\n/g, '；')}`
+      : s.title;
     out.push(
-      para([{ text: `类型：${s.projectType}`, style: STYLE.projectType }], 2),
+      para([{ text: line, style: STYLE.skillLine }], {
+        spacingAfterPt: 0.4,
+        bullet: true,
+      }),
     );
+    return out;
   }
+
+  if (section === 'awards') {
+    const line = [s.title, s.timeRange, s.body.trim()]
+      .filter(Boolean)
+      .join('，');
+    out.push(
+      para([{ text: line, style: STYLE.body }], {
+        spacingAfterPt: 0.8,
+        bullet: true,
+      }),
+    );
+    return out;
+  }
+
+  // projects / internships: entry row + body bullets
+  const meta = [s.subtitle, s.projectType].filter(Boolean).join(' · ');
+  out.push(
+    entryLine(s.title, meta || undefined, s.timeRange, {
+      spacingAfterPt: 0.8,
+      spacingBeforePt: placement.sortOrder > 0 ? 6.5 : 0,
+    }),
+  );
 
   if (s.body.trim()) {
-    for (const line of s.body.split(/\n/)) {
-      out.push(para([{ text: line, style: STYLE.body }], 2));
+    for (const line of s.body.split(/\n/).map((l) => l.trim()).filter(Boolean)) {
+      out.push(
+        para([{ text: line, style: STYLE.body }], {
+          spacingAfterPt: 0.8,
+          bullet: true,
+        }),
+      );
     }
   }
 
   return out;
 }
 
+function entryLine(
+  title: string,
+  middle: string | undefined,
+  time: string | undefined,
+  opts: { spacingAfterPt?: number; spacingBeforePt?: number } = {},
+): IrParagraph {
+  const runs: IrParagraph['runs'] = [
+    { text: title, style: STYLE.entryTitle },
+  ];
+  if (middle || time) {
+    runs.push({ text: '\t', style: STYLE.entryMeta });
+    runs.push({ text: middle ?? '', style: STYLE.entryMeta });
+  }
+  if (time) {
+    runs.push({ text: '\t', style: STYLE.entryMeta });
+    runs.push({ text: time, style: STYLE.entryMeta });
+  }
+  return para(runs, {
+    spacingAfterPt: opts.spacingAfterPt,
+    spacingBeforePt: opts.spacingBeforePt,
+    entryTabs: true,
+  });
+}
+
 function para(
   runs: IrParagraph['runs'],
-  spacingAfterPt?: number,
+  opts: {
+    spacingAfterPt?: number;
+    spacingBeforePt?: number;
+    alignment?: IrParagraph['alignment'];
+    bullet?: boolean;
+    entryTabs?: boolean;
+  } = {},
 ): IrParagraph {
-  return { kind: 'paragraph', runs, spacingAfterPt };
+  return {
+    kind: 'paragraph',
+    runs,
+    spacingAfterPt: opts.spacingAfterPt,
+    spacingBeforePt: opts.spacingBeforePt,
+    alignment: opts.alignment,
+    bullet: opts.bullet,
+    entryTabs: opts.entryTabs,
+  };
 }
+
+/** Exported for tests — style constants derived from reference DOCX. */
+export const LIN_V1_STYLE_PROBE = {
+  namePt: STYLE.name.fontSizePt,
+  sectionPt: STYLE.sectionHeading.fontSizePt,
+  bodyPt: STYLE.body.fontSizePt,
+  contactPt: STYLE.contact.fontSizePt,
+  heiti: HEITI,
+  song: SONG,
+  sectionOrder: SECTION_ORDER,
+} as const;
