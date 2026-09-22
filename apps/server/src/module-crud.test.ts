@@ -88,6 +88,82 @@ describe('module CRUD from editor payloads', () => {
     assert.equal(res.status, 400);
   });
 
+  it('deletes module without touching resume placements (snapshot isolation)', async () => {
+    const mod = await json<{ id: string }>('POST', '/api/modules', {
+      category: 'project',
+      title: '可删项目',
+      body: '正文',
+      tags: [],
+    });
+    const resume = await json<{ id: string }>('POST', '/api/resumes', {
+      title: '带快照',
+    });
+    const placement = await json<{
+      id: string;
+      snapshot: { title: string };
+    }>('POST', `/api/resumes/${resume.id}/placements`, {
+      section: 'projects',
+      moduleId: mod.id,
+    });
+    assert.equal(placement.snapshot.title, '可删项目');
+
+    const del = await fetch(`${baseUrl}/api/modules/${mod.id}`, {
+      method: 'DELETE',
+    });
+    assert.equal(del.status, 204);
+
+    const gone = await fetch(`${baseUrl}/api/modules/${mod.id}`);
+    assert.equal(gone.status, 404);
+
+    const still = await json<{
+      placements: Array<{ snapshot: { title: string } }>;
+    }>('GET', `/api/resumes/${resume.id}`);
+    assert.equal(still.placements.length, 1);
+    assert.equal(still.placements[0]?.snapshot.title, '可删项目');
+  });
+
+  it('places latest module fields after update (temp DB)', async () => {
+    const mod = await json<{ id: string }>('POST', '/api/modules', {
+      category: 'project',
+      title: '初版标题',
+      body: '旧正文',
+      subtitle: '旧职责',
+      projectType: '旧栈',
+      tags: [],
+    });
+    await json('PUT', `/api/modules/${mod.id}`, {
+      category: 'project',
+      title: '新标题',
+      body: '新正文第一行\n第二行',
+      subtitle: '新职责',
+      projectType: 'Flutter',
+      timeRange: '2025.01 - 2025.06',
+      tags: [],
+    });
+    const resume = await json<{ id: string }>('POST', '/api/resumes', {
+      title: '验新鲜度',
+    });
+    const placement = await json<{
+      snapshot: {
+        title: string;
+        body: string;
+        subtitle?: string;
+        projectType?: string;
+        timeRange?: string;
+        sourceModuleId: string;
+      };
+    }>('POST', `/api/resumes/${resume.id}/placements`, {
+      section: 'projects',
+      moduleId: mod.id,
+    });
+    assert.equal(placement.snapshot.sourceModuleId, mod.id);
+    assert.equal(placement.snapshot.title, '新标题');
+    assert.equal(placement.snapshot.body, '新正文第一行\n第二行');
+    assert.equal(placement.snapshot.subtitle, '新职责');
+    assert.equal(placement.snapshot.projectType, 'Flutter');
+    assert.equal(placement.snapshot.timeRange, '2025.01 - 2025.06');
+  });
+
   async function json<T>(
     method: string,
     urlPath: string,

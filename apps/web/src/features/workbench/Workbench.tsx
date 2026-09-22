@@ -315,8 +315,13 @@ export function Workbench() {
           onApplyProfile={onApplyProfile}
           onProfilesChanged={() => {
             setLibraryKey((k) => k + 1);
-            if (resume?.profileId) {
-              void api.getProfile(resume.profileId).then(setProfile).catch(() => undefined);
+            if (resume) {
+              void refreshResume(resume.id).catch(() => undefined);
+            }
+          }}
+          onModulesChanged={() => {
+            if (resume) {
+              void refreshResume(resume.id).catch(() => undefined);
             }
           }}
         />

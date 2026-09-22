@@ -75,7 +75,11 @@ export function ModuleEditor({
       const mod = editing
         ? await api.updateModule(editing.id, result.payload)
         : await api.createModule(result.payload);
-      onStatus?.(editing ? `已更新模块：${mod.title}` : `已创建模块：${mod.title}`);
+      onStatus?.(
+        editing
+          ? `已更新模块：${mod.title}（若已在简历中，请删除旧条目后重新拖入）`
+          : `已创建模块：${mod.title}`,
+      );
       onSaved(mod);
       onClose();
     } catch (e) {

@@ -20,6 +20,7 @@ import {
 import { placementsForSection } from '../editor/docModel';
 import { canMovePlacement } from '../editor/placementOrder';
 import { api } from '../../api/client';
+import { placementDisplayFields } from './placementDisplay';
 import './resumeCanvas.css';
 
 export interface ResumeCanvasProps {
@@ -323,16 +324,10 @@ function PlacementRow({
   onDelete: () => void;
 }) {
   const s = placement.snapshot;
+  const view = placementDisplayFields(s, placement.section);
   const isInternship = placement.section === 'internships';
-  const isAward = placement.section === 'awards';
-  const middle = isInternship
-    ? s.subtitle || s.projectType
-    : s.projectType || s.subtitle;
 
-  if (isAward) {
-    const line = [s.title, s.timeRange, s.body.trim()]
-      .filter(Boolean)
-      .join('，');
+  if (view.awardLine !== undefined) {
     return (
       <article className="canvas__item">
         <div className="canvas__item-toolbar">
@@ -346,7 +341,7 @@ function PlacementRow({
             删
           </button>
         </div>
-        <p className="canvas__bullet">{line}</p>
+        <p className="canvas__bullet">{view.awardLine}</p>
       </article>
     );
   }
@@ -369,19 +364,15 @@ function PlacementRow({
           isInternship ? 'canvas__entry canvas__entry--intern' : 'canvas__entry'
         }
       >
-        <span className="canvas__entry-title">{s.title}</span>
-        <span className="canvas__entry-mid">{middle}</span>
-        <span className="canvas__entry-right">{s.timeRange}</span>
+        <span className="canvas__entry-title">{view.title}</span>
+        <span className="canvas__entry-mid">{view.middle}</span>
+        <span className="canvas__entry-right">{view.timeRange}</span>
       </div>
-      {s.body
-        .split(/\n/)
-        .map((l) => l.trim())
-        .filter(Boolean)
-        .map((line) => (
-          <p key={line} className="canvas__bullet">
-            {line}
-          </p>
-        ))}
+      {view.bodyLines.map((line, i) => (
+        <p key={`${i}-${line.slice(0, 24)}`} className="canvas__bullet">
+          {line}
+        </p>
+      ))}
     </article>
   );
 }

@@ -19,6 +19,8 @@ export interface ContentDatabaseProps {
   onCountChange?: (count: number) => void;
   onApplyProfile?: (profileId: string) => Promise<void>;
   onProfilesChanged?: () => void;
+  /** After module create/update — refresh resume so synced snapshots appear. */
+  onModulesChanged?: () => void;
 }
 
 type TabId = LibraryModuleCategory | 'profile';
@@ -42,6 +44,7 @@ export function ContentDatabase({
   onCountChange,
   onApplyProfile,
   onProfilesChanged,
+  onModulesChanged,
 }: ContentDatabaseProps) {
   const [modules, setModules] = useState<ContentModule[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -241,7 +244,8 @@ export function ContentDatabase({
                 </span>
               </div>
               <div className="cdb__field cdb__stack">
-                {m.projectType || m.subtitle || '技术栈'}
+                {[m.projectType, m.subtitle].filter(Boolean).join(' · ') ||
+                  '技术栈 / 职责'}
               </div>
               <div className="cdb__field cdb__body">
                 {m.body.trim() || '正文'}
@@ -253,18 +257,20 @@ export function ContentDatabase({
                   </span>
                 ))}
               </div>
-              <button
-                type="button"
-                className="cdb__edit"
-                disabled={disabled}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setEditing(m);
-                  setEditorOpen(true);
-                }}
-              >
-                编辑
-              </button>
+              <div className="cdb__card-actions">
+                <button
+                  type="button"
+                  className="cdb__edit"
+                  disabled={disabled}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditing(m);
+                    setEditorOpen(true);
+                  }}
+                >
+                  编辑
+                </button>
+              </div>
             </li>
           ))}
         </ul>
@@ -277,6 +283,7 @@ export function ContentDatabase({
         onClose={() => setEditorOpen(false)}
         onSaved={() => {
           void load();
+          onModulesChanged?.();
         }}
         onStatus={onStatus}
       />

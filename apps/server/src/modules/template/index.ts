@@ -190,12 +190,10 @@ function renderSnapshot(
     return out;
   }
 
-  // projects: title | tech(stack) | dates — matches reference ResumeEntry
-  // internships: company | role | dates — wider center tab (6520)
+  // projects: title | 技术栈 · 担任的职责 | dates
+  // internships: company | 岗位 · 部门 | dates — show every saved field
   const middle =
-    section === 'internships'
-      ? s.subtitle || s.projectType || undefined
-      : s.projectType || s.subtitle || undefined;
+    [s.projectType, s.subtitle].filter(Boolean).join(' · ') || undefined;
   const right = s.timeRange || undefined;
   const tabCenter =
     section === 'internships'

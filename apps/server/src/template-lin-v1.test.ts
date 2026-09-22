@@ -109,7 +109,7 @@ describe('lin-v1 / default-v1 template fidelity', () => {
     );
     assert.ok(entry && entry.kind === 'paragraph');
     assert.ok(entry.runs.some((r) => r.text === '\t'));
-    assert.ok(entry.runs.some((r) => r.text === 'Python'));
+    assert.ok(entry.runs.some((r) => r.text === 'Python · 个人项目'));
     assert.equal(entry.entryTabs, 4933);
   });
 
