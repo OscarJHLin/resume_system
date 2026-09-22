@@ -54,7 +54,7 @@ describe('module form validation', () => {
 
     const good = validateModuleForm({
       ...emptyForm('project'),
-      title: 'Agent 记忆',
+      title: '示例记忆',
       body: '语义检索',
       tagsText: 'AI, Agent',
     });
@@ -92,7 +92,7 @@ describe('module form validation', () => {
       id: 'm1',
       category: 'internship',
       title: '示例教育科技',
-      subtitle: '珠海',
+      subtitle: '示例市',
       projectType: '实习助理',
       timeRange: '2024.07.01',
       body: '展会执行',
@@ -105,7 +105,7 @@ describe('module form validation', () => {
     assert.equal(r.ok, true);
     if (r.ok) {
       assert.equal(r.payload.title, '示例教育科技');
-      assert.equal(r.payload.subtitle, '珠海');
+      assert.equal(r.payload.subtitle, '示例市');
     }
   });
 

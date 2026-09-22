@@ -14,7 +14,7 @@ const profile: Profile = {
   id: 'p1',
   name: '张三',
   phone: '1',
-  email: 'a@b.c',
+  email: 'zhangsan@example.com',
   location: '上海',
   summary: '简介',
   education: [

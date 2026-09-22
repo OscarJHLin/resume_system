@@ -13,7 +13,7 @@ describe('libraryDelete confirms', () => {
   });
 
   it('profile message warns when applied', () => {
-    assert.match(deleteProfileConfirmMessage('林', true), /清空/);
-    assert.doesNotMatch(deleteProfileConfirmMessage('林', false), /清空/);
+    assert.match(deleteProfileConfirmMessage('张三', true), /清空/);
+    assert.doesNotMatch(deleteProfileConfirmMessage('张三', false), /清空/);
   });
 });

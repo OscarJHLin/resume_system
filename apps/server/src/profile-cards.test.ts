@@ -75,7 +75,7 @@ describe('profile cards + template select', () => {
       templateId: string;
       placements: unknown[];
     }>('POST', '/api/resumes', {
-      title: '林氏模板稿',
+      title: '示例模板稿',
       templateId: DEFAULT_TEMPLATE_ID,
     });
     assert.equal(resume.templateId, DEFAULT_TEMPLATE_ID);

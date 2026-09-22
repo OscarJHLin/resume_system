@@ -33,7 +33,7 @@ export const TEMPLATES: readonly TemplateMeta[] = [
   {
     id: DEFAULT_TEMPLATE_ID,
     label: '蓝黑简洁简历',
-    description: '对齐参考简历模板：居中证件照→姓名→应聘岗位→联系；三栏条目',
+    description: '蓝黑简洁：居中证件照→姓名→应聘岗位→联系；三栏条目',
   },
 ] as const;
 

@@ -3,7 +3,7 @@
 - as_of: 2026-09-23
 - Template id（合同）: `default-v1`（内部亦称 lin-v1）
 - 用户可见名称: **蓝黑简洁简历**
-- 视觉参考: `~/(local-resume-sample)/参考简历模板.docx`（不入库二进制）
+- 视觉参考: 本地参考 DOCX（蓝黑简洁版式；**不入库**二进制）
 - Pack: `templates/blue-black-simple/manifest.json`（v1.2.1）
 - 工作台：顶栏「选择简历模板」；**证件照居中置于姓名上方**（有照片时）
 

@@ -18,7 +18,7 @@ describe('profile required fields', () => {
       validateProfileRequired({
         name: '张三',
         gender: '男',
-        email: 'a@b.com',
+        email: 'zhangsan@example.com',
         phone: '138',
       }).ok,
       false,
@@ -29,7 +29,7 @@ describe('profile required fields', () => {
     const r = validateProfileRequired({
       name: '张三',
       gender: '女',
-      email: 'a@b.com',
+      email: 'zhangsan@example.com',
       phone: '13800000000',
       wechat: 'wx_zhang',
     });
@@ -40,7 +40,7 @@ describe('profile required fields', () => {
     const r = validateProfileRequired({
       name: '张三',
       gender: '其他',
-      email: 'a@b.com',
+      email: 'zhangsan@example.com',
       phone: '138',
       wechat: 'wx',
     });

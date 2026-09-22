@@ -8,7 +8,7 @@ import {
 } from './modules/template/index.js';
 
 describe('lin-v1 / default-v1 template fidelity', () => {
-  it('locks typography probes from reference DOCX (参考简历模板)', () => {
+  it('locks typography probes from blue-black-simple reference', () => {
     assert.equal(LIN_V1_STYLE_PROBE.namePt, 22);
     assert.equal(LIN_V1_STYLE_PROBE.sectionPt, 14);
     assert.equal(LIN_V1_STYLE_PROBE.bodyPt, 10.5);
@@ -35,16 +35,16 @@ describe('lin-v1 / default-v1 template fidelity', () => {
           id: 'p1',
           name: '张三',
           gender: '男',
-          phone: '15000000000',
-          email: 'a@b.c',
-          wechat: 'wx_demo',
+          phone: '13800000000',
+          email: 'zhangsan@example.com',
+          wechat: 'wx_zhangsan',
           location: '示例市',
-          summary: '软件工程本科生 · AI 应用',
+          summary: '软件工程师',
           statement: '善于跨端协作\n关注落地交付',
           education: [
             {
               id: 'e1',
-              school: '示例学院',
+              school: '示例大学',
               degree: '本科',
               major: '软件工程',
               timeRange: '2023.09 - 2027.06',
@@ -67,7 +67,7 @@ describe('lin-v1 / default-v1 template fidelity', () => {
             snapshot: {
               sourceModuleId: 'm2',
               category: 'project',
-              title: 'Agent 记忆原型',
+              title: '示例记忆原型',
               subtitle: '个人项目',
               projectType: 'Python',
               timeRange: '2025',
@@ -87,7 +87,7 @@ describe('lin-v1 / default-v1 template fidelity', () => {
       (b) =>
         b.kind === 'paragraph' &&
         b.runs[0]?.text === '应聘岗位：' &&
-        b.runs[1]?.text === '软件工程本科生 · AI 应用',
+        b.runs[1]?.text === '软件工程师',
     );
     assert.ok(roleLine && roleLine.kind === 'paragraph');
     assert.equal(roleLine.runs[0]?.style?.bold, true);
@@ -139,7 +139,7 @@ describe('lin-v1 / default-v1 template fidelity', () => {
       (b) =>
         b.kind === 'paragraph' &&
         b.entryTabs &&
-        b.runs.some((r) => r.text === 'Agent 记忆原型'),
+        b.runs.some((r) => r.text === '示例记忆原型'),
     );
     assert.ok(entry && entry.kind === 'paragraph');
     assert.ok(entry.runs.some((r) => r.text === '\t'));
@@ -149,7 +149,7 @@ describe('lin-v1 / default-v1 template fidelity', () => {
     assert.equal(techRun.style?.fontSizePt, 9.5);
     assert.notEqual(techRun.style?.bold, true);
     assert.ok(entry.runs.some((r) => r.text === '个人项目'));
-    assert.ok(entry.runs.some((r) => r.style?.bold && r.text === 'Agent 记忆原型'));
+    assert.ok(entry.runs.some((r) => r.style?.bold && r.text === '示例记忆原型'));
     assert.equal(entry.entryTabs, 4933);
 
     const bodyParas = ir.blocks.filter(

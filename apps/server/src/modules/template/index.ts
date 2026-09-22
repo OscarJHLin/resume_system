@@ -24,7 +24,7 @@ import {
 /**
  * Template-driven IR renderer. Typography / tabs / photo placement come from
  * templates/<slug>/manifest.json (see docs/07-template-packs.md).
- * Blue-black-simple matches 参考简历模板.docx: centered photo above name,
+ * Blue-black-simple: centered photo above name,
  * three-column entry tabs, skill/body lines without auto bullets.
  */
 export class UnknownTemplateError extends Error {
