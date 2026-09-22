@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS profile (
   location TEXT,
   summary TEXT,
   education_json TEXT NOT NULL DEFAULT '[]',
+  photo_filename TEXT,
   updated_at TEXT NOT NULL
 );
 
@@ -56,7 +57,17 @@ export function openDatabase(dbPath: string): Db {
   const db = new DatabaseSync(dbPath);
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
+  migrateProfilePhotoColumn(db);
   return db;
+}
+
+function migrateProfilePhotoColumn(db: Db): void {
+  const cols = db.prepare('PRAGMA table_info(profile)').all() as Array<{
+    name: string;
+  }>;
+  if (!cols.some((c) => c.name === 'photo_filename')) {
+    db.exec('ALTER TABLE profile ADD COLUMN photo_filename TEXT');
+  }
 }
 
 export function defaultDbPath(): string {
@@ -64,4 +75,11 @@ export function defaultDbPath(): string {
     process.env.RESUME_DB_PATH ??
     path.join(process.cwd(), 'data', 'resume.db')
   );
+}
+
+/** Photos live next to the SQLite file: <dbDir>/photos/ */
+export function photosDir(dbPath: string = defaultDbPath()): string {
+  const dir = path.join(path.dirname(dbPath), 'photos');
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
 }

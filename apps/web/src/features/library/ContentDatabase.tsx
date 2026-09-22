@@ -1,0 +1,193 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { Category, ContentModule } from '@resume/domain';
+import { api } from '../../api/client';
+import { clearModuleDrag, setModuleDragData } from '../dnd/dragPayload';
+import { ModuleEditor } from './ModuleEditor';
+import './contentDatabase.css';
+
+export interface ContentDatabaseProps {
+  refreshKey?: number;
+  disabled?: boolean;
+  onStatus?: (message: string) => void;
+  onCountChange?: (count: number) => void;
+}
+
+type TabId = 'project' | 'internship' | 'skill' | 'award' | 'all';
+
+const TABS: Array<{ id: TabId; label: string }> = [
+  { id: 'project', label: '项目' },
+  { id: 'internship', label: '实习' },
+  { id: 'skill', label: '技能' },
+  { id: 'award', label: '获奖' },
+  { id: 'all', label: '全部' },
+];
+
+/**
+ * Right column: content DB — search, category tabs, +, cards (wireframe).
+ */
+export function ContentDatabase({
+  refreshKey = 0,
+  disabled = false,
+  onStatus,
+  onCountChange,
+}: ContentDatabaseProps) {
+  const [modules, setModules] = useState<ContentModule[]>([]);
+  const [tab, setTab] = useState<TabId>('project');
+  const [q, setQ] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editing, setEditing] = useState<ContentModule | null>(null);
+  const [createCategory, setCreateCategory] = useState<Category>('project');
+
+  const load = useCallback(async () => {
+    if (disabled) {
+      setError('API 未连接');
+      setModules([]);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const list = await api.listModules({
+        category: tab === 'all' ? undefined : tab,
+        q: q.trim() || undefined,
+      });
+      setModules(list);
+      if (tab === 'all' && !q.trim()) onCountChange?.(list.length);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+      onStatus?.(`内容库加载失败: ${msg}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [disabled, tab, q, onCountChange, onStatus]);
+
+  useEffect(() => {
+    void load();
+  }, [load, refreshKey]);
+
+  const emptyHint = useMemo(() => {
+    if (disabled) return '服务未连接';
+    if (loading) return '加载中…';
+    if (modules.length === 0) return '无记录。点 + 新建，或切换标签。';
+    return `${modules.length} 条 · 拖到左侧模板`;
+  }, [disabled, loading, modules.length]);
+
+  return (
+    <aside className={`cdb${disabled ? ' cdb--disabled' : ''}`}>
+      <div className="cdb__search">
+        <span className="cdb__search-icon" aria-hidden>
+          ⌕
+        </span>
+        <input
+          type="search"
+          placeholder="搜索"
+          value={q}
+          disabled={disabled}
+          onChange={(e) => setQ(e.target.value)}
+        />
+      </div>
+
+      <div className="cdb__tabs">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className={
+              tab === t.id ? 'cdb__tab cdb__tab--active' : 'cdb__tab'
+            }
+            disabled={disabled}
+            onClick={() => setTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+        <button
+          type="button"
+          className="cdb__add"
+          disabled={disabled}
+          title="新建"
+          aria-label="新建模块"
+          onClick={() => {
+            const cat: Category =
+              tab === 'all' || tab === 'project'
+                ? 'project'
+                : tab === 'internship'
+                  ? 'internship'
+                  : tab === 'skill'
+                    ? 'skill'
+                    : 'award';
+            setCreateCategory(cat);
+            setEditing(null);
+            setEditorOpen(true);
+          }}
+        >
+          +
+        </button>
+      </div>
+
+      <p className="cdb__meta">{error ?? emptyHint}</p>
+
+      <ul className="cdb__list">
+        {modules.map((m) => (
+          <li
+            key={m.id}
+            className="cdb__card"
+            draggable={!disabled}
+            onDragStart={(e) => {
+              if (disabled) return;
+              setModuleDragData(e.dataTransfer, m.id, m.category);
+              onStatus?.(`拖拽中: ${m.title}`);
+            }}
+            onDragEnd={() => clearModuleDrag()}
+          >
+            <div className="cdb__card-row">
+              <span className="cdb__field cdb__title">{m.title}</span>
+              <span className="cdb__field cdb__time">
+                {m.timeRange || '时间'}
+              </span>
+            </div>
+            <div className="cdb__field cdb__stack">
+              {m.projectType || m.subtitle || '技术栈'}
+            </div>
+            <div className="cdb__field cdb__body">
+              {m.body.trim() || '正文'}
+            </div>
+            <div className="cdb__tags">
+              {(m.tags.length ? m.tags : ['标签']).map((t) => (
+                <span key={t} className="cdb__tag">
+                  {t}
+                </span>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="cdb__edit"
+              disabled={disabled}
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditing(m);
+                setEditorOpen(true);
+              }}
+            >
+              编辑
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      <ModuleEditor
+        open={editorOpen}
+        editing={editing}
+        defaultCategory={createCategory}
+        onClose={() => setEditorOpen(false)}
+        onSaved={() => {
+          void load();
+        }}
+        onStatus={onStatus}
+      />
+    </aside>
+  );
+}

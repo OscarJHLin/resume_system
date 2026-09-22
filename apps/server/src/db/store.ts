@@ -9,7 +9,10 @@ import type {
   TemplateId,
 } from '@resume/domain';
 import { DEFAULT_TEMPLATE_ID } from '@resume/domain';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { Db } from './client.js';
+import { defaultDbPath, photosDir } from './client.js';
 import { newId, nowIso } from '../util.js';
 import { badRequest, notFound } from '../errors.js';
 
@@ -21,8 +24,23 @@ function parseJson<T>(raw: string, fallback: T): T {
   }
 }
 
+type ProfileRow = {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  location: string | null;
+  summary: string | null;
+  education_json: string;
+  photo_filename?: string | null;
+  updated_at: string;
+};
+
 export class Store {
-  constructor(private readonly db: Db) {}
+  constructor(
+    private readonly db: Db,
+    private readonly dbPath: string = defaultDbPath(),
+  ) {}
 
   ensureDefaultProfile(): Profile {
     const row = this.db
@@ -39,8 +57,8 @@ export class Store {
     };
     this.db
       .prepare(
-        `INSERT INTO profile (id, name, phone, email, location, summary, education_json, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO profile (id, name, phone, email, location, summary, education_json, photo_filename, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         profile.id,
@@ -50,6 +68,7 @@ export class Store {
         null,
         null,
         '[]',
+        null,
         profile.updatedAt,
       );
     return profile;
@@ -57,30 +76,12 @@ export class Store {
 
   getProfile(): Profile {
     const row = this.db.prepare('SELECT * FROM profile LIMIT 1').get() as
-      | {
-          id: string;
-          name: string;
-          phone: string | null;
-          email: string | null;
-          location: string | null;
-          summary: string | null;
-          education_json: string;
-          updated_at: string;
-        }
+      | ProfileRow
       | undefined;
     if (!row) {
       throw notFound('Profile not found');
     }
-    return {
-      id: row.id,
-      name: row.name,
-      phone: row.phone ?? undefined,
-      email: row.email ?? undefined,
-      location: row.location ?? undefined,
-      summary: row.summary ?? undefined,
-      education: parseJson<EducationItem[]>(row.education_json, []),
-      updatedAt: row.updated_at,
-    };
+    return this.rowToProfile(row);
   }
 
   updateProfile(input: {
@@ -116,6 +117,82 @@ export class Store {
         current.id,
       );
     return this.getProfile();
+  }
+
+  saveProfilePhoto(bytes: Buffer, ext: string): Profile {
+    const profile = this.ensureDefaultProfile();
+    const safeExt = ext.replace(/^\./, '').toLowerCase();
+    if (!['jpg', 'jpeg', 'png', 'webp'].includes(safeExt)) {
+      throw badRequest('photo must be jpg, png, or webp');
+    }
+    const filename = `profile.${safeExt === 'jpeg' ? 'jpg' : safeExt}`;
+    const dir = photosDir(this.dbPath);
+    for (const f of fs.readdirSync(dir)) {
+      if (f.startsWith('profile.')) fs.unlinkSync(path.join(dir, f));
+    }
+    fs.writeFileSync(path.join(dir, filename), bytes);
+    this.db
+      .prepare(
+        'UPDATE profile SET photo_filename = ?, updated_at = ? WHERE id = ?',
+      )
+      .run(filename, nowIso(), profile.id);
+    return this.getProfile();
+  }
+
+  clearProfilePhoto(): Profile {
+    const profile = this.ensureDefaultProfile();
+    const row = this.db
+      .prepare('SELECT photo_filename FROM profile WHERE id = ?')
+      .get(profile.id) as { photo_filename: string | null } | undefined;
+    if (row?.photo_filename) {
+      const full = path.join(photosDir(this.dbPath), row.photo_filename);
+      if (fs.existsSync(full)) fs.unlinkSync(full);
+    }
+    this.db
+      .prepare(
+        'UPDATE profile SET photo_filename = NULL, updated_at = ? WHERE id = ?',
+      )
+      .run(nowIso(), profile.id);
+    return this.getProfile();
+  }
+
+  getProfilePhoto(): { buffer: Buffer; mime: string; filename: string } | null {
+    const row = this.db.prepare('SELECT photo_filename FROM profile LIMIT 1').get() as
+      | { photo_filename: string | null }
+      | undefined;
+    if (!row?.photo_filename) return null;
+    const full = path.join(photosDir(this.dbPath), row.photo_filename);
+    if (!fs.existsSync(full)) return null;
+    const ext = path.extname(row.photo_filename).toLowerCase();
+    const mime =
+      ext === '.png'
+        ? 'image/png'
+        : ext === '.webp'
+          ? 'image/webp'
+          : 'image/jpeg';
+    return {
+      buffer: fs.readFileSync(full),
+      mime,
+      filename: row.photo_filename,
+    };
+  }
+
+  private rowToProfile(row: ProfileRow): Profile {
+    const name = row.photo_filename ?? null;
+    const photoPath = name
+      ? path.join(photosDir(this.dbPath), name)
+      : null;
+    return {
+      id: row.id,
+      name: row.name,
+      phone: row.phone ?? undefined,
+      email: row.email ?? undefined,
+      location: row.location ?? undefined,
+      summary: row.summary ?? undefined,
+      education: parseJson<EducationItem[]>(row.education_json, []),
+      hasPhoto: Boolean(photoPath && fs.existsSync(photoPath)),
+      updatedAt: row.updated_at,
+    };
   }
 
   listModules(filter: {

@@ -45,6 +45,8 @@ export interface Profile {
   location?: string;
   summary?: string;
   education: EducationItem[];
+  /** True when a local photo file is stored for this profile. */
+  hasPhoto?: boolean;
   updatedAt: string;
 }
 

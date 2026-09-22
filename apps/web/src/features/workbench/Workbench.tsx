@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Profile, ResumeDocument, SectionId } from '@resume/domain';
 import { api } from '../../api/client';
-import { LibrarySidebar } from '../library/LibrarySidebar';
-import { EditorShell } from '../editor/EditorShell';
+import { ResumeCanvas } from '../canvas/ResumeCanvas';
+import { ContentDatabase } from '../library/ContentDatabase';
 import { placementsForSection } from '../editor/docModel';
 import { movePlacementId } from '../editor/placementOrder';
 import {
@@ -13,7 +13,7 @@ import {
 import './workbench.css';
 
 /**
- * S4 workbench: empty/error polish + placement delete/reorder + TipTap projection.
+ * Wireframe workbench: left template canvas + right content DB + export.
  */
 export function Workbench() {
   const [resume, setResume] = useState<ResumeDocument | null>(null);
@@ -43,19 +43,26 @@ export function Workbench() {
       setConnection('ok');
       if (list[0]) {
         await refreshResume(list[0].id);
-        setStatus(statusLine('S4', `已加载简历 ${list[0].id.slice(0, 8)}…`));
+        setStatus(statusLine('就绪', list[0].title));
       } else {
-        setStatus(statusLine('S4', '就绪 · 尚无简历'));
+        setStatus(statusLine('就绪', '尚无简历'));
       }
     } catch {
       setConnection('error');
-      setStatus(statusLine('S4', '无法连接 API'));
+      setStatus(statusLine('错误', '无法连接 API'));
     }
   }, [refreshResume]);
 
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  const ensureResume = useCallback(async () => {
+    if (resume) return resume;
+    const doc = await api.createResume('我的简历');
+    setResume(doc);
+    return doc;
+  }, [resume]);
 
   const seedDemo = useCallback(async () => {
     setBusy(true);
@@ -65,15 +72,15 @@ export function Workbench() {
         name: '演示候选人',
         phone: '13800000000',
         email: 'demo@example.com',
-        location: '上海',
+        location: '示例市',
         summary: '软件工程本科生 · 全栈 / Agent / 工程化',
         education: [
           {
             id: '',
             school: '示例大学',
             degree: '本科',
-            major: '计算机',
-            timeRange: '2018-2022',
+            major: '软件工程',
+            timeRange: '2018.09 - 2022.06',
           },
         ],
       });
@@ -85,30 +92,24 @@ export function Workbench() {
         body: 'TypeScript、Python、JavaScript',
         tags: ['TypeScript'],
       });
-      await api.createModule({
-        category: 'skill',
-        title: '工程工具',
-        body: 'Git、Docker、SQLite、Fastify',
-        tags: ['工程'],
-      });
       const project = await api.createModule({
         category: 'project',
         title: '模块化简历系统',
-        subtitle: 'TypeScript + Fastify + TipTap',
-        projectType: '个人项目',
-        timeRange: '2026.01 - 2026.09',
-        body: '内容库标签检索与快照组装，导出对齐林氏简历版式。\nTipTap 仅作投影，DOCX 由 placements → ResumeIR 生成。',
+        subtitle: '个人项目',
+        projectType: 'TypeScript / Fastify / TipTap',
+        timeRange: '2026.01.01 - 2026.09.01',
+        body: '内容库标签检索与快照组装。\n导出对齐林氏简历版式。',
         tags: ['TypeScript', '简历'],
       });
       const internship = await api.createModule({
         category: 'internship',
         title: '示例科技有限公司',
-        subtitle: '实习助理',
-        timeRange: '2024.07',
-        body: '参与展会策划与现场执行，协助资料整理与跨部门沟通。',
-        tags: ['实习', '后端'],
+        subtitle: '珠海',
+        projectType: '实习助理',
+        timeRange: '2024.07.01',
+        body: '参与展会策划与现场执行。',
+        tags: ['实习'],
       });
-      // Extra module left unplaced so DnD remains demonstrable.
       await api.createModule({
         category: 'award',
         title: '校级二等奖学金',
@@ -116,21 +117,15 @@ export function Workbench() {
         tags: ['获奖'],
       });
 
-      const doc = await api.createResume('S4演示简历');
+      const doc = await api.createResume('演示简历');
       await api.addPlacement(doc.id, 'projects', project.id);
       await api.addPlacement(doc.id, 'skills', skill.id);
       await api.addPlacement(doc.id, 'internships', internship.id);
       const full = await refreshResume(doc.id);
-
       setLibraryKey((k) => k + 1);
-      setLibraryCount((c) => (c == null ? 5 : c + 5));
+      setLibraryCount((c) => (c == null ? 4 : c + 4));
       setConnection('ok');
-      setStatus(
-        statusLine(
-          'S4',
-          `已种子化可读简历（${full.placements.length} 条）· 可拖入/删除/排序`,
-        ),
-      );
+      setStatus(statusLine('演示', `${full.placements.length} 条已落入`));
     } catch (e) {
       setStatus(`种子失败: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
@@ -140,22 +135,19 @@ export function Workbench() {
 
   const onDropModule = useCallback(
     async (section: SectionId, moduleId: string) => {
-      if (!resume) {
-        setStatus('请先创建或写入演示简历');
-        return;
-      }
       setBusy(true);
       try {
-        await api.addPlacement(resume.id, section, moduleId);
-        await refreshResume(resume.id);
-        setStatus(`已落入 ${section}（快照）`);
+        const doc = await ensureResume();
+        await api.addPlacement(doc.id, section, moduleId);
+        await refreshResume(doc.id);
+        setStatus(`已落入 ${section}`);
       } catch (e) {
         setStatus(`落入失败: ${e instanceof Error ? e.message : String(e)}`);
       } finally {
         setBusy(false);
       }
     },
-    [resume, refreshResume],
+    [ensureResume, refreshResume],
   );
 
   const onDeletePlacement = useCallback(
@@ -165,7 +157,7 @@ export function Workbench() {
       try {
         await api.deletePlacement(resume.id, placementId);
         await refreshResume(resume.id);
-        setStatus('已删除快照条目');
+        setStatus('已删除条目');
       } catch (e) {
         setStatus(`删除失败: ${e instanceof Error ? e.message : String(e)}`);
       } finally {
@@ -185,14 +177,14 @@ export function Workbench() {
       const ordered = placementsForSection(resume, section).map((p) => p.id);
       const next = movePlacementId(ordered, placementId, direction);
       if (!next) {
-        setStatus('已到边界，无法继续移动');
+        setStatus('已到边界');
         return;
       }
       setBusy(true);
       try {
         const updated = await api.reorderPlacements(resume.id, section, next);
         setResume(updated);
-        setStatus(`已${direction === 'up' ? '上移' : '下移'}条目`);
+        setStatus(direction === 'up' ? '已上移' : '已下移');
       } catch (e) {
         setStatus(`排序失败: ${e instanceof Error ? e.message : String(e)}`);
       } finally {
@@ -204,7 +196,7 @@ export function Workbench() {
 
   const exportDocx = useCallback(async () => {
     if (!resume) {
-      setStatus('请先「写入演示数据」或创建简历');
+      setStatus('请先创建简历或写入演示数据');
       return;
     }
     setBusy(true);
@@ -239,7 +231,7 @@ export function Workbench() {
   return (
     <div className="workbench">
       <header className="workbench__header">
-        <div>
+        <div className="workbench__brand-block">
           <p className="workbench__brand">简历组装系统</p>
           <p className="workbench__phase">{status}</p>
         </div>
@@ -250,7 +242,7 @@ export function Workbench() {
             disabled={busy || connection === 'error'}
             onClick={() => void seedDemo()}
           >
-            写入演示数据
+            演示数据
           </button>
           <button
             type="button"
@@ -258,7 +250,7 @@ export function Workbench() {
             disabled={busy || !resume || connection === 'error'}
             onClick={() => void exportDocx()}
           >
-            导出 DOCX
+            导出
           </button>
         </div>
       </header>
@@ -270,21 +262,22 @@ export function Workbench() {
           {banner.message}
         </div>
       )}
-      <div className="workbench__body">
-        <LibrarySidebar
-          refreshKey={libraryKey}
-          onStatus={setStatus}
-          onCountChange={setLibraryCount}
-          disabled={connection === 'error'}
-        />
-        <EditorShell
+      <div className="workbench__body workbench__body--wire">
+        <ResumeCanvas
           resume={resume}
           profile={profile}
           connectionError={connection === 'error'}
+          onProfileChange={setProfile}
           onDropModule={onDropModule}
           onDeletePlacement={onDeletePlacement}
           onMovePlacement={onMovePlacement}
           onStatus={setStatus}
+        />
+        <ContentDatabase
+          refreshKey={libraryKey}
+          disabled={connection === 'error'}
+          onStatus={setStatus}
+          onCountChange={setLibraryCount}
         />
       </div>
     </div>

@@ -22,6 +22,8 @@ export interface ModuleEditorProps {
   /** null = create mode */
   editing: ContentModule | null;
   open: boolean;
+  /** Used when creating */
+  defaultCategory?: Category;
   onClose: () => void;
   onSaved: (mod: ContentModule) => void;
   onStatus?: (message: string) => void;
@@ -30,19 +32,20 @@ export interface ModuleEditorProps {
 export function ModuleEditor({
   editing,
   open,
+  defaultCategory = 'project',
   onClose,
   onSaved,
   onStatus,
 }: ModuleEditorProps) {
-  const [values, setValues] = useState<ModuleFormValues>(emptyForm('project'));
+  const [values, setValues] = useState<ModuleFormValues>(emptyForm(defaultCategory));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
-    setValues(editing ? moduleToForm(editing) : emptyForm('project'));
-  }, [open, editing]);
+    setValues(editing ? moduleToForm(editing) : emptyForm(defaultCategory));
+  }, [open, editing, defaultCategory]);
 
   const labels = useMemo(
     () => labelsForCategory(values.category),

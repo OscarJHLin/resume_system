@@ -63,6 +63,19 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
+  uploadProfilePhoto: (dataBase64: string, mime: string) =>
+    request<Profile>('/api/profile/photo', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ dataBase64, mime }),
+    }),
+
+  clearProfilePhoto: () =>
+    request<Profile>('/api/profile/photo', { method: 'DELETE' }),
+
+  profilePhotoUrl: (updatedAt?: string) =>
+    `/api/profile/photo${updatedAt ? `?t=${encodeURIComponent(updatedAt)}` : ''}`,
+
   listModules: (filters: { category?: string; tag?: string; q?: string } = {}) =>
     request<ContentModule[]>(buildModulesQuery(filters)),
 

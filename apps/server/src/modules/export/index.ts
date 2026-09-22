@@ -3,6 +3,7 @@ import {
   BorderStyle,
   Document,
   HeadingLevel,
+  ImageRun,
   Packer,
   Paragraph,
   TabStopType,
@@ -21,8 +22,44 @@ const PAGE = {
 const ENTRY_TAB_CENTER = 4933;
 const ENTRY_TAB_RIGHT = 9866;
 
-export async function exportDocx(ir: ResumeIR): Promise<Buffer> {
-  const children = ir.blocks.map(blockToParagraph);
+export interface ExportOptions {
+  /** Optional portrait bytes for header (lin-v1 photo). */
+  photo?: { buffer: Buffer; mime: string } | null;
+}
+
+export async function exportDocx(
+  ir: ResumeIR,
+  options: ExportOptions = {},
+): Promise<Buffer> {
+  const children: Paragraph[] = [];
+  if (options.photo?.buffer?.length) {
+    // docx ImageRun supports jpg/png/gif/bmp/svg — coerce webp to jpg type label if needed
+    const type =
+      options.photo.mime.includes('png')
+        ? 'png'
+        : options.photo.mime.includes('gif')
+          ? 'gif'
+          : 'jpg';
+    children.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 120 },
+        children: [
+          new ImageRun({
+            type,
+            data: options.photo.buffer,
+            transformation: { width: 72, height: 96 },
+            altText: {
+              title: '证件照',
+              description: '简历证件照',
+              name: 'photo',
+            },
+          }),
+        ],
+      }),
+    );
+  }
+  children.push(...ir.blocks.map(blockToParagraph));
   const doc = new Document({
     sections: [
       {

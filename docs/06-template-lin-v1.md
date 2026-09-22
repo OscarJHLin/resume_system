@@ -20,8 +20,19 @@
 
 ## 保真度限制（诚实）
 
-- **证件照**：未导出（MVP 无头像字段）。
+- **证件照**：工作台可上传并写入 `data/photos/`；**DOCX 导出已嵌入**（页眉居中小图）。精确排版位置可能与 Word 原件略有差异。
 - **超链接**（邮箱/GitHub）：导出为纯文本。
 - **编号列表**：参考为 Word numbering；我们用 `•` 悬挂缩进近似。
 - **字体**：写入 eastAsia=`黑体`/`宋体` + ascii=`Arial`。若宿主缺字体，Word/Pages 会回退（macOS 常见 Songti SC / Heiti SC）。
 - **多模板**：延后；仅此默认一套。
+
+## 工作台线框字段映射
+
+| 线框 | 领域字段 |
+|---|---|
+| 标题 | `ContentModule.title` |
+| 时间 | `timeRange`（日期选择器，可留空） |
+| 技术栈 | `projectType` |
+| 正文 | `body` |
+| 标签 | `tags[]` |
+| 工作站（表单可选） | `subtitle` |

@@ -32,27 +32,36 @@ export interface ModuleFormLabels {
   showTime: boolean;
 }
 
+/**
+ * Wireframe field mapping for library cards (项目/实习):
+ * - 标题 → title
+ * - 时间 → timeRange (optional date range)
+ * - 技术栈 → projectType (plain text; e.g. "Flutter / Riverpod")
+ * - 正文 → body
+ * - 标签 → tags[]
+ * - 工作站/基础站 → subtitle (optional; not on sketch card but kept in form)
+ */
 export function labelsForCategory(category: Category): ModuleFormLabels {
   switch (category) {
     case 'project':
       return {
         title: '标题',
         workstation: '工作站 / 基础站（可留空）',
-        projectType: '项目类型（可留空）',
-        time: '时间（可留空，点选起止日期）',
-        body: '正文（纯文本，可用换行）',
-        tags: '标签（多个用逗号或换行分隔）',
+        projectType: '技术栈（可留空）',
+        time: '时间（可留空）',
+        body: '正文',
+        tags: '标签',
         showWorkstation: true,
         showProjectType: true,
         showTime: true,
       };
     case 'internship':
       return {
-        title: '公司 / 标题',
+        title: '标题',
         workstation: '部门 / 地点（可留空）',
-        projectType: '岗位 / 类型（可留空）',
+        projectType: '技术栈 / 岗位（可留空）',
         time: '时间（可留空）',
-        body: '正文（纯文本）',
+        body: '正文',
         tags: '标签',
         showWorkstation: true,
         showProjectType: true,
@@ -64,7 +73,7 @@ export function labelsForCategory(category: Category): ModuleFormLabels {
         workstation: '补充说明（可留空）',
         projectType: '类型（可留空）',
         time: '时间（可留空）',
-        body: '详情正文（建议「标题：内容」会导出为技能行）',
+        body: '详情正文',
         tags: '标签',
         showWorkstation: false,
         showProjectType: false,

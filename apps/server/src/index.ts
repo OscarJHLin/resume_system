@@ -13,7 +13,7 @@ import { registerApiRoutes } from './routes/api.js';
 
 export function buildApp(dbPath: string = defaultDbPath()) {
   const db = openDatabase(dbPath);
-  const store = new Store(db);
+  const store = new Store(db, dbPath);
   store.ensureDefaultProfile();
 
   const app = Fastify({ logger: true });

@@ -1,0 +1,224 @@
+.canvas {
+  overflow: auto;
+  padding: 1.25rem 1.5rem 2rem;
+  background: #e8eef2;
+}
+
+.canvas__page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1.75rem 2rem 2.5rem;
+  background: #fff;
+  border: 1px solid #c9d3da;
+  box-shadow: 0 14px 36px rgba(30, 40, 50, 0.08);
+  min-height: 70vh;
+  font-family: "Songti SC", "Noto Serif SC", "Source Serif 4", serif;
+}
+
+.canvas__empty {
+  text-align: center;
+  color: #5a6670;
+  padding-top: 4rem;
+}
+
+.canvas__hero {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 1.1rem;
+  align-items: start;
+  margin-bottom: 0.75rem;
+}
+
+.canvas__photo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.canvas__photo img,
+.canvas__photo-ph {
+  width: 96px;
+  height: 128px;
+  object-fit: cover;
+  border: 1px solid #222;
+  background: #f3f5f7;
+}
+
+.canvas__photo-ph {
+  display: grid;
+  place-items: center;
+  font-size: 0.9rem;
+  color: #555;
+  cursor: pointer;
+  padding: 0;
+}
+
+.canvas__photo-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.canvas__photo-actions button,
+.canvas__mini,
+.canvas__item-actions button {
+  font: inherit;
+  font-size: 0.72rem;
+  border: 1px solid #c9d3da;
+  background: #fff;
+  padding: 0.15rem 0.4rem;
+  cursor: pointer;
+}
+
+.canvas__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.canvas__name,
+.canvas__tagline,
+.canvas__contact-row input,
+.canvas__edu-row input {
+  font: inherit;
+  border: 1px dashed transparent;
+  background: transparent;
+  color: inherit;
+  width: 100%;
+}
+
+.canvas__name:focus,
+.canvas__tagline:focus,
+.canvas__contact-row input:focus,
+.canvas__edu-row input:focus {
+  outline: none;
+  border-color: #0b6e6e;
+  background: #f7fbfb;
+}
+
+.canvas__name {
+  font-family: "Heiti SC", "PingFang SC", sans-serif;
+  font-size: 1.65rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.canvas__tagline {
+  font-family: "Heiti SC", "PingFang SC", sans-serif;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.canvas__contact-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.canvas__contact-row input {
+  width: auto;
+  min-width: 5rem;
+  text-align: center;
+}
+
+.canvas__section {
+  margin-top: 1rem;
+  padding-top: 0.55rem;
+  border-top: 1.5px solid #111;
+}
+
+.canvas__section h2 {
+  margin: 0 0 0.55rem;
+  font-family: "Heiti SC", "PingFang SC", sans-serif;
+  font-size: 1.05rem;
+}
+
+.canvas__hint {
+  margin: 0;
+  color: #6a757e;
+  font-size: 0.85rem;
+}
+
+.canvas__edu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.canvas__edu-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1.4fr 1fr auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.canvas__drop {
+  min-height: 3.25rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px dashed #b7c2ca;
+  background: #f7fafb;
+}
+
+.canvas__drop--active {
+  border-color: #0b6e6e;
+  background: color-mix(in srgb, #0b6e6e 10%, #fff);
+}
+
+.canvas__drop--invalid {
+  border-color: #a33;
+  background: #f8ecec;
+}
+
+.canvas__drop-hint {
+  margin: 0;
+  color: #6a757e;
+  font-size: 0.88rem;
+}
+
+.canvas__item {
+  padding: 0.45rem 0;
+  border-bottom: 1px solid #e2e8ec;
+}
+
+.canvas__item:last-child {
+  border-bottom: none;
+}
+
+.canvas__item-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.canvas__item-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.canvas__muted {
+  margin: 0.15rem 0;
+  color: #5a6670;
+  font-size: 0.85rem;
+}
+
+.canvas__body {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 900px) {
+  .canvas__hero {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+  .canvas__edu-row {
+    grid-template-columns: 1fr;
+  }
+}

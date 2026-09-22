@@ -77,6 +77,40 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
     });
   });
 
+  app.get('/api/profile/photo', async (_req, reply) => {
+    const photo = store.getProfilePhoto();
+    if (!photo) {
+      return reply.code(404).send({ error: 'NotFound', message: 'No photo' });
+    }
+    return reply
+      .type(photo.mime)
+      .header('cache-control', 'no-cache')
+      .send(photo.buffer);
+  });
+
+  app.put<{
+    Body: { dataBase64: string; mime?: string };
+  }>('/api/profile/photo', async (req) => {
+    const body = req.body;
+    if (!body?.dataBase64) throw badRequest('dataBase64 required');
+    const mime = body.mime ?? 'image/jpeg';
+    const ext =
+      mime.includes('png')
+        ? 'png'
+        : mime.includes('webp')
+          ? 'webp'
+          : 'jpg';
+    const raw = body.dataBase64.replace(/^data:[^;]+;base64,/, '');
+    const bytes = Buffer.from(raw, 'base64');
+    if (bytes.length === 0) throw badRequest('empty photo');
+    if (bytes.length > 5 * 1024 * 1024) {
+      throw badRequest('photo too large (max 5MB)');
+    }
+    return store.saveProfilePhoto(bytes, ext);
+  });
+
+  app.delete('/api/profile/photo', async () => store.clearProfilePhoto());
+
   // —— Content modules ——
   app.get<{
     Querystring: { category?: string; tag?: string; q?: string };
@@ -230,7 +264,12 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
         profile,
         placements: resume.placements,
       });
-      const buffer = await exportDocx(ir);
+      const photo = store.getProfilePhoto();
+      const buffer = await exportDocx(ir, {
+        photo: photo
+          ? { buffer: photo.buffer, mime: photo.mime }
+          : null,
+      });
       const filename = `${sanitizeFilename(resume.title)}.docx`;
       const encoded = encodeURIComponent(filename);
       return reply
