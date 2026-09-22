@@ -22,6 +22,8 @@ fn spawn_local_server(app: &tauri::AppHandle) -> Result<Child, String> {
     .path()
     .app_data_dir()
     .map_err(|e| e.to_string())?;
+  // Per-user empty-or-existing DB under OS app data — never copy developer ./data/
+  // and never bundle resume.db into the installer resources.
   std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
   let db_path = data_dir.join("resume.db");
 

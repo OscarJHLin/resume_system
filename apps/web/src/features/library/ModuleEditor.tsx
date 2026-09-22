@@ -9,6 +9,7 @@ import {
   validateModuleForm,
   type ModuleFormValues,
 } from './moduleForm';
+import { StepDatePicker } from './StepDatePicker';
 import './moduleEditor.css';
 
 const CATEGORY_LABEL: Record<LibraryModuleCategory, string> = {
@@ -129,22 +130,18 @@ export function ModuleEditor({
         {labels.showTime && (
           <fieldset className="moded__time">
             <legend>{labels.time}</legend>
-            <label>
-              <span>开始</span>
-              <input
-                type="date"
-                value={values.timeStart}
-                onChange={(e) => set('timeStart', e.target.value)}
-              />
-            </label>
-            <label>
-              <span>结束（可留空）</span>
-              <input
-                type="date"
-                value={values.timeEnd}
-                onChange={(e) => set('timeEnd', e.target.value)}
-              />
-            </label>
+            <StepDatePicker
+              label="开始"
+              value={values.timeStart}
+              onChange={(iso) => set('timeStart', iso)}
+              allowClear
+            />
+            <StepDatePicker
+              label="结束（可留空）"
+              value={values.timeEnd}
+              onChange={(iso) => set('timeEnd', iso)}
+              allowClear
+            />
             <button
               type="button"
               className="moded__linkish"

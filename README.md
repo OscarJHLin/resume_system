@@ -37,7 +37,8 @@ npm run app
 ```
 
 会：构建 Web → 启动 API（同进程托管静态页）→ 打开浏览器。  
-SQLite 默认：`./data/resume.db`（可用 `RESUME_DB_PATH` / `RESUME_DATA_DIR` 覆盖）。
+SQLite 默认：`./data/resume.db`（可用 `RESUME_DB_PATH` / `RESUME_DATA_DIR` 覆盖）。  
+**该目录已 gitignore，重启/重建不会清空**；Tauri 安装包使用系统 app data 下的独立库，不携带开发者数据。
 
 ### 桌面窗口（Tauri）
 

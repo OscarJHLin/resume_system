@@ -13,6 +13,7 @@ import {
   validateProfileForm,
   type ProfileFormValues,
 } from './profileForm';
+import { StepDatePicker } from './StepDatePicker';
 import './moduleEditor.css';
 
 export interface ProfileEditorProps {
@@ -291,24 +292,18 @@ export function ProfileEditor({
                 />
               </label>
               <div className="moded__row2">
-                <label>
-                  起始时间
-                  <input
-                    type="date"
-                    value={edu.startDate ?? ''}
-                    onChange={(e) =>
-                      setEdu(idx, { startDate: e.target.value })
-                    }
-                  />
-                </label>
-                <label>
-                  结束时间
-                  <input
-                    type="date"
-                    value={edu.endDate ?? ''}
-                    onChange={(e) => setEdu(idx, { endDate: e.target.value })}
-                  />
-                </label>
+                <StepDatePicker
+                  label="起始时间"
+                  value={edu.startDate ?? ''}
+                  onChange={(iso) => setEdu(idx, { startDate: iso })}
+                  allowClear
+                />
+                <StepDatePicker
+                  label="结束时间"
+                  value={edu.endDate ?? ''}
+                  onChange={(iso) => setEdu(idx, { endDate: iso })}
+                  allowClear
+                />
               </div>
               <label>
                 GPA

@@ -59,6 +59,10 @@ CREATE INDEX IF NOT EXISTS idx_profile_updated ON profile(updated_at);
 
 export type Db = DatabaseSync;
 
+/**
+ * Open (or create) SQLite. Schema uses CREATE IF NOT EXISTS + additive
+ * ALTER only — never deletes/truncates user tables or files.
+ */
 export function openDatabase(dbPath: string): Db {
   const dir = path.dirname(dbPath);
   fs.mkdirSync(dir, { recursive: true });

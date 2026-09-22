@@ -5,9 +5,17 @@ build/
 *.log
 .env
 .env.*
+
+# User / local runtime data — NEVER commit or ship in installers
 data/
+data/**
 *.db
+*.db-journal
+*.db-wal
+*.db-shm
+**/photos/
 *.docx
+
 .turbo
 coverage/
 *.tsbuildinfo
