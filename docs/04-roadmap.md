@@ -12,7 +12,7 @@
 | P2 组装 | Resume placements + 兼容矩阵 | 拒绝链 + 正常链 | Done（并入 S1） |
 | P3 模板 | `default-v1` → ResumeIR | IR 测试 | Done（并入 S1） |
 | P4 导出 | DOCX 下载 | 真实 `.docx` | Done（并入 S1） |
-| P5 编辑器+DnD | TipTap 壳 + 拖入 | 浏览器主路径 | Partial（S2 DnD 列表壳 Done；TipTap→S3） |
+| P5 编辑器+DnD | TipTap 壳 + 拖入 | 浏览器主路径 | Done（S2 DnD + S3 TipTap 投影） |
 | P6 打磨 | 空态/错误、演示数据 | 验收清单 | Partial（有 seed 脚本） |
 
 ## 垂直切片卡片
@@ -39,8 +39,11 @@
 
 ### S3 — TipTap 文档感编辑壳
 
-- **可观察结果**：主区呈现分 section 的文档结构；条目节点只读展示快照字段。
-- **依赖**：S2、ADR-0002。
+- **状态**: Done（2026-09-23）
+- **可观察结果**：主区为 TipTap 文档（section / placement / profile 节点）；条目只读展示快照字段；S2 DnD 仍写入 snapshot。
+- **同步模型**：TipTap = 投影；导出 = placements → ResumeIR（见 ADR-0002）。
+- **证据**：`npm test`（web `s3.docModel` 桥接 +既有 S1/S2）。
+- **不做**：富文本 body、TipTap→DOCX 直出、多模板设计器。
 
 ### S4 — 打磨与演示数据
 
@@ -62,4 +65,4 @@
 
 ## 建议下一步（唯一）
 
-**S2 已完成。** 开工 **S3**：用 TipTap 替换列表式编辑壳，保留现有 snapshot placements 与 DnD 桥接。
+**S3 已完成。** 开工 **S4**：演示数据打磨、空态/错误提示、验收清单（可选 placement 删除/排序）。

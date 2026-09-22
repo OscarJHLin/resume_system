@@ -1,8 +1,8 @@
 # 模块化简历组装系统
 
-本地优先的简历组装系统：**S1 已打通**「个人资料 / 内容库 / 快照组装 / 模板 IR / DOCX 导出」。
+本地优先的简历组装系统：**S1–S3 已打通**「资料 / 标签库 / 快照组装 / TipTap 投影 / 模板 IR / DOCX」。
 
-> 当前状态：**S2 Ready**（标签库 + 拖拽落入；TipTap 见 S3）。
+> 当前状态：**S3 Ready**（TipTap 文档壳 = 投影；导出仍走 placements → ResumeIR）。
 
 ## 文档入口
 
@@ -18,8 +18,8 @@
 
 ## 技术栈（摘要）
 
-TypeScript monorepo（npm workspaces）· Vite/React · Fastify · **`node:sqlite`** · `docx` 导出。  
-近端：本地 Web+API；长期：Tauri 桌面（[ADR-0004](docs/adr/0004-desktop-path.md)）。编辑器 TipTap 在 S2–S3。
+TypeScript monorepo（npm workspaces）· Vite/React · **TipTap** · Fastify · **`node:sqlite`** · `docx` 导出。  
+近端：本地 Web+API；长期：Tauri 桌面（[ADR-0004](docs/adr/0004-desktop-path.md)）。
 
 ## 环境要求
 
@@ -42,7 +42,19 @@ npm run dev:web
 健康检查：`curl http://127.0.0.1:8787/health`  
 元信息：`curl http://127.0.0.1:8787/api/meta`
 
-## S2 拖拽演示
+## S3 TipTap 演示
+
+```bash
+npm run dev:server
+npm run dev:web
+```
+
+1. 打开 http://127.0.0.1:5173  
+2. **写入演示数据**  
+3. 左侧按标签过滤，拖模块到右侧 **TipTap** section 落点  
+4. 主区应出现只读快照条目；**导出 DOCX**（仍由服务端 placements→IR 生成）
+
+## S2 拖拽演示（同路径）
 
 ```bash
 npm run dev:server   # :8787
@@ -121,7 +133,7 @@ npm run test -w @resume/server
 ## 开发约定
 
 1. 改行为前先看对应 `docs/contracts/*`。
-2. 下一切片：**S3** TipTap 文档壳（见 [docs/04-roadmap.md](docs/04-roadmap.md)）。
+2. 下一切片：**S4** 打磨与演示验收（见 [docs/04-roadmap.md](docs/04-roadmap.md)）。
 3. 不要在未实现层假装 Done；证据绑定命令与产物。
 
 ## 已锁定决策

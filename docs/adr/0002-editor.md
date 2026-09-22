@@ -31,5 +31,8 @@ MVP 需要「文档编辑器观感」+ section 落点 + 后续可扩展节点；
 
 ## 后果
 
-- 需定义 TipTap JSON ↔ placements 的同步策略（建议：drop/reorder 写 API，再 hydrate 编辑器）。
+- 同步策略（S3 锁定）：**单向投影** — `ResumeDocument`（placements + profile）→ `buildResumeTipTapDoc` → TipTap `setContent`。
+- 写入路径：library DnD → `POST /placements`（snapshot）→ 刷新 Resume → 再 hydrate TipTap。
+- **导出权威源仍是 placements → Template → ResumeIR → DOCX**；TipTap JSON **不是**导出输入。
 - MVP 正文为**纯文本**（D2）；TipTap 用于文档壳与 section/条目节点，不为 body 做富文本编辑。
+- Reorder/删除 placements 的 TipTap 内编辑可在后续切片做（仍写 API 再 hydrate）。

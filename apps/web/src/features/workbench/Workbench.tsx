@@ -6,7 +6,7 @@ import { EditorShell } from '../editor/EditorShell';
 import './workbench.css';
 
 /**
- * S2 workbench: tag library + section DnD → snapshot placements + DOCX export.
+ * S3 workbench: TipTap document shell + tag library DnD → snapshot + DOCX.
  */
 export function Workbench() {
   const [resume, setResume] = useState<ResumeDocument | null>(null);
@@ -146,7 +146,7 @@ export function Workbench() {
         <div>
           <p className="workbench__brand">简历组装系统</p>
           <p className="workbench__phase">
-            S2 · 标签库 + 拖拽 · {status}
+            S3 · TipTap 壳 · {status}
           </p>
         </div>
         <div className="workbench__actions">

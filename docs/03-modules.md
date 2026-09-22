@@ -60,10 +60,10 @@
 
 ## 7. `editor-shell`
 
-- **责任**：简历主区 section 落点、展示 placements 快照；接收 drop → `POST .../placements`。S2 为列表式壳；TipTap 在 S3。
-- **依赖**：`domain`（`decideModuleDrop`）、Web API client。
-- **状态**：S2 Ready（列表壳）
-- **DoD**：拖入后主区出现对应条目；不匹配大类拒绝。
+- **责任**：TipTap 文档壳（section / placementItem / profile 节点）；接收 drop → `POST .../placements`；再 hydrate。
+- **依赖**：`domain`（`decideModuleDrop`）、Web API client、`@tiptap/react`。
+- **状态**：S3 Ready（投影；非导出 SoT）
+- **DoD**：拖入后 TipTap 主区出现对应条目；不匹配大类拒绝；导出仍走 ResumeIR。
 
 ## 8. `library-ui`
 
@@ -75,9 +75,9 @@
 
 ## 9. `workbench`
 
-- **责任**：页面骨架、种子数据、导出按钮、串联 library + editor。
+- **责任**：页面骨架、种子数据、导出按钮、串联 library + TipTap editor。
 - **依赖**：上述 UI 模块。
-- **状态**：S2 Ready（列表式落点；TipTap→S3）
+- **状态**：S3 Ready
 - **DoD**：单页可完成「搜 → 拖 → 导出」主路径。
 
 ---
@@ -88,14 +88,14 @@
 1. domain
 2. profile
 3. content-library
-4. resume-assembly          ← 到此后端事实链打通
+4. resume-assembly
 5. template-engine
-6. export-docx              ← S1 证据：模块→简历→docx
-7. library-ui + editor-shell DnD  ← S2
-8. TipTap editor-shell       ← S3
-9. workbench 打磨
+6. export-docx              ← S1
+7. library-ui + DnD         ← S2
+8. TipTap editor-shell      ← S3 Done
+9. workbench 打磨           ← S4
 ```
 
 **并行建议**：`template-engine` 与 `content-library` 在合同冻结后可并行；`export-docx` 必须等 IR 合同稳定。
 
-**S1** 已完成；**S2** 列表式 DnD 已完成；**S3** 换 TipTap 文档壳。
+**S1–S3** 已完成；**S4** 打磨与演示验收。
