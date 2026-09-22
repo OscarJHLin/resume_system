@@ -149,9 +149,14 @@ export function renderToIR(
         title && body
           ? [
               { text: `${title}：`, style: STYLE.skillLine },
-              { text: body, style: STYLE.skillLine },
+              { text: body, style: STYLE.body },
             ]
-          : [{ text: title || body, style: STYLE.skillLine }];
+          : [
+              {
+                text: title || body,
+                style: title ? STYLE.skillLine : STYLE.body,
+              },
+            ];
       blocks.push(
         para(runs, {
           spacingAfterPt: 0.4,

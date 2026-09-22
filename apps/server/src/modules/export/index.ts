@@ -2,7 +2,6 @@ import {
   AlignmentType,
   BorderStyle,
   Document,
-  HeadingLevel,
   ImageRun,
   Packer,
   Paragraph,
@@ -54,11 +53,11 @@ export async function exportDocx(
         : options.photo.mime.includes('gif')
           ? 'gif'
           : 'jpg';
-    // Reference: centered inline photo above name (~98×131 CSS px / 74×98 pt).
+    // Do NOT use exact line spacing here — it clips the image in Word/WPS.
     children.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
-        spacing: { after: 150, line: 240, lineRule: 'exact' },
+        spacing: { after: 120, line: 276, lineRule: 'auto' },
         children: [
           new ImageRun({
             type,
@@ -118,21 +117,15 @@ function blockToParagraph(
 }
 
 function headingParagraph(block: IrHeading): Paragraph {
-  const level =
-    block.level === 1
-      ? HeadingLevel.HEADING_1
-      : block.level === 2
-        ? HeadingLevel.HEADING_2
-        : HeadingLevel.HEADING_3;
-
+  // Avoid Word/WPS built-in Heading styles (they force Calibri / theme fonts).
+  // Render as a normal paragraph with our eastAsia typography only.
   return new Paragraph({
-    heading: level,
     alignment: mapAlign(block.alignment),
     spacing: {
       before: ptToTwip(block.spacingBeforePt ?? (block.level === 1 ? 0 : 10)),
       after: ptToTwip(block.spacingAfterPt ?? 6),
       line: block.level === 1 ? 560 : 360,
-      lineRule: 'exact',
+      lineRule: 'auto',
     },
     border: block.borderBottom
       ? {
@@ -169,7 +162,7 @@ function bodyParagraph(
       before: ptToTwip(block.spacingBeforePt ?? 0),
       after: ptToTwip(block.spacingAfterPt ?? 0.8),
       line: block.bullet ? 320 : block.alignment === 'center' ? 280 : 320,
-      lineRule: 'exact',
+      lineRule: 'auto',
     },
     indent: block.bullet
       ? { left: bulletInd.left, hanging: bulletInd.hanging }
@@ -209,17 +202,22 @@ function runToTextRun(run: IrRun): TextRun {
   });
 }
 
+/**
+ * Use one CJK face for ascii/hAnsi/eastAsia so Latin + Chinese stay consistent
+ * in WPS/Word (avoids Arial/Calibri mixed with 宋体).
+ */
 function fontFace(eastAsia: string): {
   ascii: string;
   hAnsi: string;
   eastAsia: string;
   cs: string;
 } {
+  const face = eastAsia.trim() || '宋体';
   return {
-    ascii: 'Arial',
-    hAnsi: 'Arial',
-    eastAsia,
-    cs: 'Arial',
+    ascii: face,
+    hAnsi: face,
+    eastAsia: face,
+    cs: face,
   };
 }
 
