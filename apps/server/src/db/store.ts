@@ -41,6 +41,7 @@ type ProfileRow = {
   qq: string | null;
   location: string | null;
   summary: string | null;
+  statement: string | null;
   education_json: string;
   skills_json: string | null;
   tags_json: string | null;
@@ -59,6 +60,7 @@ export type ProfileInput = {
   qq?: string;
   location?: string;
   summary?: string;
+  statement?: string;
   education?: EducationItem[];
   skills?: SkillBlock[];
   tags?: string[];
@@ -91,6 +93,8 @@ export class Store {
             p.email,
             p.phone,
             p.wechat,
+            p.summary,
+            p.statement,
             p.notes,
             ...p.tags,
             ...p.education.map((e) => e.school),
@@ -139,6 +143,7 @@ export class Store {
       qq: input.qq?.trim() || undefined,
       location: input.location?.trim() || undefined,
       summary: input.summary?.trim() || undefined,
+      statement: input.statement?.trim() || undefined,
       education,
       skills,
       tags: normalizeTags(input.tags),
@@ -150,9 +155,9 @@ export class Store {
       .prepare(
         `INSERT INTO profile (
           id, name, gender, phone, email, wechat, qq, location, summary,
-          education_json, skills_json, tags_json, notes, photo_filename,
+          statement, education_json, skills_json, tags_json, notes, photo_filename,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         profile.id,
@@ -164,6 +169,7 @@ export class Store {
         profile.qq ?? null,
         profile.location ?? null,
         profile.summary ?? null,
+        profile.statement ?? null,
         JSON.stringify(profile.education),
         JSON.stringify(profile.skills),
         JSON.stringify(profile.tags),
@@ -187,7 +193,7 @@ export class Store {
       .prepare(
         `UPDATE profile SET
           name = ?, gender = ?, phone = ?, email = ?, wechat = ?, qq = ?,
-          location = ?, summary = ?, education_json = ?, skills_json = ?,
+          location = ?, summary = ?, statement = ?, education_json = ?, skills_json = ?,
           tags_json = ?, notes = ?, updated_at = ?
          WHERE id = ?`,
       )
@@ -200,6 +206,7 @@ export class Store {
         input.qq?.trim() || null,
         input.location?.trim() || null,
         input.summary?.trim() || null,
+        input.statement?.trim() || null,
         JSON.stringify(education),
         JSON.stringify(skills),
         JSON.stringify(normalizeTags(input.tags)),
@@ -310,6 +317,7 @@ export class Store {
       qq: row.qq ?? undefined,
       location: row.location ?? undefined,
       summary: row.summary ?? undefined,
+      statement: row.statement ?? undefined,
       education: parseJson<EducationItem[]>(row.education_json, []),
       skills: parseJson<SkillBlock[]>(row.skills_json, []),
       tags: parseJson<string[]>(row.tags_json, []),

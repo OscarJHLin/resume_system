@@ -116,7 +116,10 @@ export interface Profile {
   /** Optional */
   qq?: string;
   location?: string;
+  /** Short tagline under the name (标语 / 定位). */
   summary?: string;
+  /** 个人陈述 — plain-text advantage statement shown as its own section. */
+  statement?: string;
   education: EducationItem[];
   skills: SkillBlock[];
   tags: string[];
@@ -302,6 +305,9 @@ export const SECTION_LABELS: Record<SectionId, string> = {
   internships: '实习经历',
   awards: '获奖与证书',
 };
+
+/** Profile-driven section rendered above 教育背景 (not a placeable section). */
+export const PERSONAL_STATEMENT_LABEL = '个人陈述';
 
 /** Experience sections that accept drag-drop placements. */
 export const PLACEABLE_SECTIONS: readonly SectionId[] = [

@@ -26,6 +26,7 @@ type ProfileBody = {
   qq?: string;
   location?: string;
   summary?: string;
+  statement?: string;
   education?: Array<{
     id?: string;
     school: string;
@@ -55,6 +56,7 @@ function mapProfileBody(body: ProfileBody) {
     qq: body.qq,
     location: body.location,
     summary: body.summary,
+    statement: body.statement,
     education: body.education?.map((e) => ({
       id: e.id ?? '',
       school: e.school,

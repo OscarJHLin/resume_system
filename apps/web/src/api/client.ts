@@ -66,6 +66,7 @@ export type ProfilePayload = {
   qq?: string;
   location?: string;
   summary?: string;
+  statement?: string;
   education?: EducationItem[];
   skills?: SkillBlock[];
   tags?: string[];

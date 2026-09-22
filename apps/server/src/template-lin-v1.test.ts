@@ -40,6 +40,7 @@ describe('lin-v1 / default-v1 template fidelity', () => {
           wechat: 'wx_demo',
           location: '示例市',
           summary: '软件工程本科生 · AI 应用',
+          statement: '善于跨端协作\n关注落地交付',
           education: [
             {
               id: 'e1',
@@ -82,6 +83,13 @@ describe('lin-v1 / default-v1 template fidelity', () => {
 
     assert.equal(ir.templateVersion, '1.2.1');
 
+    const statementHead = ir.blocks.find(
+      (b) =>
+        b.kind === 'heading' &&
+        b.level === 2 &&
+        b.runs[0]?.text === '个人陈述',
+    );
+    assert.ok(statementHead);
     const eduHead = ir.blocks.find(
       (b) =>
         b.kind === 'heading' &&
@@ -90,6 +98,22 @@ describe('lin-v1 / default-v1 template fidelity', () => {
     );
     assert.ok(eduHead && eduHead.kind === 'heading');
     assert.equal(eduHead.borderBottom, true);
+    const stmtIdx = ir.blocks.indexOf(statementHead!);
+    const eduIdx = ir.blocks.indexOf(eduHead);
+    assert.ok(stmtIdx >= 0 && eduIdx > stmtIdx);
+
+    const stmtBody = ir.blocks.filter(
+      (b) =>
+        b.kind === 'paragraph' &&
+        (b.runs[0]?.text === '善于跨端协作' ||
+          b.runs[0]?.text === '关注落地交付'),
+    );
+    assert.equal(stmtBody.length, 2);
+    for (const b of stmtBody) {
+      assert.ok(b.kind === 'paragraph');
+      assert.notEqual(b.bullet, true);
+      assert.notEqual(b.runs[0]?.style?.bold, true);
+    }
 
     const skill = ir.blocks.find(
       (b) =>

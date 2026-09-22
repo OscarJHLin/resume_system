@@ -178,6 +178,15 @@ export function ProfileEditor({
               onChange={(e) => set('summary', e.target.value)}
             />
           </label>
+          <label>
+            个人陈述（选填）
+            <textarea
+              rows={4}
+              value={values.statement}
+              placeholder="简述个人优势与求职亮点（纯文本，应用到简历后显示在「个人陈述」栏）"
+              onChange={(e) => set('statement', e.target.value)}
+            />
+          </label>
         </fieldset>
 
         <fieldset className="moded__fieldset">

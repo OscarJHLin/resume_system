@@ -29,12 +29,14 @@ describe('profile form validation', () => {
       rank: '专业前 5%',
     };
     form.skills[0] = { id: '', title: '编程语言', body: 'Python' };
+    form.statement = '优势陈述一行';
     form.tagsText = '校招, 全栈';
     const r = validateProfileForm(form);
     assert.equal(r.ok, true);
     if (r.ok) {
       assert.equal(r.payload.education?.length, 1);
       assert.equal(r.payload.skills?.[0]?.title, '编程语言');
+      assert.equal(r.payload.statement, '优势陈述一行');
       assert.deepEqual(r.payload.tags, ['校招', '全栈']);
     }
   });

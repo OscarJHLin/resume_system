@@ -20,6 +20,7 @@ export interface ProfileFormValues {
   qq: string;
   location: string;
   summary: string;
+  statement: string;
   education: EducationItem[];
   skills: SkillBlock[];
   tagsText: string;
@@ -36,6 +37,7 @@ export function emptyProfileForm(): ProfileFormValues {
     qq: '',
     location: '',
     summary: '',
+    statement: '',
     education: [emptyEducationItem()],
     skills: [emptySkillBlock()],
     tagsText: '',
@@ -53,6 +55,7 @@ export function profileToForm(p: Profile): ProfileFormValues {
     qq: p.qq ?? '',
     location: p.location ?? '',
     summary: p.summary ?? '',
+    statement: p.statement ?? '',
     education: p.education.length
       ? p.education.map((e) => ({ ...e }))
       : [emptyEducationItem()],
@@ -118,6 +121,7 @@ export function validateProfileForm(
       qq: values.qq.trim() || undefined,
       location: values.location.trim() || undefined,
       summary: values.summary.trim() || undefined,
+      statement: values.statement.trim() || undefined,
       education,
       skills,
       tags: parseTagsText(values.tagsText),

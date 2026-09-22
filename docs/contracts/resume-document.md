@@ -21,11 +21,14 @@ interface Profile {
   phone?: string;
   email?: string;
   location?: string;
-  summary?: string;       // 纯文本
+  summary?: string;       // 标语 / 定位
+  statement?: string;     // 个人陈述（教育背景之上独立栏）
   education: EducationItem[];
   updatedAt: string;
 }
 ```
+
+栏顺序：个人陈述 → 教育背景 → 技术能力 → 项目经历 → 实习经历 → 获奖与证书。
 
 | Method | Path |
 |---|---|

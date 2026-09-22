@@ -35,7 +35,8 @@
 
 | 线框 | 领域字段 |
 |---|---|
-| 基本信息卡 | `Profile`（多卡） |
+| 基本信息卡 | `Profile`（多卡；含 `statement` 个人陈述） |
+| 个人陈述 | `Profile.statement` → 简历栏「个人陈述」（教育背景之上） |
 | 教育多段 | `education[]` |
 | 技术能力块 | `skills[]`（title 加粗 + body） |
 | 项目/实习/获奖 | `ContentModule` → placement 快照 |

@@ -7,6 +7,7 @@ import type {
   SkillBlock,
 } from '@resume/domain';
 import {
+  PERSONAL_STATEMENT_LABEL,
   SECTION_LABELS,
   decideModuleDrop,
   educationTimeRange,
@@ -114,6 +115,29 @@ export function ResumeCanvas({
             </p>
           </div>
         </header>
+
+        <CanvasSection title={PERSONAL_STATEMENT_LABEL}>
+          {!profile || !profile.statement?.trim() ? (
+            <p className="canvas__hint canvas__ph">
+              个人陈述占位 — 在右侧「基本信息」填写并应用到简历
+            </p>
+          ) : (
+            <div className="canvas__statement">
+              {profile.statement
+                .split(/\n/)
+                .map((l) => l.trim())
+                .filter(Boolean)
+                .map((line, i) => (
+                  <p
+                    key={`${i}-${line.slice(0, 24)}`}
+                    className="canvas__body"
+                  >
+                    {line}
+                  </p>
+                ))}
+            </div>
+          )}
+        </CanvasSection>
 
         <CanvasSection title="教育背景">
           {!profile || profile.education.length === 0 ? (

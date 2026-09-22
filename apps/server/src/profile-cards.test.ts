@@ -82,13 +82,17 @@ describe('profile cards + template select', () => {
     assert.equal(resume.profileId, '');
     assert.equal(resume.placements.length, 0);
 
-    const profile = await json<{ id: string }>('POST', '/api/profiles', {
+    const profile = await json<{ id: string; statement?: string }>(
+      'POST',
+      '/api/profiles',
+      {
       name: '候选人',
       gender: '男',
       email: 'c@x.com',
       phone: '333',
       wechat: 'wx_c',
       summary: '软件工程本科生',
+      statement: '优势一\n优势二',
       education: [
         {
           school: '示例学院',
@@ -105,6 +109,7 @@ describe('profile cards + template select', () => {
         { title: '工程工具', body: 'Git、Docker' },
       ],
     });
+    assert.equal(profile.statement, '优势一\n优势二');
 
     const applied = await json<{ profileId: string }>(
       'PATCH',

@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS profile (
   qq TEXT,
   location TEXT,
   summary TEXT,
+  statement TEXT,
   education_json TEXT NOT NULL DEFAULT '[]',
   skills_json TEXT NOT NULL DEFAULT '[]',
   tags_json TEXT NOT NULL DEFAULT '[]',
@@ -91,6 +92,7 @@ function migrateProfileColumns(db: Db): void {
   add('tags_json', "tags_json TEXT NOT NULL DEFAULT '[]'");
   add('notes', 'notes TEXT');
   add('created_at', 'created_at TEXT');
+  add('statement', 'statement TEXT');
   // Backfill created_at from updated_at when missing
   db.exec(
     `UPDATE profile SET created_at = updated_at WHERE created_at IS NULL OR created_at = ''`,

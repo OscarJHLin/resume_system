@@ -9,7 +9,7 @@ import type {
   SectionPlacement,
   TextStyle,
 } from '@resume/domain';
-import { DEFAULT_TEMPLATE_ID, SECTION_LABELS } from '@resume/domain';
+import { DEFAULT_TEMPLATE_ID, PERSONAL_STATEMENT_LABEL, SECTION_LABELS } from '@resume/domain';
 import {
   getTemplate,
   type TemplateDefinition,
@@ -75,6 +75,20 @@ export function renderToIR(
         spacingAfterPt: 0,
       }),
     );
+  }
+
+  if (profile.statement?.trim()) {
+    blocks.push(sectionHeading(PERSONAL_STATEMENT_LABEL, STYLE));
+    for (const line of profile.statement
+      .split(/\n/)
+      .map((l) => l.trim())
+      .filter(Boolean)) {
+      blocks.push(
+        para([{ text: line, style: STYLE.body }], {
+          spacingAfterPt: 0.8,
+        }),
+      );
+    }
   }
 
   if (profile.education.length > 0) {
