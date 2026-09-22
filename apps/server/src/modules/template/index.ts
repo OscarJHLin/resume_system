@@ -9,7 +9,12 @@ import type {
   SectionPlacement,
   TextStyle,
 } from '@resume/domain';
-import { DEFAULT_TEMPLATE_ID, PERSONAL_STATEMENT_LABEL, SECTION_LABELS } from '@resume/domain';
+import {
+  DEFAULT_TEMPLATE_ID,
+  PERSONAL_STATEMENT_LABEL,
+  SECTION_LABELS,
+  TARGET_ROLE_PREFIX,
+} from '@resume/domain';
 import {
   getTemplate,
   type TemplateDefinition,
@@ -53,10 +58,19 @@ export function renderToIR(
 
   if (profile.summary?.trim()) {
     blocks.push(
-      para([{ text: profile.summary.trim(), style: STYLE.tagline }], {
-        alignment: 'center',
-        spacingAfterPt: 4,
-      }),
+      para(
+        [
+          { text: TARGET_ROLE_PREFIX, style: STYLE.tagline },
+          {
+            text: profile.summary.trim(),
+            style: { ...STYLE.tagline, bold: false },
+          },
+        ],
+        {
+          alignment: 'center',
+          spacingAfterPt: 4,
+        },
+      ),
     );
   }
 

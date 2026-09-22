@@ -21,7 +21,7 @@ interface Profile {
   phone?: string;
   email?: string;
   location?: string;
-  summary?: string;       // 标语 / 定位
+  summary?: string;       // 应聘岗位（页眉；存 summary 列）
   statement?: string;     // 个人陈述（教育背景之上独立栏）
   education: EducationItem[];
   updatedAt: string;

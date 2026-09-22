@@ -16,7 +16,12 @@ export function ProfileBasicView({ node }: NodeViewProps) {
     <NodeViewWrapper className="editor__profile" as="div">
       <p className="editor__name">{name}</p>
       {contact ? <p className="editor__muted">{contact}</p> : null}
-      {summary ? <p>{summary}</p> : null}
+      {summary ? (
+        <p>
+          <strong>应聘岗位：</strong>
+          {summary}
+        </p>
+      ) : null}
     </NodeViewWrapper>
   );
 }

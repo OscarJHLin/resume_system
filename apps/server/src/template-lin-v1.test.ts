@@ -83,6 +83,16 @@ describe('lin-v1 / default-v1 template fidelity', () => {
 
     assert.equal(ir.templateVersion, '1.2.1');
 
+    const roleLine = ir.blocks.find(
+      (b) =>
+        b.kind === 'paragraph' &&
+        b.runs[0]?.text === '应聘岗位：' &&
+        b.runs[1]?.text === '软件工程本科生 · AI 应用',
+    );
+    assert.ok(roleLine && roleLine.kind === 'paragraph');
+    assert.equal(roleLine.runs[0]?.style?.bold, true);
+    assert.equal(roleLine.runs[1]?.style?.bold, false);
+
     const statementHead = ir.blocks.find(
       (b) =>
         b.kind === 'heading' &&

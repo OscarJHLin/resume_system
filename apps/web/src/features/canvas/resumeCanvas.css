@@ -72,8 +72,16 @@
   margin: 0;
   font-family: "Heiti SC", "STHeiti", "PingFang SC", sans-serif;
   font-size: 11pt;
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1.25;
+}
+
+.canvas__role-label {
+  font-weight: 700;
+}
+
+.canvas__role-value {
+  font-weight: 400;
 }
 
 .canvas__contact {

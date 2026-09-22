@@ -9,6 +9,7 @@ import type {
 import {
   PERSONAL_STATEMENT_LABEL,
   SECTION_LABELS,
+  TARGET_ROLE_PREFIX,
   decideModuleDrop,
   educationTimeRange,
   isPlaceableSection,
@@ -102,7 +103,16 @@ export function ResumeCanvas({
               {name || '姓名'}
             </p>
             <p className={`canvas__tagline${summary ? '' : ' canvas__ph'}`}>
-              {summary || '标语 / 定位（在「基本信息」中填写）'}
+              {summary ? (
+                <>
+                  <strong className="canvas__role-label">
+                    {TARGET_ROLE_PREFIX}
+                  </strong>
+                  <span className="canvas__role-value">{summary}</span>
+                </>
+              ) : (
+                '应聘岗位（在「基本信息」中填写）'
+              )}
             </p>
             <p
               className={`canvas__contact${

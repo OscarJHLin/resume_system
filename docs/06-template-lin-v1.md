@@ -14,7 +14,7 @@
 | 页 | A4 11906×16838 twips；边距 680/1020 | `page` in manifest |
 | 证件照 | 首段居中 inline；约 98×131 CSS px（936116×1248156 EMU） | 画布顶部居中；DOCX `ImageRun` 同尺寸 |
 | 姓名 | 22pt 黑体 bold 居中；段后 120；行距 560 | H1 + `styles.name` |
-| 标语 | 11pt 黑体 **bold** 居中 | `styles.tagline` |
+| 应聘岗位 | 11pt；前缀「应聘岗位：」加粗 + 值常规；居中 | `styles.tagline` + `Profile.summary` |
 | 联系 | 9.5pt 宋体 **bold** 居中，`\|` 分隔 | `styles.contact` |
 | 节标题 | 14pt 黑体 + 底边框；段前 200 / 段后 120 | H2 `borderBottom` / `styles.sectionHeading` |
 | 教育 / 项目条目 | Tab center **4933** + right **9866**；左黑体加粗；技术栈小一号斜体 | `entryTitle` / `entryTech` / `entryMeta` |

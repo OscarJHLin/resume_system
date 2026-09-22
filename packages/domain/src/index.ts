@@ -33,7 +33,7 @@ export const TEMPLATES: readonly TemplateMeta[] = [
   {
     id: DEFAULT_TEMPLATE_ID,
     label: '蓝黑简洁简历',
-    description: '对齐参考简历模板：居中证件照→姓名→标语→联系；三栏条目',
+    description: '对齐参考简历模板：居中证件照→姓名→应聘岗位→联系；三栏条目',
   },
 ] as const;
 
@@ -116,7 +116,7 @@ export interface Profile {
   /** Optional */
   qq?: string;
   location?: string;
-  /** Short tagline under the name (标语 / 定位). */
+  /** 应聘岗位 — short target role under the name (stored as summary). */
   summary?: string;
   /** 个人陈述 — plain-text advantage statement shown as its own section. */
   statement?: string;
@@ -308,6 +308,9 @@ export const SECTION_LABELS: Record<SectionId, string> = {
 
 /** Profile-driven section rendered above 教育背景 (not a placeable section). */
 export const PERSONAL_STATEMENT_LABEL = '个人陈述';
+
+/** Header line prefix for Profile.summary (stored field; UI label 应聘岗位). */
+export const TARGET_ROLE_PREFIX = '应聘岗位：';
 
 /** Experience sections that accept drag-drop placements. */
 export const PLACEABLE_SECTIONS: readonly SectionId[] = [

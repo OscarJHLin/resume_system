@@ -171,10 +171,10 @@ export function ProfileEditor({
             />
           </label>
           <label>
-            标语 / 定位（选填）
+            应聘岗位（选填）
             <input
               value={values.summary}
-              placeholder="如：软件工程本科生 · AI 应用"
+              placeholder="如：软件工程师"
               onChange={(e) => set('summary', e.target.value)}
             />
           </label>
