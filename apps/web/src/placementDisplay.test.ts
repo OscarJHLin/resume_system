@@ -23,5 +23,9 @@ describe('placementDisplayFields', () => {
     assert.match(v.middle, /负责人/);
     assert.equal(v.timeRange, '2025');
     assert.deepEqual(v.bodyLines, ['一行', '二行']);
+    for (const line of v.bodyLines) {
+      assert.ok(!line.startsWith('•'));
+      assert.ok(!/^[一二三四五六七八九十\d]+[、.]/.test(line));
+    }
   });
 });

@@ -160,17 +160,12 @@
   line-height: 1.4;
 }
 
-.canvas__bullet {
+/* Body lines: verbatim module text — no auto • / numbering */
+.canvas__body {
   margin: 0.05rem 0;
-  padding-left: 0.95rem;
-  text-indent: -0.7rem;
   font-size: 10.5pt;
   font-weight: 700;
   line-height: 1.4;
-}
-
-.canvas__bullet::before {
-  content: "• ";
 }
 
 .canvas__drop {

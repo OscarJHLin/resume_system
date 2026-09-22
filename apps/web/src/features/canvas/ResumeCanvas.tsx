@@ -146,7 +146,7 @@ export function ResumeCanvas({
                       <span className="canvas__entry-right">{range}</span>
                     </div>
                     {detail && (
-                      <p className="canvas__bullet">{detail}</p>
+                      <p className="canvas__body">{detail}</p>
                     )}
                   </div>
                 );
@@ -341,7 +341,7 @@ function PlacementRow({
             删
           </button>
         </div>
-        <p className="canvas__bullet">{view.awardLine}</p>
+        <p className="canvas__body">{view.awardLine}</p>
       </article>
     );
   }
@@ -369,7 +369,7 @@ function PlacementRow({
         <span className="canvas__entry-right">{view.timeRange}</span>
       </div>
       {view.bodyLines.map((line, i) => (
-        <p key={`${i}-${line.slice(0, 24)}`} className="canvas__bullet">
+        <p key={`${i}-${line.slice(0, 24)}`} className="canvas__body">
           {line}
         </p>
       ))}

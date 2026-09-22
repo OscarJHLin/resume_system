@@ -20,7 +20,7 @@ import {
  * Template-driven IR renderer. Typography / tabs / photo placement come from
  * templates/<slug>/manifest.json (see docs/07-template-packs.md).
  * Blue-black-simple matches 参考简历模板.docx: centered photo above name,
- * three-column entry tabs, skill lines without bullets.
+ * three-column entry tabs, skill/body lines without auto bullets.
  */
 export class UnknownTemplateError extends Error {
   constructor(templateId: string) {
@@ -104,7 +104,6 @@ export function renderToIR(
         blocks.push(
           para([{ text: detail, style: STYLE.body }], {
             spacingAfterPt: 0.8,
-            bullet: true,
           }),
         );
       }
@@ -184,7 +183,6 @@ function renderSnapshot(
     out.push(
       para([{ text: line, style: STYLE.body }], {
         spacingAfterPt: 0.8,
-        bullet: true,
       }),
     );
     return out;
@@ -213,7 +211,6 @@ function renderSnapshot(
       out.push(
         para([{ text: line, style: STYLE.body }], {
           spacingAfterPt: 0.8,
-          bullet: true,
         }),
       );
     }

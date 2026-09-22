@@ -111,6 +111,19 @@ describe('lin-v1 / default-v1 template fidelity', () => {
     assert.ok(entry.runs.some((r) => r.text === '\t'));
     assert.ok(entry.runs.some((r) => r.text === 'Python · 个人项目'));
     assert.equal(entry.entryTabs, 4933);
+
+    const bodyParas = ir.blocks.filter(
+      (b) =>
+        b.kind === 'paragraph' &&
+        (b.runs[0]?.text === '语义检索' || b.runs[0]?.text === '跨会话记忆'),
+    );
+    assert.equal(bodyParas.length, 2);
+    for (const b of bodyParas) {
+      assert.ok(b.kind === 'paragraph');
+      assert.notEqual(b.bullet, true);
+      assert.ok(!b.runs[0]?.text.startsWith('•'));
+      assert.ok(!/^[一二三四五六七八九十\d]+[、.]/.test(b.runs[0]?.text ?? ''));
+    }
   });
 
   it('exported docx is non-empty OOXML', async () => {
