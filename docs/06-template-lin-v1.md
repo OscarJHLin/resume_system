@@ -4,7 +4,7 @@
 - Template id（合同）: `default-v1`（内部亦称 lin-v1）
 - 用户可见名称: **蓝黑简洁简历**
 - 视觉参考: `~/(local-resume-sample)/参考简历模板.docx`（不入库二进制）
-- Pack: `templates/blue-black-simple/manifest.json`（v1.2.0）
+- Pack: `templates/blue-black-simple/manifest.json`（v1.2.1）
 - 工作台：顶栏「选择简历模板」；**证件照居中置于姓名上方**（有照片时）
 
 ## 从参考 DOCX 提取（已复核）
@@ -16,7 +16,7 @@
 | 姓名 | 22pt 黑体 bold 居中；段后 120；行距 560 | H1 + `styles.name` |
 | 标语 | 11pt 黑体 **bold** 居中 | `styles.tagline` |
 | 联系 | 9.5pt 宋体 **bold** 居中，`\|` 分隔 | `styles.contact` |
-| 节标题 | 13pt 黑体 + 底边框 single sz=6 space=4；段前 200 / 段后 120 | H2 `borderBottom` |
+| 节标题 | 14pt 黑体 + 底边框；段前 200 / 段后 120 | H2 `borderBottom` / `styles.sectionHeading` |
 | 教育 / 项目条目 | Tab center **4933** + right **9866**；左黑体加粗；技术栈小一号斜体 | `entryTitle` / `entryTech` / `entryMeta` |
 | 实习条目 | Tab center **6520** + right 9866 | `layout.internshipTabCenter` |
 | 技术能力 | 无项目符号；「标题：」+ 正文，全加粗；段后 8 | 非 bullet 段落 |

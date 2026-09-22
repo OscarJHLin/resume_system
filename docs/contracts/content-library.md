@@ -40,7 +40,7 @@ interface ContentModule {
 
 必填：`name` / `gender`（男|女）/ `email` / `phone` / `wechat`  
 选填：`qq` / `location` / `summary` / `photo` / `tags` / `notes`  
-嵌套：`education[]`（学校、学历、专业、起止、GPA、排名、课程）、`skills[]`（标题加粗 + 正文）
+嵌套：`education[]`（学校、学历〔小学/中专/高中/大专/本科/双学位/硕士/博士/其他〕、专业、起止、GPA、排名、课程）、`skills[]`（标题加粗 + 正文）
 
 | Method | Path | 说明 |
 |---|---|---|

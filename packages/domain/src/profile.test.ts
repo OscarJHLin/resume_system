@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   decideModuleDrop,
+  DEGREE_OPTIONS,
   educationTimeRange,
   emptyEducationItem,
   emptySkillBlock,
+  isDegreeOption,
   isPlaceableSection,
   validateProfileRequired,
 } from './index.js';
@@ -58,6 +60,24 @@ describe('education helpers', () => {
   it('empty education/skill defaults', () => {
     assert.equal(emptyEducationItem().degree, '本科');
     assert.equal(emptySkillBlock().title, '');
+  });
+
+  it('degree options cover common levels', () => {
+    for (const d of [
+      '小学',
+      '中专',
+      '高中',
+      '大专',
+      '本科',
+      '双学位',
+      '硕士',
+      '博士',
+      '其他',
+    ]) {
+      assert.ok(isDegreeOption(d), d);
+    }
+    assert.equal(DEGREE_OPTIONS.length, 9);
+    assert.equal(isDegreeOption('专科'), false);
   });
 });
 

@@ -39,12 +39,26 @@ export const TEMPLATES: readonly TemplateMeta[] = [
 
 export type Gender = '男' | '女';
 
-export type DegreeOption = '本科' | '硕士' | '博士' | '其他';
+export type DegreeOption =
+  | '小学'
+  | '中专'
+  | '高中'
+  | '大专'
+  | '本科'
+  | '双学位'
+  | '硕士'
+  | '博士'
+  | '其他';
 
 export const GENDERS: readonly Gender[] = ['男', '女'];
 
 export const DEGREE_OPTIONS: readonly DegreeOption[] = [
+  '小学',
+  '中专',
+  '高中',
+  '大专',
   '本科',
+  '双学位',
   '硕士',
   '博士',
   '其他',

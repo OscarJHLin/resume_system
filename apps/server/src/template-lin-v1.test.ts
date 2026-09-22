@@ -10,7 +10,7 @@ import {
 describe('lin-v1 / default-v1 template fidelity', () => {
   it('locks typography probes from reference DOCX (参考简历模板)', () => {
     assert.equal(LIN_V1_STYLE_PROBE.namePt, 22);
-    assert.equal(LIN_V1_STYLE_PROBE.sectionPt, 13);
+    assert.equal(LIN_V1_STYLE_PROBE.sectionPt, 14);
     assert.equal(LIN_V1_STYLE_PROBE.bodyPt, 10.5);
     assert.equal(LIN_V1_STYLE_PROBE.contactPt, 9.5);
     assert.equal(LIN_V1_STYLE_PROBE.heiti, '黑体');
@@ -80,7 +80,7 @@ describe('lin-v1 / default-v1 template fidelity', () => {
       () => '2026-09-23T00:00:00.000Z',
     );
 
-    assert.equal(ir.templateVersion, '1.2.0');
+    assert.equal(ir.templateVersion, '1.2.1');
 
     const eduHead = ir.blocks.find(
       (b) =>
