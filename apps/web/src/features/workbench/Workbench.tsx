@@ -239,7 +239,6 @@ export function Workbench() {
         <div className="workbench__brand-block">
           <p className="workbench__brand">拼履</p>
           <p className="workbench__phase">{status}</p>
-          <p className="workbench__storage">本机自动存库 · 无需配置数据库</p>
         </div>
         <div className="workbench__actions">
           <div className="workbench__picker-wrap">

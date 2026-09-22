@@ -30,13 +30,6 @@
   font-size: 0.8rem;
 }
 
-.workbench__storage {
-  margin: 0.2rem 0 0;
-  color: var(--muted);
-  font-size: 0.72rem;
-  opacity: 0.9;
-}
-
 .workbench__actions {
   display: flex;
   gap: 0.5rem;
