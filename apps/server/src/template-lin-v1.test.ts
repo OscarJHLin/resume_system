@@ -80,7 +80,7 @@ describe('lin-v1 / default-v1 template fidelity', () => {
       () => '2026-09-23T00:00:00.000Z',
     );
 
-    assert.equal(ir.templateVersion, '1.1.0');
+    assert.equal(ir.templateVersion, '1.2.0');
 
     const eduHead = ir.blocks.find(
       (b) =>
@@ -109,7 +109,13 @@ describe('lin-v1 / default-v1 template fidelity', () => {
     );
     assert.ok(entry && entry.kind === 'paragraph');
     assert.ok(entry.runs.some((r) => r.text === '\t'));
-    assert.ok(entry.runs.some((r) => r.text === 'Python · 个人项目'));
+    const techRun = entry.runs.find((r) => r.text === 'Python');
+    assert.ok(techRun);
+    assert.equal(techRun.style?.italic, true);
+    assert.equal(techRun.style?.fontSizePt, 9.5);
+    assert.notEqual(techRun.style?.bold, true);
+    assert.ok(entry.runs.some((r) => r.text === '个人项目'));
+    assert.ok(entry.runs.some((r) => r.style?.bold && r.text === 'Agent 记忆原型'));
     assert.equal(entry.entryTabs, 4933);
 
     const bodyParas = ir.blocks.filter(
@@ -121,6 +127,8 @@ describe('lin-v1 / default-v1 template fidelity', () => {
     for (const b of bodyParas) {
       assert.ok(b.kind === 'paragraph');
       assert.notEqual(b.bullet, true);
+      assert.notEqual(b.runs[0]?.style?.bold, true);
+      assert.equal(b.runs[0]?.style?.fontEastAsia, '宋体');
       assert.ok(!b.runs[0]?.text.startsWith('•'));
       assert.ok(!/^[一二三四五六七八九十\d]+[、.]/.test(b.runs[0]?.text ?? ''));
     }

@@ -10,9 +10,13 @@ export function placementDisplayFields(
   section: SectionId,
 ): {
   title: string;
+  /** Tech stack / role — styled smaller + italic on canvas. */
+  projectType: string;
+  /** Duty / department — mid column beside tech. */
+  subtitle: string;
+  /** Joined mid for tests / plain consumers. */
   middle: string;
   timeRange: string;
-  subtitleLine: string;
   bodyLines: string[];
   awardLine?: string;
 } {
@@ -28,21 +32,22 @@ export function placementDisplayFields(
   if (section === 'awards') {
     return {
       title,
+      projectType: '',
+      subtitle: '',
       middle: '',
       timeRange,
-      subtitleLine: '',
       bodyLines,
       awardLine: [title, timeRange, bodyLines.join(' ')].filter(Boolean).join('，'),
     };
   }
 
-  // Mid column: tech/role first, then duty/location — both when present
   const middle = [projectType, subtitle].filter(Boolean).join(' · ');
   return {
     title,
+    projectType,
+    subtitle,
     middle,
     timeRange,
-    subtitleLine: '',
     bodyLines,
   };
 }

@@ -153,6 +153,9 @@ export const api = {
 
   getModule: (id: string) => request<ContentModule>(`/api/modules/${id}`),
 
+  deleteModule: (id: string) =>
+    request<void>(`/api/modules/${id}`, { method: 'DELETE' }),
+
   listResumes: () =>
     request<
       Array<{

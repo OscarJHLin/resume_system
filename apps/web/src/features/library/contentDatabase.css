@@ -108,7 +108,7 @@
   position: relative;
   border: 1px solid #aeb9c2;
   background: #fff;
-  padding: 0.65rem 0.7rem 1.85rem;
+  padding: 0.65rem 0.7rem 2.4rem;
   cursor: grab;
   display: flex;
   flex-direction: column;
@@ -177,7 +177,7 @@
 
 .cdb__card--profile {
   cursor: default;
-  padding-bottom: 2.4rem;
+  padding-bottom: 2.6rem;
 }
 
 .cdb__card--profile .cdb__card-row {
@@ -209,4 +209,9 @@
   border-color: #0b6e6e;
   color: #0b6e6e;
   font-weight: 600;
+}
+
+.cdb__edit--danger {
+  border-color: #c45c5c;
+  color: #a33;
 }

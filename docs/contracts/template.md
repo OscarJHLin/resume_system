@@ -81,8 +81,7 @@ function renderToIR(input: RenderInput): ResumeIR;
   - 姓名：heading L1，加粗，16pt
   - 联系方式行：段落，10.5pt
   - Section 标题：heading L2，加粗，12pt
-  - 项目 title：加粗 11pt；subtitle/担任的职责：常规 10.5pt；projectType：10.5pt；timeRange：同条或旁路 runs
-  - body：段落，10.5pt，按换行拆段，**不**解析 Markdown
+  - 项目 title：加粗 10.5pt 黑体；projectType（技术栈）：9.5pt 斜体宋体；subtitle/担任的职责与 timeRange：entryMeta；body：10.5pt 宋体常规、不加粗、不自动加 •
 
 ## 错误
 

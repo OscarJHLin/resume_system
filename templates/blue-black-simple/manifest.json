@@ -2,8 +2,8 @@
   "id": "default-v1",
   "slug": "blue-black-simple",
   "displayName": "蓝黑简洁简历",
-  "version": "1.1.0",
-  "description": "对齐参考简历模板：居中证件照→姓名→标语→联系；教育/项目三栏 Tab；技能加粗「标题：正文」",
+  "version": "1.2.0",
+  "description": "对齐参考简历模板：居中证件照→姓名→标语→联系；条目标题加粗；技术栈小一号斜体；正文宋体常规",
   "photoInTemplate": true,
   "photo": {
     "placement": "above-name-center",
@@ -28,8 +28,9 @@
     "contact": { "bold": true, "fontSizePt": 9.5, "fontEastAsia": "宋体" },
     "sectionHeading": { "bold": true, "fontSizePt": 13, "fontEastAsia": "黑体" },
     "entryTitle": { "bold": true, "fontSizePt": 10.5, "fontEastAsia": "黑体" },
+    "entryTech": { "bold": false, "italic": true, "fontSizePt": 9.5, "fontEastAsia": "宋体" },
     "entryMeta": { "bold": true, "fontSizePt": 10.5, "fontEastAsia": "宋体" },
     "skillLine": { "bold": true, "fontSizePt": 10.5, "fontEastAsia": "宋体" },
-    "body": { "bold": true, "fontSizePt": 10.5, "fontEastAsia": "宋体" }
+    "body": { "bold": false, "fontSizePt": 10.5, "fontEastAsia": "宋体" }
   }
 }

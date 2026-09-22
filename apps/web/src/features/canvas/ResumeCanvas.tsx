@@ -365,7 +365,15 @@ function PlacementRow({
         }
       >
         <span className="canvas__entry-title">{view.title}</span>
-        <span className="canvas__entry-mid">{view.middle}</span>
+        <span className="canvas__entry-mid">
+          {view.projectType ? (
+            <span className="canvas__entry-tech">{view.projectType}</span>
+          ) : null}
+          {view.projectType && view.subtitle ? ' · ' : null}
+          {view.subtitle ? (
+            <span className="canvas__entry-duty">{view.subtitle}</span>
+          ) : null}
+        </span>
         <span className="canvas__entry-right">{view.timeRange}</span>
       </div>
       {view.bodyLines.map((line, i) => (

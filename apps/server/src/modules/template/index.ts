@@ -85,7 +85,7 @@ export function renderToIR(
         entryLine(
           STYLE,
           edu.school || '学校',
-          major || undefined,
+          { text: major || undefined },
           edu.timeRange,
           {
             spacingAfterPt: 0.8,
@@ -190,8 +190,8 @@ function renderSnapshot(
 
   // projects: title | 技术栈 · 担任的职责 | dates
   // internships: company | 岗位 · 部门 | dates — show every saved field
-  const middle =
-    [s.projectType, s.subtitle].filter(Boolean).join(' · ') || undefined;
+  const tech = (s.projectType ?? '').trim() || undefined;
+  const duty = (s.subtitle ?? '').trim() || undefined;
   const right = s.timeRange || undefined;
   const tabCenter =
     section === 'internships'
@@ -199,11 +199,17 @@ function renderSnapshot(
       : layout.entryTabCenter;
 
   out.push(
-    entryLine(STYLE, s.title, middle, right, {
-      spacingAfterPt: 0.8,
-      spacingBeforePt: placement.sortOrder > 0 ? 6.5 : 0,
-      entryTabCenter: tabCenter,
-    }),
+    entryLine(
+      STYLE,
+      s.title,
+      { tech, text: duty },
+      right,
+      {
+        spacingAfterPt: 0.8,
+        spacingBeforePt: placement.sortOrder > 0 ? 6.5 : 0,
+        entryTabCenter: tabCenter,
+      },
+    ),
   );
 
   if (s.body.trim()) {
@@ -222,7 +228,7 @@ function renderSnapshot(
 function entryLine(
   STYLE: TemplateStyles,
   title: string,
-  middle: string | undefined,
+  mid: { tech?: string; text?: string } | undefined,
   time: string | undefined,
   opts: {
     spacingAfterPt?: number;
@@ -230,12 +236,26 @@ function entryLine(
     entryTabCenter?: number;
   } = {},
 ): IrParagraph {
+  const tech = mid?.tech?.trim() || undefined;
+  const text = mid?.text?.trim() || undefined;
+  const hasMid = Boolean(tech || text);
   const runs: IrParagraph['runs'] = [
     { text: title, style: STYLE.entryTitle },
   ];
-  if (middle || time) {
+  if (hasMid || time) {
     runs.push({ text: '\t', style: STYLE.entryMeta });
-    runs.push({ text: middle ?? '', style: STYLE.entryMeta });
+    if (tech) {
+      runs.push({ text: tech, style: STYLE.entryTech });
+    }
+    if (tech && text) {
+      runs.push({ text: ' · ', style: STYLE.entryMeta });
+    }
+    if (text) {
+      runs.push({ text, style: STYLE.entryMeta });
+    }
+    if (!hasMid) {
+      runs.push({ text: '', style: STYLE.entryMeta });
+    }
   }
   if (time) {
     runs.push({ text: '\t', style: STYLE.entryMeta });

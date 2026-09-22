@@ -9,6 +9,10 @@ import { clearModuleDrag, setModuleDragData } from '../dnd/dragPayload';
 import { ModuleEditor } from './ModuleEditor';
 import { ProfileEditor } from './ProfileEditor';
 import { profileCardSummary } from './profileForm';
+import {
+  confirmDeleteModule,
+  confirmDeleteProfile,
+} from './libraryDelete';
 import './contentDatabase.css';
 
 export interface ContentDatabaseProps {
@@ -118,6 +122,51 @@ export function ContentDatabase({
     setEditorOpen(true);
   };
 
+  const onDeleteModule = async (m: ContentModule) => {
+    if (disabled) return;
+    if (!confirmDeleteModule(m.title)) return;
+    try {
+      await api.deleteModule(m.id);
+      if (editing?.id === m.id) {
+        setEditorOpen(false);
+        setEditing(null);
+      }
+      onStatus?.(
+        `已删除模块：${m.title}（简历上已拖入的条目仍保留快照）`,
+      );
+      await load();
+      onModulesChanged?.();
+    } catch (e) {
+      onStatus?.(
+        `删除模块失败: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  };
+
+  const onDeleteProfile = async (p: Profile) => {
+    if (disabled) return;
+    const applied = appliedProfileId === p.id;
+    if (!confirmDeleteProfile(p.name || '未命名', applied)) return;
+    try {
+      await api.deleteProfile(p.id);
+      if (editingProfile?.id === p.id) {
+        setProfileEditorOpen(false);
+        setEditingProfile(null);
+      }
+      onStatus?.(
+        applied
+          ? `已删除基本信息卡：${p.name}（已从简历解除应用）`
+          : `已删除基本信息卡：${p.name}`,
+      );
+      await load();
+      onProfilesChanged?.();
+    } catch (e) {
+      onStatus?.(
+        `删除基本信息失败: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  };
+
   return (
     <aside className={`cdb${disabled ? ' cdb--disabled' : ''}`}>
       <div className="cdb__search">
@@ -219,6 +268,16 @@ export function ContentDatabase({
                 >
                   应用到简历
                 </button>
+                <button
+                  type="button"
+                  className="cdb__edit cdb__edit--danger"
+                  disabled={disabled}
+                  onClick={() => {
+                    void onDeleteProfile(p);
+                  }}
+                >
+                  删除
+                </button>
               </div>
             </li>
           ))}
@@ -269,6 +328,17 @@ export function ContentDatabase({
                   }}
                 >
                   编辑
+                </button>
+                <button
+                  type="button"
+                  className="cdb__edit cdb__edit--danger"
+                  disabled={disabled}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void onDeleteModule(m);
+                  }}
+                >
+                  删除
                 </button>
               </div>
             </li>

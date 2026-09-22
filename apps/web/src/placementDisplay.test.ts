@@ -19,6 +19,8 @@ describe('placementDisplayFields', () => {
       'projects',
     );
     assert.equal(v.title, '示例项目');
+    assert.equal(v.projectType, 'Flutter');
+    assert.equal(v.subtitle, '负责人');
     assert.match(v.middle, /Flutter/);
     assert.match(v.middle, /负责人/);
     assert.equal(v.timeRange, '2025');

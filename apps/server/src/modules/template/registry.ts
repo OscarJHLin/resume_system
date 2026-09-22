@@ -16,6 +16,8 @@ export interface TemplateStyles {
   contact: TextStyle;
   sectionHeading: TextStyle;
   entryTitle: TextStyle;
+  /** projectType / tech stack — typically one size smaller + italic. */
+  entryTech: TextStyle;
   entryMeta: TextStyle;
   skillLine: TextStyle;
   body: TextStyle;
@@ -59,7 +61,7 @@ interface ManifestFile {
   layout?: Partial<TemplateLayoutSpec>;
   sectionOrder: SectionId[];
   page: TemplatePageSpec;
-  styles: TemplateStyles;
+  styles: Omit<TemplateStyles, 'entryTech'> & { entryTech?: TextStyle };
 }
 
 const DEFAULT_LAYOUT: TemplateLayoutSpec = {
@@ -169,7 +171,19 @@ export function loadTemplateRegistry(
       },
       sectionOrder: m.sectionOrder,
       page: m.page,
-      styles: m.styles,
+      styles: {
+        ...m.styles,
+        entryTech:
+          m.styles.entryTech ?? {
+            bold: false,
+            italic: true,
+            fontSizePt: Math.max(
+              8,
+              (m.styles.entryMeta?.fontSizePt ?? 10.5) - 1,
+            ),
+            fontEastAsia: m.styles.entryMeta?.fontEastAsia ?? '宋体',
+          },
+      },
     });
   }
   if (map.size === 0) {
