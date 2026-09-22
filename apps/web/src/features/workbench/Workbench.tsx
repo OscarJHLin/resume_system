@@ -237,7 +237,7 @@ export function Workbench() {
     <div className="workbench">
       <header className="workbench__header">
         <div className="workbench__brand-block">
-          <p className="workbench__brand">简历组装系统</p>
+          <p className="workbench__brand">拼履</p>
           <p className="workbench__phase">{status}</p>
         </div>
         <div className="workbench__actions">

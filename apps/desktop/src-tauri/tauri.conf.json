@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "简历组装系统",
-  "version": "0.1.0",
+  "productName": "拼履",
+  "version": "0.2.1",
   "identifier": "com.resume.assembler",
   "build": {
     "frontendDist": "../../web/dist",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "简历组装系统",
+        "title": "拼履",
         "width": 1280,
         "height": 840,
         "resizable": true,

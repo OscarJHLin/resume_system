@@ -1,6 +1,8 @@
-# 模块化简历组装系统
+# 拼履
 
-本地优先的简历组装系统：**S5 工作台（模板选择 + 四标签内容库 + 多基本信息卡）+ lin-v1 导出**。
+本地优先的模块化简历工具：**内容库拼进模板 → 画布预览 → DOCX 导出**。
+
+产品名取「拼履」——「拼」对应模块拖放组装，「履」指履历；短、好记，区别于泛称「简历组装系统」。
 
 > 当前状态：**可验收**。清单 [docs/05-acceptance.md](docs/05-acceptance.md)；模板说明 [docs/06-template-lin-v1.md](docs/06-template-lin-v1.md) / [docs/07-template-packs.md](docs/07-template-packs.md)。
 
@@ -52,8 +54,8 @@ npm run app:desktop:build    # 产出 macOS .app（不入库）
 
 ```bash
 npm run app:desktop:build
-# → dist-app/简历组装系统.app   （若设置了 CARGO_TARGET_DIR 则见该目录下 release/bundle/macos/）
-open dist-app/简历组装系统.app
+# → dist-app/拼履.app   （若设置了 CARGO_TARGET_DIR 则见该目录下 release/bundle/macos/）
+open dist-app/拼履.app
 ```
 
 打包后的 `.app` 仍需本机 **Node/npm 在 PATH**，并建议在仓库根执行或设置 `RESUME_ROOT` 指向本仓库（服务从 monorepo 启动）。纯离线无 Node 的安装包未做。

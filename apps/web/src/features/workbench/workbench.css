@@ -16,8 +16,10 @@
 
 .workbench__brand {
   margin: 0;
-  font-size: 1.15rem;
-  letter-spacing: 0.02em;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
 }
 
 .workbench__phase {

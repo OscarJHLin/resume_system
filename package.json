@@ -2,7 +2,7 @@
   "name": "resume-system",
   "private": true,
   "version": "0.0.0",
-  "description": "Modular resume assembly system — foundation scaffold",
+  "description": "拼履 — modular resume assembler (content library → template → DOCX)",
   "workspaces": [
     "apps/*",
     "packages/*"
