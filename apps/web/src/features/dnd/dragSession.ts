@@ -1,36 +1,81 @@
-import type { ModuleDragPayload } from '@resume/domain';
+import type { ModuleDragPayload, SectionId } from '@resume/domain';
+import {
+  exceedsDragThreshold,
+  hitTestZones,
+  type Point,
+  type RectLike,
+} from './dropTarget';
 
 /**
- * In-memory drag / place session (cross-platform: WKWebView + WebView2).
+ * Pointer-driven module drag + 「放入」click-to-place, shared by library cards
+ * and resume drop zones. No HTML5 DnD: Tauri's native drag-drop handler
+ * swallows dragover/drop in WKWebView and WebView2, pointer events are not
+ * affected.
  *
- * Lifecycle for HTML5 DnD:
- *   beginModuleDrag  → arm payload (no UI notify — React re-render mid-drag
- *                      aborts DnD in WKWebView / Safari)
- *   scheduleEndModuleDrag (from dragend) → cancel timer only; do NOT clear yet
- *                      (WebView2 may deliver dragend before drop)
- *   endModuleDrag (from drop / explicit cancel) → clear immediately
- *   timer fires → clear only if drop never consumed the session
- *
- * Pointer place (「放入」): separate arm; notifies so drop zones highlight.
+ *   pressModuleDrag (pointerdown) → pending
+ *   moveModuleDrag  (pointermove) → dragging once past the threshold; tracks hover zone
+ *   releaseModuleDrag (pointerup) → drops on the zone under the pointer, if any
+ *   cancelModuleDrag (Escape / pointercancel)
  */
 
-/** Grace period after dragend before treating the drag as cancelled. */
-export const MODULE_DRAG_END_GRACE_MS = 500;
+export interface DropZone {
+  section: SectionId;
+  getRect(): RectLike | null;
+  onDrop(payload: ModuleDragPayload): void;
+}
 
-let activeDrag: ModuleDragPayload | null = null;
+export interface PlaceSnapshot {
+  /** Module being dragged (past the threshold), else null. */
+  dragging: ModuleDragPayload | null;
+  dragLabel: string;
+  hoverSection: SectionId | null;
+  /** Module armed via 「放入」. */
+  picked: ModuleDragPayload | null;
+}
+
+export type ReleaseOutcome = 'click' | 'dropped' | 'missed';
+
+interface DragState {
+  payload: ModuleDragPayload;
+  label: string;
+  start: Point;
+  dragging: boolean;
+  hover: DropZone | null;
+}
+
+const EMPTY: PlaceSnapshot = {
+  dragging: null,
+  dragLabel: '',
+  hoverSection: null,
+  picked: null,
+};
+
+const zones = new Set<DropZone>();
+let drag: DragState | null = null;
 let pointerPick: ModuleDragPayload | null = null;
-let endDragTimer: ReturnType<typeof setTimeout> | null = null;
-/** Bumps on begin/end so a stale cancel timer cannot wipe a newer drag. */
-let dragEpoch = 0;
+let snapshot: PlaceSnapshot = EMPTY;
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
 
-function notifyPlace(): void {
+function publish(): void {
+  const next: PlaceSnapshot = {
+    dragging: drag?.dragging ? drag.payload : null,
+    dragLabel: drag?.dragging ? drag.label : '',
+    hoverSection: drag?.dragging ? (drag.hover?.section ?? null) : null,
+    picked: pointerPick,
+  };
+  if (
+    next.dragging === snapshot.dragging &&
+    next.hoverSection === snapshot.hoverSection &&
+    next.picked === snapshot.picked
+  ) {
+    return;
+  }
+  snapshot = next;
   listeners.forEach((l) => l());
 }
 
-/** Subscribe to pointer-place changes (drop-zone highlight for 「放入」). */
 export function subscribePlaceSession(listener: Listener): () => void {
   listeners.add(listener);
   return () => {
@@ -38,76 +83,72 @@ export function subscribePlaceSession(listener: Listener): () => void {
   };
 }
 
-function clearEndDragTimer(): void {
-  if (endDragTimer != null) {
-    clearTimeout(endDragTimer);
-    endDragTimer = null;
-  }
+export function getPlaceSnapshot(): PlaceSnapshot {
+  return snapshot;
 }
 
-export function beginModuleDrag(payload: ModuleDragPayload): void {
-  clearEndDragTimer();
-  dragEpoch += 1;
-  activeDrag = payload;
-  // Intentionally no notifyPlace(): HTML5 drag must not trigger React commits.
+export function registerDropZone(zone: DropZone): () => void {
+  zones.add(zone);
+  return () => {
+    zones.delete(zone);
+    if (drag?.hover === zone) {
+      drag.hover = null;
+      publish();
+    }
+  };
 }
 
-/** Immediate clear after a successful drop or explicit cancel. */
-export function endModuleDrag(): void {
-  clearEndDragTimer();
-  dragEpoch += 1;
-  if (activeDrag == null) return;
-  activeDrag = null;
-}
-
-/**
- * Call from dragend. Does not clear immediately — keeps the payload until
- * drop consumes it (endModuleDrag) or grace elapses (cancel / drop outside).
- */
-export function scheduleEndModuleDrag(
-  delayMs: number = MODULE_DRAG_END_GRACE_MS,
+export function pressModuleDrag(
+  payload: ModuleDragPayload,
+  label: string,
+  start: Point,
 ): void {
-  clearEndDragTimer();
-  const epoch = dragEpoch;
-  endDragTimer = setTimeout(() => {
-    endDragTimer = null;
-    if (epoch !== dragEpoch) return;
-    if (activeDrag == null) return;
-    activeDrag = null;
-  }, delayMs);
+  drag = { payload, label, start, dragging: false, hover: null };
 }
 
-export function getActiveModuleDrag(): ModuleDragPayload | null {
-  return activeDrag;
+/** Returns true while a drag is in progress (caller should suppress default). */
+export function moveModuleDrag(point: Point): boolean {
+  if (!drag) return false;
+  if (!drag.dragging) {
+    if (!exceedsDragThreshold(drag.start, point)) return false;
+    drag.dragging = true;
+    pointerPick = null;
+  }
+  drag.hover = hitTestZones(point, zones);
+  publish();
+  return true;
 }
 
-/** Armed module for click-to-place (no HTML5 DnD required). */
+export function releaseModuleDrag(point: Point): ReleaseOutcome {
+  const state = drag;
+  drag = null;
+  if (!state || !state.dragging) {
+    publish();
+    return 'click';
+  }
+  const zone = hitTestZones(point, zones);
+  publish();
+  if (!zone) return 'missed';
+  zone.onDrop(state.payload);
+  return 'dropped';
+}
+
+export function cancelModuleDrag(): void {
+  if (!drag) return;
+  drag = null;
+  publish();
+}
+
+export function isModuleDragActive(): boolean {
+  return drag?.dragging ?? false;
+}
+
 export function armPointerPick(payload: ModuleDragPayload): void {
   pointerPick = payload;
-  notifyPlace();
+  publish();
 }
 
 export function clearPointerPick(): void {
-  if (pointerPick == null) return;
   pointerPick = null;
-  notifyPlace();
-}
-
-export function getPointerPick(): ModuleDragPayload | null {
-  return pointerPick;
-}
-
-export function consumePointerPick(): ModuleDragPayload | null {
-  const p = pointerPick;
-  if (p == null) return null;
-  pointerPick = null;
-  notifyPlace();
-  return p;
-}
-
-/**
- * Prefer live HTML5 drag, then pointer-pick, for drop-zone hover / drop / click.
- */
-export function getPlacePayload(): ModuleDragPayload | null {
-  return activeDrag ?? pointerPick;
+  publish();
 }

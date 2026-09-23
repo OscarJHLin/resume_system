@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type {
   Profile,
   ResumeDocument,
@@ -10,18 +10,11 @@ import {
   PERSONAL_STATEMENT_LABEL,
   SECTION_LABELS,
   TARGET_ROLE_PREFIX,
-  decideModuleDrop,
   educationTimeRange,
   isPlaceableSection,
 } from '@resume/domain';
-import {
-  clearModuleDrag,
-  dropZoneClassName,
-  getPointerPick,
-  readModuleDragData,
-  takePlacePayloadOnClick,
-} from '../dnd/dragPayload';
-import { subscribePlaceSession } from '../dnd/dragSession';
+import { dropZoneClassName } from '../dnd/dropTarget';
+import { useDropZone } from '../dnd/pointerDrag';
 import { placementsForSection } from '../editor/docModel';
 import { canMovePlacement } from '../editor/placementOrder';
 import { api } from '../../api/client';
@@ -277,21 +270,12 @@ function PlaceableSection({
   ) => Promise<void>;
   onStatus?: (message: string) => void;
 }) {
-  const [hover, setHover] = useState(false);
-  const [invalid, setInvalid] = useState(false);
-  // Only 「放入」pointer-pick — HTML5 drag uses local hover; notifying on
-  // dragstart re-renders the canvas and aborts DnD in WKWebView.
-  const [placeArmed, setPlaceArmed] = useState(() => getPointerPick() != null);
+  const zone = useDropZone<HTMLDivElement>(sectionId, {
+    onAccept: (moduleId) => void onDropModule(sectionId, moduleId),
+    onReject: (message) => onStatus?.(message),
+  });
   const items = placementsForSection(resume, sectionId);
   const orderedIds = items.map((p) => p.id);
-
-  useEffect(
-    () =>
-      subscribePlaceSession(() => {
-        setPlaceArmed(getPointerPick() != null);
-      }),
-    [],
-  );
 
   if (!isPlaceableSection(sectionId)) return null;
 
@@ -299,43 +283,8 @@ function PlaceableSection({
     <section className="canvas__section" data-section={sectionId}>
       <h2>{title}</h2>
       <div
-        className={dropZoneClassName('canvas__drop', {
-          active: hover || placeArmed,
-          invalid: hover && invalid,
-        })}
-        onDragOver={(e) => {
-          e.preventDefault();
-          const payload = readModuleDragData(e.dataTransfer);
-          if (!payload) {
-            e.dataTransfer.dropEffect = 'none';
-            return;
-          }
-          const ok = decideModuleDrop(payload.category, sectionId) === 'accept';
-          e.dataTransfer.dropEffect = ok ? 'copy' : 'none';
-          setHover(true);
-          setInvalid(!ok);
-        }}
-        onDragLeave={() => {
-          setHover(false);
-          setInvalid(false);
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setHover(false);
-          setInvalid(false);
-          const payload = readModuleDragData(e.dataTransfer);
-          clearModuleDrag();
-          if (!payload) {
-            onStatus?.('无法读取拖拽数据');
-            return;
-          }
-          if (decideModuleDrop(payload.category, sectionId) !== 'accept') {
-            onStatus?.(`不能将 ${payload.category} 放入「${title}」`);
-            return;
-          }
-          void onDropModule(sectionId, payload.moduleId);
-        }}
+        ref={zone.ref}
+        className={dropZoneClassName('canvas__drop', zone)}
         onClick={(e) => {
           const t = e.target;
           if (
@@ -344,13 +293,7 @@ function PlaceableSection({
           ) {
             return;
           }
-          const payload = takePlacePayloadOnClick();
-          if (!payload) return;
-          if (decideModuleDrop(payload.category, sectionId) !== 'accept') {
-            onStatus?.(`不能将 ${payload.category} 放入「${title}」`);
-            return;
-          }
-          void onDropModule(sectionId, payload.moduleId);
+          zone.placePicked();
         }}
       >
         {items.length === 0 ? (

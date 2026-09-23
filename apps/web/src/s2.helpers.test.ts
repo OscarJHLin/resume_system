@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { buildModulesQuery } from './api/client.js';
-import { dropZoneClassName } from './features/dnd/dragPayload.js';
+import { dropZoneClassName } from './features/dnd/dropTarget.js';
 
 describe('web S2 helpers', () => {
   it('builds modules query for tag/category/q filters', () => {

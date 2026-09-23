@@ -22,10 +22,7 @@ export function deleteProfileConfirmTitle(): string {
   return '删除基本信息';
 }
 
-/**
- * Prevent HTML5 drag on the parent card from swallowing button clicks
- * (common WKWebView / Chromium failure mode for 删除).
- */
+/** Keep the parent card's pointer drag from starting on action buttons (删除 / 编辑 / 放入). */
 export function stopCardActionPointer(
   e: Pick<Event, 'stopPropagation'> & { preventDefault?: () => void },
 ): void {

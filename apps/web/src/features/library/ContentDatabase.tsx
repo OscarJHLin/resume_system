@@ -6,11 +6,8 @@ import {
   displayModuleTimeRange,
 } from '@resume/domain';
 import { api } from '../../api/client';
-import {
-  finishModuleDrag,
-  pickModuleForPlace,
-  setModuleDragData,
-} from '../dnd/dragPayload';
+import { armPointerPick } from '../dnd/dragSession';
+import { startModulePointerDrag } from '../dnd/pointerDrag';
 import { ConfirmDialog } from './ConfirmDialog';
 import { ModuleEditor } from './ModuleEditor';
 import { ProfileEditor } from './ProfileEditor';
@@ -391,23 +388,16 @@ export function ContentDatabase({
               <li
                 key={m.id}
                 className="cdb__card"
-                draggable={!disabled}
-                onDragStart={(e) => {
+                onDragStart={(e) => e.preventDefault()}
+                onPointerDown={(e) => {
                   if (disabled) return;
-                  const t = e.target;
-                  if (
-                    t instanceof Element &&
-                    t.closest('.cdb__card-actions, button, a, input')
-                  ) {
-                    e.preventDefault();
-                    return;
-                  }
-                  // Prefer currentTarget (the card): Safari/WKWebView often
-                  // reports a child as target while the li owns draggable.
-                  setModuleDragData(e.dataTransfer, m.id, m.category);
-                  onStatus?.(`拖拽中: ${m.title}`);
+                  startModulePointerDrag(
+                    e,
+                    { moduleId: m.id, category: m.category },
+                    m.title,
+                    { onMiss: () => onStatus?.('未放入：请拖到左侧对应的经历区块') },
+                  );
                 }}
-                onDragEnd={() => finishModuleDrag()}
               >
                 <div className="cdb__card-row">
                   <span className="cdb__field cdb__title">{m.title}</span>
@@ -442,7 +432,7 @@ export function ContentDatabase({
                     title="拖拽不可用时：点此选中，再点击左侧简历区块放入"
                     onClick={(e) => {
                       e.stopPropagation();
-                      pickModuleForPlace(m.id, m.category);
+                      armPointerPick({ moduleId: m.id, category: m.category });
                       onStatus?.(
                         `已选中「${m.title}」— 点击左侧对应区块放入（也可直接拖拽）`,
                       );

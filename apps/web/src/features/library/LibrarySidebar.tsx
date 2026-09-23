@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Category, ContentModule } from '@resume/domain';
 import { CATEGORIES } from '@resume/domain';
 import { api } from '../../api/client';
-import { setModuleDragData, finishModuleDrag } from '../dnd/dragPayload';
+import { startModulePointerDrag } from '../dnd/pointerDrag';
 import { ModuleEditor } from './ModuleEditor';
 import './library.css';
 
@@ -154,13 +154,15 @@ export function LibrarySidebar({
           <li
             key={m.id}
             className="library__item"
-            draggable={!disabled}
-            onDragStart={(e) => {
+            onDragStart={(e) => e.preventDefault()}
+            onPointerDown={(e) => {
               if (disabled) return;
-              setModuleDragData(e.dataTransfer, m.id, m.category);
-              onStatus?.(`拖拽中: ${m.title}`);
+              startModulePointerDrag(
+                e,
+                { moduleId: m.id, category: m.category },
+                m.title,
+              );
             }}
-            onDragEnd={() => finishModuleDrag()}
           >
             <div className="library__item-top">
               <span className="library__cat">{CATEGORY_LABEL[m.category]}</span>

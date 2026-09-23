@@ -32,3 +32,38 @@ button {
   font: inherit;
   cursor: pointer;
 }
+
+html.module-dragging,
+html.module-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+.module-drag-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  max-width: 260px;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--accent);
+  background: #fff;
+  color: var(--ink);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 6px 18px rgba(21, 32, 40, 0.18);
+  pointer-events: none;
+  opacity: 0.92;
+}
+
+.module-drag-ghost[data-state='ok'] {
+  background: color-mix(in srgb, var(--accent) 10%, #fff);
+}
+
+.module-drag-ghost[data-state='invalid'] {
+  border-color: #a33;
+  background: #f8ecec;
+}

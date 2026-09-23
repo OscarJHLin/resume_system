@@ -131,9 +131,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  /* WebView2: make the card itself the drag image source */
-  -webkit-user-drag: element;
+  -webkit-user-drag: none;
   user-select: none;
+  -webkit-user-select: none;
 }
 
 .cdb__card:active {
@@ -230,13 +230,10 @@
   justify-content: flex-end;
   gap: 0.35rem;
   z-index: 2;
-  /* Isolate from parent HTML5 drag so 删除/编辑 clicks always fire */
-  -webkit-user-drag: none;
 }
 
 .cdb__card-actions .cdb__edit {
   position: static;
-  -webkit-user-drag: none;
 }
 
 .cdb__edit--primary,
