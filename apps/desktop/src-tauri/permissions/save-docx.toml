@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-save-docx"
+description = "Show a native save dialog and write an exported DOCX file."
+commands.allow = ["save_docx"]

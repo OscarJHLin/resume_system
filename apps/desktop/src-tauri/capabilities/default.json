@@ -3,11 +3,15 @@
   "identifier": "default",
   "description": "Default capabilities for 拼履",
   "windows": ["main"],
+  "remote": {
+    "urls": ["http://127.0.0.1:*/*", "http://localhost:*/*"]
+  },
   "permissions": [
     "core:default",
     "core:webview:allow-set-webview-focus",
     "core:window:default",
     "updater:default",
-    "process:default"
+    "process:default",
+    "allow-save-docx"
   ]
 }

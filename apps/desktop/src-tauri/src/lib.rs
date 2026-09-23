@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use base64::Engine as _;
 use tauri::Manager;
 
 pub mod core;
@@ -235,12 +236,67 @@ fn kill_child_tree(child: &mut Child) {
   let _ = child.wait();
 }
 
+/// Native save-as for exported DOCX.
+///
+/// WKWebView exposes `showSaveFilePicker` but rejects instantly with `AbortError`
+/// (no panel). Treating that as cancel made export look broken. This command shows
+/// a real macOS/Windows save panel and writes the bytes.
+#[tauri::command]
+fn save_docx(suggested_name: String, data_base64: String) -> Result<Option<String>, String> {
+  let safe = sanitize_save_name(&suggested_name);
+  let bytes = base64::engine::general_purpose::STANDARD
+    .decode(data_base64.trim())
+    .map_err(|e| format!("invalid DOCX payload: {e}"))?;
+  if bytes.is_empty() {
+    return Err("empty DOCX payload".into());
+  }
+
+  let path = rfd::FileDialog::new()
+    .set_file_name(&safe)
+    .add_filter("Word 文档", &["docx"])
+    .save_file();
+
+  match path {
+    None => Ok(None),
+    Some(path) => {
+      std::fs::write(&path, &bytes).map_err(|e| format!("写入失败: {e}"))?;
+      let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or(safe);
+      Ok(Some(name))
+    }
+  }
+}
+
+fn sanitize_save_name(suggested: &str) -> String {
+  let cleaned: String = suggested
+    .chars()
+    .map(|c| match c {
+      '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
+      _ => c,
+    })
+    .collect();
+  let trimmed = cleaned.trim();
+  let base = if trimmed.is_empty() {
+    "resume.docx"
+  } else {
+    trimmed
+  };
+  if base.to_ascii_lowercase().ends_with(".docx") {
+    base.into()
+  } else {
+    format!("{base}.docx")
+  }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
     .plugin(tauri_plugin_updater::Builder::new().build())
     .plugin(tauri_plugin_process::init())
     .manage(ServerChild(Mutex::new(None)))
+    .invoke_handler(tauri::generate_handler![save_docx])
     .setup(|app| {
       let port = std::env::var("PORT").unwrap_or_else(|_| "8787".into());
       let backend = api_backend();

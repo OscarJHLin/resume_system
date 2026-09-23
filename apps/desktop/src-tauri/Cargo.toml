@@ -34,6 +34,7 @@ uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 base64 = "0.22"
 docx-rs = "0.4"
+rfd = "0.15"
 
 [[bin]]
 name = "resume_api"
