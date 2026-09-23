@@ -1,6 +1,6 @@
 [package]
 name = "pinlu"
-version = "1.5.1"
+version = "1.5.2"
 description = "拼履 — modular resume assembler"
 authors = ["拼履"]
 license = "MIT"

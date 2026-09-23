@@ -77,5 +77,38 @@ jobs:
             - Windows: `%APPDATA%\com.pinlu.desktop\resume.db`
           releaseDraft: false
           prerelease: false
-          uploadUpdaterJson: true
+          includeUpdaterJson: true
           updaterJsonPreferNsis: true
+
+      # Belt-and-suspenders: tauri-action sometimes reports Win .exe upload success
+      # but the asset never sticks on the Release. Keep CI artifacts + re-upload via gh.
+      - name: Preserve Windows NSIS artifacts
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pinlu-windows-nsis
+          path: |
+            apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
+            apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe.sig
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Re-upload Windows NSIS via gh
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          NSIS_DIR="apps/desktop/src-tauri/target/release/bundle/nsis"
+          EXE=$(ls "$NSIS_DIR"/*-setup.exe | head -1)
+          SIG="${EXE}.sig"
+          test -f "$EXE"
+          test -f "$SIG"
+          ls -lh "$EXE" "$SIG"
+          # Zip mirror helps if raw .exe is scrubbed from Releases
+          ZIP="${EXE%.exe}.zip"
+          powershell.exe -NoProfile -Command "Compress-Archive -Path '$EXE' -DestinationPath '$ZIP' -Force"
+          gh release upload "${{ github.ref_name }}" "$EXE" "$SIG" "$ZIP" --clobber
+          echo "Uploaded:"
+          gh release view "${{ github.ref_name }}" --json assets --jq '.assets[].name'

@@ -2,7 +2,7 @@
 
 ## 当前（正式版 GA · Plan C Phase 4）
 
-- 产品版本 **1.5.1**（GitHub tag `v1.5.1`）— Windows WebView2 UX 补丁（导出 / 拖拽 / 日期）
+- 产品版本 **1.5.2**（GitHub tag `v1.5.2`）— Windows WebView2 UX 补丁（导出 / 拖拽 / 日期）
 - Tauri 2 WebView 加载打包的 `apps/web`
 - **默认**进程内 axum（CRUD + 照片 + DOCX `docx-rs`）——**无需本机 Node**
 - 可选开发对照：`RESUME_API=node` → monorepo 内 `npm run start -w @resume/server`（仅仓库开发；安装包拒绝）
