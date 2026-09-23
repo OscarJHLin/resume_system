@@ -61,7 +61,7 @@ npm run app
 - macOS: `~/Library/Application Support/com.pinlu.desktop/resume.db`
 - Windows: `%APPDATA%\com.pinlu.desktop\resume.db`
 
-发布：`git tag v1.2 && git push origin v1.2` → Actions 构建双端安装包并上传 `latest.json`。
+发布：`git tag v1.3 && git push origin v1.3` → Actions 构建双端安装包并上传 `latest.json`。
 
 ### 本地构建桌面壳
 
