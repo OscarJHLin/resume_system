@@ -160,6 +160,14 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
     },
   );
 
+  app.post<{ Params: { id: string } }>(
+    '/api/profiles/:id/copy',
+    async (req, reply) => {
+      const created = store.copyProfile(req.params.id);
+      return reply.code(201).send(created);
+    },
+  );
+
   app.get<{ Params: { id: string } }>(
     '/api/profiles/:id/photo',
     async (req, reply) => {

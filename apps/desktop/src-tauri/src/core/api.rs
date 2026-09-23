@@ -122,6 +122,7 @@ pub fn router(state: AppState, static_dir: Option<PathBuf>) -> Router {
       "/api/profiles/{id}",
       get(get_profile).put(update_profile).delete(delete_profile),
     )
+    .route("/api/profiles/{id}/copy", post(copy_profile))
     .route(
       "/api/profiles/{id}/photo",
       get(get_profile_photo)
@@ -247,6 +248,14 @@ async fn delete_profile(
 ) -> Result<impl IntoResponse, ApiError> {
   state.store.delete_profile(&id)?;
   Ok(StatusCode::NO_CONTENT)
+}
+
+async fn copy_profile(
+  State(state): State<AppState>,
+  Path(id): Path<String>,
+) -> Result<impl IntoResponse, ApiError> {
+  let created = state.store.copy_profile(&id)?;
+  Ok((StatusCode::CREATED, Json(created)))
 }
 
 async fn get_profile_photo(
@@ -870,6 +879,83 @@ mod tests {
       .await
       .unwrap();
     assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[tokio::test]
+  async fn copy_profile_endpoint() {
+    let (state, path) = test_state();
+    let app = router(state, None);
+
+    let res = app
+      .clone()
+      .oneshot(
+        Request::builder()
+          .method("POST")
+          .uri("/api/profiles")
+          .header("content-type", "application/json")
+          .body(Body::from(
+            r#"{"name":"源","gender":"女","phone":"1","email":"e@e.com","wechat":"w","summary":"岗","tags":["t"]}"#,
+          ))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(res.status(), StatusCode::CREATED);
+    let body = to_bytes(res.into_body(), 64 * 1024).await.unwrap();
+    let profile: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let id = profile["id"].as_str().unwrap().to_string();
+
+    let png_b64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    let res = app
+      .clone()
+      .oneshot(
+        Request::builder()
+          .method("PUT")
+          .uri(format!("/api/profiles/{id}/photo"))
+          .header("content-type", "application/json")
+          .body(Body::from(format!(
+            r#"{{"dataBase64":"{png_b64}","mime":"image/png"}}"#
+          )))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+
+    let res = app
+      .clone()
+      .oneshot(
+        Request::builder()
+          .method("POST")
+          .uri(format!("/api/profiles/{id}/copy"))
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(res.status(), StatusCode::CREATED);
+    let body = to_bytes(res.into_body(), 64 * 1024).await.unwrap();
+    let copy: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_ne!(copy["id"].as_str().unwrap(), id);
+    assert_eq!(copy["name"], "源（副本）");
+    assert_eq!(copy["summary"], "岗");
+    assert_eq!(copy["hasPhoto"], true);
+
+    let res = app
+      .oneshot(
+        Request::builder()
+          .method("POST")
+          .uri("/api/profiles/missing-id/copy")
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(res.status(), StatusCode::NOT_FOUND);
+
+    let photos = path.parent().unwrap().join("photos");
+    let _ = std::fs::remove_dir_all(&photos);
     let _ = std::fs::remove_file(&path);
   }
 }

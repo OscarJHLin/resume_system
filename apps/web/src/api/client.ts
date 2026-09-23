@@ -103,6 +103,9 @@ export const api = {
   deleteProfile: (id: string) =>
     request<void>(`/api/profiles/${id}`, { method: 'DELETE' }),
 
+  copyProfile: (id: string) =>
+    request<Profile>(`/api/profiles/${id}/copy`, { method: 'POST' }),
+
   uploadProfilePhoto: (id: string, dataBase64: string, mime: string) =>
     request<Profile>(`/api/profiles/${id}/photo`, {
       method: 'PUT',

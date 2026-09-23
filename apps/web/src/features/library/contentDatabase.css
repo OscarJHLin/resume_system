@@ -195,7 +195,13 @@
 
 .cdb__card--profile {
   cursor: default;
-  padding-bottom: 2.6rem;
+  padding-bottom: 3rem;
+}
+
+.cdb__card--highlight {
+  outline: 2px solid #0b6e6e;
+  outline-offset: 1px;
+  background: #f3faf9;
 }
 
 .cdb__card--profile .cdb__card-row {

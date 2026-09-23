@@ -379,6 +379,51 @@ impl Store {
     Ok(())
   }
 
+  /// Full copy of a profile card (new id); photo file duplicated when present.
+  /// Display name appends `（副本）` so the copy is distinct in the library list.
+  pub fn copy_profile(&self, id: &str) -> Result<Profile, ApiError> {
+    let src = self.get_profile(id)?;
+    let copy_name = format!("{}（副本）", src.name.trim());
+    let phone = src.phone.as_deref().unwrap_or("");
+    let email = src.email.as_deref().unwrap_or("");
+    let wechat = src.wechat.as_deref().unwrap_or("");
+    let created = self.create_profile(ProfileInput {
+      name: &copy_name,
+      gender: &src.gender,
+      phone,
+      email,
+      wechat,
+      qq: src.qq.as_deref(),
+      location: src.location.as_deref(),
+      summary: src.summary.as_deref(),
+      statement: src.statement.as_deref(),
+      education: Some(&src.education),
+      skills: Some(&src.skills),
+      tags: Some(&src.tags),
+      notes: src.notes.as_deref(),
+    })?;
+
+    if let Some((bytes, mime, _)) = self.get_profile_photo(id)? {
+      let ext = if mime.contains("png") {
+        "png"
+      } else if mime.contains("webp") {
+        "webp"
+      } else {
+        "jpg"
+      };
+      return self.save_profile_photo(&created.id, &bytes, ext);
+    }
+    if src.has_photo {
+      let legacy = photos_dir(&self.db_path).join("profile.jpg");
+      if legacy.is_file() {
+        let bytes =
+          std::fs::read(&legacy).map_err(|e| ApiError::Internal(e.to_string()))?;
+        return self.save_profile_photo(&created.id, &bytes, "jpg");
+      }
+    }
+    Ok(created)
+  }
+
   pub fn save_profile_photo(
     &self,
     profile_id: &str,
@@ -1032,6 +1077,72 @@ mod tests {
     let detached = store.get_resume(&r.id).unwrap();
     assert_eq!(detached.profile_id, "");
 
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn copy_profile_duplicates_fields_and_photo() {
+    let (store, path) = seed_db();
+    let education = json!([{
+      "school": "示例大学",
+      "degree": "本科",
+      "major": "CS",
+      "startDate": "2020-09-01",
+      "endDate": "2024-06-01"
+    }]);
+    let src = store
+      .create_profile(ProfileInput {
+        name: "丁一",
+        gender: "男",
+        phone: "137",
+        email: "d@e.com",
+        wechat: "wd",
+        qq: Some("123"),
+        location: Some("北京"),
+        summary: Some("后端"),
+        statement: Some("优势"),
+        education: Some(&education),
+        skills: Some(&json!([{ "title": "语言", "body": "Rust" }])),
+        tags: Some(&json!(["校招"])),
+        notes: Some("备注"),
+      })
+      .unwrap();
+    let png = [
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
+      0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90,
+      0x77, 0x53, 0xde, 0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41, 0x54, 0x08, 0xd7, 0x63, 0xf8,
+      0xff, 0xff, 0x3f, 0x00, 0x05, 0xfe, 0x02, 0xfe, 0xa7, 0x35, 0x81, 0x84, 0x00, 0x00, 0x00,
+      0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+    ];
+    store.save_profile_photo(&src.id, &png, "png").unwrap();
+
+    let copy = store.copy_profile(&src.id).unwrap();
+    assert_ne!(copy.id, src.id);
+    assert_eq!(copy.name, "丁一（副本）");
+    assert_eq!(copy.gender, "男");
+    assert_eq!(copy.phone.as_deref(), Some("137"));
+    assert_eq!(copy.location.as_deref(), Some("北京"));
+    assert_eq!(copy.summary.as_deref(), Some("后端"));
+    assert_eq!(copy.statement.as_deref(), Some("优势"));
+    assert_eq!(copy.notes.as_deref(), Some("备注"));
+    assert_eq!(
+      copy.education[0]["school"].as_str(),
+      Some("示例大学")
+    );
+    assert_eq!(copy.skills[0]["body"].as_str(), Some("Rust"));
+    assert!(copy.has_photo);
+
+    let orig_photo = store.get_profile_photo(&src.id).unwrap().unwrap();
+    let copy_photo = store.get_profile_photo(&copy.id).unwrap().unwrap();
+    assert_eq!(orig_photo.0, copy_photo.0);
+    assert_ne!(orig_photo.2, copy_photo.2);
+
+    let still = store.get_profile(&src.id).unwrap();
+    assert_eq!(still.name, "丁一");
+    assert!(still.has_photo);
+
+    let photos = path.parent().unwrap().join("photos");
+    let _ = std::fs::remove_dir_all(&photos);
     let _ = std::fs::remove_file(&path);
   }
 }

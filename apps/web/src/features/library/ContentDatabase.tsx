@@ -63,6 +63,9 @@ export function ContentDatabase({
     useState<LibraryModuleCategory>('project');
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
+  const [highlightProfileId, setHighlightProfileId] = useState<string | null>(
+    null,
+  );
 
   const load = useCallback(async () => {
     if (disabled) {
@@ -100,6 +103,18 @@ export function ContentDatabase({
   useEffect(() => {
     void load();
   }, [load, refreshKey]);
+
+  useEffect(() => {
+    if (!highlightProfileId || tab !== 'profile') return;
+    const el = document.querySelector(
+      `[data-profile-id="${CSS.escape(highlightProfileId)}"]`,
+    );
+    if (el instanceof HTMLElement) {
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+    const t = window.setTimeout(() => setHighlightProfileId(null), 2400);
+    return () => window.clearTimeout(t);
+  }, [highlightProfileId, profiles, tab]);
 
   const emptyHint = useMemo(() => {
     if (disabled) return '服务未连接';
@@ -168,6 +183,21 @@ export function ContentDatabase({
     }
   };
 
+  const onCopyProfile = async (p: Profile) => {
+    if (disabled) return;
+    try {
+      const copy = await api.copyProfile(p.id);
+      onStatus?.(`已复制基本信息卡：${copy.name}`);
+      await load();
+      setHighlightProfileId(copy.id);
+      onProfilesChanged?.();
+    } catch (e) {
+      onStatus?.(
+        `复制基本信息失败: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  };
+
   return (
     <aside className={`cdb${disabled ? ' cdb--disabled' : ''}`}>
       <div className="cdb__chrome">
@@ -217,7 +247,13 @@ export function ContentDatabase({
         {tab === 'profile' ? (
           <ul className="cdb__list">
             {profiles.map((p) => (
-              <li key={p.id} className="cdb__card cdb__card--profile">
+              <li
+                key={p.id}
+                data-profile-id={p.id}
+                className={`cdb__card cdb__card--profile${
+                  highlightProfileId === p.id ? ' cdb__card--highlight' : ''
+                }`}
+              >
                 <div className="cdb__card-row">
                   <div className="cdb__profile-head">
                     {p.hasPhoto ? (
@@ -261,6 +297,16 @@ export function ContentDatabase({
                     }}
                   >
                     编辑
+                  </button>
+                  <button
+                    type="button"
+                    className="cdb__edit"
+                    disabled={disabled}
+                    onClick={() => {
+                      void onCopyProfile(p);
+                    }}
+                  >
+                    复制
                   </button>
                   <button
                     type="button"

@@ -65,6 +65,78 @@ describe('profile cards + template select', () => {
     assert.ok(list.some((p) => p.id === b.id));
   });
 
+  it('copies profile fields and photo to a new card', async () => {
+    const src = await json<{
+      id: string;
+      name: string;
+      summary?: string;
+      hasPhoto?: boolean;
+    }>('POST', '/api/profiles', {
+      name: '源卡',
+      gender: '男',
+      email: 'src@x.com',
+      phone: '999',
+      wechat: 'wx_src',
+      summary: '应聘岗位',
+      statement: '陈述',
+      education: [
+        {
+          school: '示例大学',
+          degree: '本科',
+          major: '软件',
+          startDate: '2020-09-01',
+          endDate: '2024-06-01',
+        },
+      ],
+      skills: [{ title: '语言', body: 'TS' }],
+      tags: ['副本测'],
+      notes: '源备注',
+    });
+
+    const pngB64 =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    const withPhoto = await json<{ id: string; hasPhoto?: boolean }>(
+      'PUT',
+      `/api/profiles/${src.id}/photo`,
+      { dataBase64: pngB64, mime: 'image/png' },
+    );
+    assert.equal(withPhoto.hasPhoto, true);
+
+    const copy = await json<{
+      id: string;
+      name: string;
+      summary?: string;
+      statement?: string;
+      notes?: string;
+      hasPhoto?: boolean;
+      education: Array<{ school: string }>;
+    }>('POST', `/api/profiles/${src.id}/copy`);
+
+    assert.notEqual(copy.id, src.id);
+    assert.equal(copy.name, '源卡（副本）');
+    assert.equal(copy.summary, '应聘岗位');
+    assert.equal(copy.statement, '陈述');
+    assert.equal(copy.notes, '源备注');
+    assert.equal(copy.hasPhoto, true);
+    assert.equal(copy.education[0]?.school, '示例大学');
+
+    const origPhoto = await fetch(`${baseUrl}/api/profiles/${src.id}/photo`);
+    const copyPhoto = await fetch(`${baseUrl}/api/profiles/${copy.id}/photo`);
+    assert.equal(origPhoto.status, 200);
+    assert.equal(copyPhoto.status, 200);
+    const origBuf = Buffer.from(await origPhoto.arrayBuffer());
+    const copyBuf = Buffer.from(await copyPhoto.arrayBuffer());
+    assert.deepEqual(origBuf, copyBuf);
+
+    const still = await json<{ name: string }>('GET', `/api/profiles/${src.id}`);
+    assert.equal(still.name, '源卡');
+
+    const missing = await fetch(`${baseUrl}/api/profiles/no-such/copy`, {
+      method: 'POST',
+    });
+    assert.equal(missing.status, 404);
+  });
+
   it('template select creates empty lin-v1 resume; apply profile fills export', async () => {
     const templates = await json<Array<{ id: string }>>('GET', '/api/templates');
     assert.equal(templates[0]?.id, DEFAULT_TEMPLATE_ID);

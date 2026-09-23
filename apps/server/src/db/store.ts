@@ -234,6 +234,48 @@ export class Store {
       .run(nowIso(), id);
   }
 
+  /** Full copy of a profile card (new id); photo file duplicated when present. */
+  copyProfile(id: string): Profile {
+    const src = this.getProfileById(id);
+    const created = this.createProfile({
+      name: `${src.name.trim()}（副本）`,
+      gender: src.gender || '',
+      phone: src.phone || '',
+      email: src.email || '',
+      wechat: src.wechat || '',
+      qq: src.qq,
+      location: src.location,
+      summary: src.summary,
+      statement: src.statement,
+      education: src.education,
+      skills: src.skills,
+      tags: src.tags,
+      notes: src.notes,
+    });
+
+    const photo = this.getProfilePhoto(id);
+    if (photo) {
+      const ext =
+        photo.mime.includes('png')
+          ? 'png'
+          : photo.mime.includes('webp')
+            ? 'webp'
+            : 'jpg';
+      return this.saveProfilePhoto(created.id, photo.buffer, ext);
+    }
+    if (src.hasPhoto) {
+      const legacy = path.join(photosDir(this.dbPath), 'profile.jpg');
+      if (fs.existsSync(legacy)) {
+        return this.saveProfilePhoto(
+          created.id,
+          fs.readFileSync(legacy),
+          'jpg',
+        );
+      }
+    }
+    return created;
+  }
+
   saveProfilePhoto(profileId: string, bytes: Buffer, ext: string): Profile {
     this.getProfileById(profileId);
     const safeExt = ext.replace(/^\./, '').toLowerCase();
