@@ -12,6 +12,7 @@
     "core:window:default",
     "updater:default",
     "process:default",
-    "allow-save-docx"
+    "allow-save-docx",
+    "allow-app-updater"
   ]
 }

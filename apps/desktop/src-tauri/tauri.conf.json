@@ -63,7 +63,10 @@
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY5MDM0RDVFQzIyNzJDNzYKUldSMkxDZkNYazBEYWIyRWJWeU5MUzJ4VFV5R1Rwb2xCTWJlbWczZ1VaQkJFUEh4aVM3SWVrRFcK",
       "endpoints": [
         "https://github.com/OscarJHLin/resume_system/releases/latest/download/latest.json"
-      ]
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

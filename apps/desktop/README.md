@@ -7,7 +7,7 @@
 - **默认**进程内 axum（CRUD + 照片 + DOCX `docx-rs`）——**无需本机 Node**
 - 可选开发对照：`RESUME_API=node` → monorepo 内 `npm run start -w @resume/server`（仅仓库开发；安装包拒绝）
 - 用户数据：OS App Data 下 `resume.db` + `photos/`（不打进安装包）
-- 热更新：见仓库 `docs/adr/0005-desktop-updater.md`
+- 应用内更新：顶栏「检查更新」+ 新版本横幅（「立即更新」/「稍后」、进度条、失败重试）；命令 `check_update` / `install_update`，事件 `update://available` / `update://progress`（`src/updater.rs`）。≤1.5.3 首次升级仍为旧版静默更新。见 `docs/adr/0005-desktop-updater.md`
 - 打包资源：`web-dist` + `templates/`（**不含** `server/`）
 
 开发：

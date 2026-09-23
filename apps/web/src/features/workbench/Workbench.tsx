@@ -17,6 +17,11 @@ import {
   type ConnectionState,
 } from './workbenchState';
 import { saveDocxWithPicker } from './saveDocx';
+import {
+  UpdateBanner,
+  UpdateCheckButton,
+  useAppUpdater,
+} from '../updater/AppUpdater';
 import './workbench.css';
 
 /**
@@ -230,6 +235,8 @@ export function Workbench() {
     [connection, resume, libraryCount],
   );
 
+  const updater = useAppUpdater();
+
   const templateLabel =
     templates.find((t) => t.id === (resume?.templateId ?? DEFAULT_TEMPLATE_ID))
       ?.label ?? '蓝黑简洁简历';
@@ -287,8 +294,10 @@ export function Workbench() {
           >
             导出
           </button>
+          <UpdateCheckButton updater={updater} />
         </div>
       </header>
+      <UpdateBanner updater={updater} />
       {banner && (
         <div
           className={`workbench__banner workbench__banner--${banner.tone}`}

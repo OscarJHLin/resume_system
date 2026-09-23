@@ -8,6 +8,7 @@ use base64::Engine as _;
 use tauri::Manager;
 
 pub mod core;
+mod updater;
 
 struct ServerChild(Mutex<Option<Child>>);
 
@@ -343,7 +344,12 @@ pub fn run() {
     .plugin(tauri_plugin_updater::Builder::new().build())
     .plugin(tauri_plugin_process::init())
     .manage(ServerChild(Mutex::new(None)))
-    .invoke_handler(tauri::generate_handler![save_docx])
+    .manage(updater::PendingUpdate::default())
+    .invoke_handler(tauri::generate_handler![
+      save_docx,
+      updater::check_update,
+      updater::install_update
+    ])
     .setup(|app| {
       let port = std::env::var("PORT").unwrap_or_else(|_| "8787".into());
       let backend = api_backend();
@@ -395,13 +401,8 @@ pub fn run() {
         let _ = win.eval(&format!("window.location.replace('{url}')"));
       }
 
-      // Quiet background update check (signed GitHub latest.json).
-      let handle = app.handle().clone();
-      tauri::async_runtime::spawn(async move {
-        if let Err(e) = check_and_install_update(handle).await {
-          log::info!("[拼履] updater: {e}");
-        }
-      });
+      // Notify-only: the UI shows the banner; install happens on user click.
+      updater::spawn_background_checks(app.handle().clone());
 
       Ok(())
     })
@@ -419,30 +420,6 @@ pub fn run() {
     })
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
-}
-
-async fn check_and_install_update(app: tauri::AppHandle) -> Result<(), String> {
-  use tauri_plugin_updater::UpdaterExt;
-  let updater = app.updater().map_err(|e| e.to_string())?;
-  match updater.check().await {
-    Ok(Some(update)) => {
-      log::info!(
-        "[拼履] update available {} → {}",
-        update.current_version,
-        update.version
-      );
-      update
-        .download_and_install(|_, _| {}, || {})
-        .await
-        .map_err(|e| e.to_string())?;
-      app.restart();
-    }
-    Ok(None) => {
-      log::info!("[拼履] updater: already latest");
-      Ok(())
-    }
-    Err(e) => Err(e.to_string()),
-  }
 }
 
 #[allow(dead_code)]
