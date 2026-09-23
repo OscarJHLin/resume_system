@@ -55,6 +55,10 @@ npm run app
 
 **热更新：** 从 v1.2 起，已安装的桌面端会在启动时检查 Release 的 `latest.json`，有新版本则自动下载并重启（见 [ADR-0005](docs/adr/0005-desktop-updater.md)）。用户 SQLite 数据保留在 App Data，不被覆盖。
 
+**显示名 / 包名限制：** Tauri 热更新只替换 `.app` **内部**二进制与资源，**不会**把磁盘上的 `/Applications/Pinlu.app` 重命名为 `拼履.app`，也不会清掉 Dock / Launchpad / Spotlight 里的旧名缓存。若 Finder 仍显示 **Pinlu**，请用新版 DMG **整包拖入「应用程序」一次**（建议目标名为 `拼履.app`，并删掉旧的 `Pinlu.app`）；必要时从 Dock 移除旧图标后重新拖入。改 `CFBundleDisplayName` / `bundleName` 同理，不能单靠热更新生效。
+
+**勿用旧版：** GitHub Releases 上的 **v1.0**（Node sidecar）在无本机 Node / Finder PATH 时会启动即崩；请只用 **v1.3+**（进程内 Rust API，无需 Node）。
+
 **运行要求：** 安装包**不需要**本机 Node（Plan C Phase 4：进程内 Rust API）。**不**附带开发者 `data/`。
 
 **用户数据目录（独立于仓库）：**
