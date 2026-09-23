@@ -52,25 +52,29 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: 拼履 ${{ github.ref_name }}
           releaseBody: |
-            ## 拼履 ${{ github.ref_name }}
+            ## 拼履 ${{ github.ref_name }}（1.6.0）
 
-            Windows / macOS 桌面修复补丁（跨端拖拽）。
+            跨端拖拽修复 + 应用内更新提示。
 
             ### 下载安装
-            - **macOS**: 下载 `Pinlu_*_*.dmg`，打开后拖到「应用程序」（Finder / 菜单栏显示 **拼履**）
-            - **Windows**: 下载 `Pinlu_*_x64-setup.exe`（NSIS）并运行
+            | 平台 | 文件 | 安装 |
+            |---|---|---|
+            | **macOS**（Apple Silicon） | `Pinlu_1.6.0_aarch64.dmg` | 打开 DMG，拖到「应用程序」（Finder / 菜单栏显示 **拼履**） |
+            | **Windows**（x64） | `Pinlu_1.6.0_x64-setup.exe` | 双击运行 NSIS 安装程序 |
 
-            ### 本版修复（v1.5.3）
-            - **拖拽**: 修正会话生命周期——dragend 不再抢在 drop 前清空；HTML5 拖拽开始时不触发 React 重渲染（避免 WKWebView 中断拖拽）
-            - **「放入」**: 仍作为无障碍/备用路径；主路径拖拽应在 Mac 与 Windows 均可用
-            - （v1.5.2 已含）导出 IPC / 日期面板 portal 修复保留
+            `.sig` / `.app.tar.gz` / `-setup.zip` / `latest.json` 为自动更新所用，无需手动下载。
+
+            ### 本版更新
+            - **拖拽修复（Mac / Windows 通用）**：右侧内容库 → 左侧画布改为指针拖拽（pointer events）。根因是 Tauri 原生 dragDrop 处理器吞掉了 HTML5 的 dragover / drop，导致卡片拖不进画布。「放入」按钮仍保留为无障碍 / 备用路径。
+            - **应用内更新提示**：发现新版本时顶部显示「发现新版本」横幅，点「立即更新」下载并显示进度，完成后重启；顶栏新增「检查更新」按钮可手动检查。不再静默自动安装。
+
+            ### 升级说明
+            - 已安装 **≤ v1.5.3** 的用户：旧版内置的是静默更新器，这一次会**静默**下载并升级到 1.6.0（无提示，自动重启）。
+            - 从 1.6.0 起，之后每次更新都会显示应用内横幅，由你点击「立即更新」确认。
 
             ### 运行要求
             - **无需安装 Node.js**（进程内 Rust API）
-            - 数据在系统 App Data，**不**携带开发者数据库
-
-            ### 热更新
-            已安装用户下次启动会检查 GitHub Release 的 `latest.json`，有新版本则自动下载并重启（需签名包）。
+            - 数据在系统 App Data，**不**携带开发者数据库；升级不会覆盖用户数据
 
             ### 数据路径
             - macOS: `~/Library/Application Support/com.pinlu.desktop/resume.db`

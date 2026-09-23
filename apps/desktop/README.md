@@ -2,7 +2,7 @@
 
 ## 当前（正式版 GA · Plan C Phase 4）
 
-- 产品版本 **1.5.3**（GitHub tag `v1.5.3`）— 跨端拖拽会话修复（Mac WKWebView + Windows WebView2）
+- 产品版本 **1.6.0**（GitHub tag `v1.6`）— 指针拖拽（绕开 Tauri 原生 dragDrop 吞掉 HTML5 dragover/drop）+ 应用内更新提示
 - Tauri 2 WebView 加载打包的 `apps/web`
 - **默认**进程内 axum（CRUD + 照片 + DOCX `docx-rs`）——**无需本机 Node**
 - 可选开发对照：`RESUME_API=node` → monorepo 内 `npm run start -w @resume/server`（仅仓库开发；安装包拒绝）

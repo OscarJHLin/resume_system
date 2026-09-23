@@ -4,7 +4,7 @@
 
 产品名取「拼履」——「拼」对应模块拖放组装，「履」指履历；短、好记，区别于泛称「简历组装系统」。
 
-> 当前状态：**正式版（GA）v1.5.3**（跨端拖拽会话修复）。清单 [docs/05-acceptance.md](docs/05-acceptance.md)；模板说明 [docs/06-template-lin-v1.md](docs/06-template-lin-v1.md) / [docs/07-template-packs.md](docs/07-template-packs.md)。
+> 当前状态：**正式版（GA）v1.6.0**（指针拖拽修复 + 应用内更新提示）。清单 [docs/05-acceptance.md](docs/05-acceptance.md)；模板说明 [docs/06-template-lin-v1.md](docs/06-template-lin-v1.md) / [docs/07-template-packs.md](docs/07-template-packs.md)。
 
 ## 文档入口
 
@@ -50,14 +50,14 @@ npm run app
 
 | 平台 | 下载 | 安装 |
 |---|---|---|
-| **macOS** | `Pinlu_1.5.3_*.dmg` / `Pinlu.app`（Finder / 菜单栏显示 **拼履**） | 打开 DMG，拖到「应用程序」 |
-| **Windows** | `Pinlu_1.5.3_x64-setup.exe`（NSIS） | 双击安装 |
+| **macOS** | `Pinlu_1.6.0_aarch64.dmg` / `Pinlu.app`（Finder / 菜单栏显示 **拼履**） | 打开 DMG，拖到「应用程序」 |
+| **Windows** | `Pinlu_1.6.0_x64-setup.exe`（NSIS） | 双击安装 |
 
-**热更新：** 从 v1.2 起，已安装的桌面端会在启动时检查 Release 的 `latest.json`，有新版本则自动下载并重启（见 [ADR-0005](docs/adr/0005-desktop-updater.md)）。用户 SQLite 数据保留在 App Data，不被覆盖。
+**应用内更新：** 从 v1.6.0 起，桌面端启动时检查 Release 的 `latest.json`，发现新版本会显示「发现新版本」横幅，点「立即更新」下载（带进度）并重启；顶栏「检查更新」可手动检查。≤ v1.5.3 升级到 v1.6.0 时仍会**静默**更新一次（旧更新器），之后的更新都走横幅（见 [ADR-0005](docs/adr/0005-desktop-updater.md)）。用户 SQLite 数据保留在 App Data，不被覆盖。
 
 **显示名 / 包名限制：** Tauri 热更新只替换 `.app` **内部**二进制与资源，**不会**把磁盘上的 `/Applications/Pinlu.app` 重命名为 `拼履.app`，也不会清掉 Dock / Launchpad / Spotlight 里的旧名缓存。若 Finder 仍显示 **Pinlu**，请用新版 DMG **整包拖入「应用程序」一次**（建议目标名为 `拼履.app`，并删掉旧的 `Pinlu.app`）；必要时从 Dock 移除旧图标后重新拖入。改 `CFBundleDisplayName` / `bundleName` 同理，不能单靠热更新生效。
 
-**勿用旧版：** GitHub Releases 上的 **v1.0**（Node sidecar）在无本机 Node / Finder PATH 时会启动即崩；请只用 **v1.5.3+**（进程内 Rust API，无需 Node）。v1.2 / v1.3 / v1.5.0–v1.5.2 为过渡包：若侧栏拖不到画布或 Windows 导出/日期异常，请升级到 v1.5.3。
+**勿用旧版：** GitHub Releases 上的 **v1.0**（Node sidecar）在无本机 Node / Finder PATH 时会启动即崩；请只用 **v1.6.0+**（进程内 Rust API，无需 Node）。v1.2 / v1.3 / v1.5.x 为过渡包：若侧栏拖不到画布或 Windows 导出/日期异常，请升级到 v1.6.0。
 
 **运行要求：** 安装包**不需要**本机 Node（Plan C Phase 4：进程内 Rust API）。**不**附带开发者 `data/`。
 
@@ -65,7 +65,7 @@ npm run app
 - macOS: `~/Library/Application Support/com.pinlu.desktop/resume.db`
 - Windows: `%APPDATA%\com.pinlu.desktop\resume.db`
 
-发布：`git tag v1.5.3 && git push origin v1.5.3` → Actions 构建双端安装包并上传 `latest.json`。
+发布：`git tag -a v1.6 -m "拼履 v1.6.0" && git push origin v1.6` → Actions 构建双端安装包并上传 `latest.json`。
 
 ### 本地构建桌面壳
 
