@@ -6,7 +6,7 @@ import { SECTION_LABELS, decideModuleDrop } from '@resume/domain';
 import {
   clearModuleDrag,
   dropZoneClassName,
-  getPlacePayload,
+  getPointerPick,
   readModuleDragData,
   takePlacePayloadOnClick,
 } from '../../dnd/dragPayload';
@@ -21,12 +21,13 @@ export function ResumeSectionView({ node, extension }: NodeViewProps) {
 
   const [hover, setHover] = useState(false);
   const [invalid, setInvalid] = useState(false);
-  const [placeArmed, setPlaceArmed] = useState(() => getPlacePayload() != null);
+  // Pointer-pick only — see PlaceableSection in ResumeCanvas.
+  const [placeArmed, setPlaceArmed] = useState(() => getPointerPick() != null);
 
   useEffect(
     () =>
       subscribePlaceSession(() => {
-        setPlaceArmed(getPlacePayload() != null);
+        setPlaceArmed(getPointerPick() != null);
       }),
     [],
   );
@@ -63,6 +64,7 @@ export function ResumeSectionView({ node, extension }: NodeViewProps) {
           }}
           onDrop={(e) => {
             e.preventDefault();
+            e.stopPropagation();
             setHover(false);
             setInvalid(false);
             const payload = readModuleDragData(e.dataTransfer);

@@ -54,16 +54,16 @@ jobs:
           releaseBody: |
             ## 拼履 ${{ github.ref_name }}
 
-            Windows / macOS 桌面修复补丁（WebView2 UX）。
+            Windows / macOS 桌面修复补丁（跨端拖拽）。
 
             ### 下载安装
             - **macOS**: 下载 `Pinlu_*_*.dmg`，打开后拖到「应用程序」（Finder / 菜单栏显示 **拼履**）
             - **Windows**: 下载 `Pinlu_*_x64-setup.exe`（NSIS）并运行
 
-            ### 本版修复（Windows 重点）
-            - **导出**: Tauri IPC 优先走 `__TAURI_INTERNALS__`；原生保存对话框挂到主窗口（AsyncFileDialog）
-            - **拖拽**: 修复 WebView2 dragend/drop 竞态；增加「放入」→ 点击画布区块的备用路径
-            - **日期**: 逐步日期面板 portal + fixed，避免被模态 overflow 裁切
+            ### 本版修复（v1.5.3）
+            - **拖拽**: 修正会话生命周期——dragend 不再抢在 drop 前清空；HTML5 拖拽开始时不触发 React 重渲染（避免 WKWebView 中断拖拽）
+            - **「放入」**: 仍作为无障碍/备用路径；主路径拖拽应在 Mac 与 Windows 均可用
+            - （v1.5.2 已含）导出 IPC / 日期面板 portal 修复保留
 
             ### 运行要求
             - **无需安装 Node.js**（进程内 Rust API）

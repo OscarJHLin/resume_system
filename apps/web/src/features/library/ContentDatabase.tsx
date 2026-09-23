@@ -402,6 +402,8 @@ export function ContentDatabase({
                     e.preventDefault();
                     return;
                   }
+                  // Prefer currentTarget (the card): Safari/WKWebView often
+                  // reports a child as target while the li owns draggable.
                   setModuleDragData(e.dataTransfer, m.id, m.category);
                   onStatus?.(`拖拽中: ${m.title}`);
                 }}

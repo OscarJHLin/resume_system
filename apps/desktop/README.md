@@ -2,7 +2,7 @@
 
 ## 当前（正式版 GA · Plan C Phase 4）
 
-- 产品版本 **1.5.2**（GitHub tag `v1.5.2`）— Windows WebView2 UX 补丁（导出 / 拖拽 / 日期）
+- 产品版本 **1.5.3**（GitHub tag `v1.5.3`）— 跨端拖拽会话修复（Mac WKWebView + Windows WebView2）
 - Tauri 2 WebView 加载打包的 `apps/web`
 - **默认**进程内 axum（CRUD + 照片 + DOCX `docx-rs`）——**无需本机 Node**
 - 可选开发对照：`RESUME_API=node` → monorepo 内 `npm run start -w @resume/server`（仅仓库开发；安装包拒绝）
@@ -50,6 +50,6 @@ RESUME_DB_PATH=../../../data/resume.db RESUME_TEMPLATES_DIR=../../../templates \
 在干净 Windows 10/11 + WebView2 上安装 `Pinlu_*_x64-setup.exe` 后：
 
 1. **导出** — 打开任意简历 →「导出 DOCX」→ 应弹出系统「另存为」对话框；选路径后状态栏显示「已保存 …」（不应出现「已取消导出」且无对话框）。
-2. **拖拽** — 内容库拖一条项目经历到左侧「项目经历」区块；若拖拽失灵，点卡片「放入」再点左侧对应区块。
+2. **拖拽** — 内容库拖一条项目经历到左侧「项目经历」区块（应直接落入）；「放入」→ 再点左侧区块仅作备用。
 3. **日期** — 编辑模块 → 点「开始」日期 → 年/月/日面板应完整可见可点，选完后字段显示中文日期。
 4. **数据** — 关闭重开后内容仍在 `%APPDATA%\com.pinlu.desktop\resume.db`（勿删用户库做验收）。

@@ -17,7 +17,7 @@ import {
 import {
   clearModuleDrag,
   dropZoneClassName,
-  getPlacePayload,
+  getPointerPick,
   readModuleDragData,
   takePlacePayloadOnClick,
 } from '../dnd/dragPayload';
@@ -279,14 +279,16 @@ function PlaceableSection({
 }) {
   const [hover, setHover] = useState(false);
   const [invalid, setInvalid] = useState(false);
-  const [placeArmed, setPlaceArmed] = useState(() => getPlacePayload() != null);
+  // Only 「放入」pointer-pick — HTML5 drag uses local hover; notifying on
+  // dragstart re-renders the canvas and aborts DnD in WKWebView.
+  const [placeArmed, setPlaceArmed] = useState(() => getPointerPick() != null);
   const items = placementsForSection(resume, sectionId);
   const orderedIds = items.map((p) => p.id);
 
   useEffect(
     () =>
       subscribePlaceSession(() => {
-        setPlaceArmed(getPlacePayload() != null);
+        setPlaceArmed(getPointerPick() != null);
       }),
     [],
   );
@@ -319,6 +321,7 @@ function PlaceableSection({
         }}
         onDrop={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           setHover(false);
           setInvalid(false);
           const payload = readModuleDragData(e.dataTransfer);

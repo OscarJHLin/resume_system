@@ -37,7 +37,10 @@ export function clearModuleDrag(): void {
   endModuleDrag();
 }
 
-/** Call from onDragEnd — delayed so WebView2 drop can still read the session. */
+/**
+ * Call from onDragEnd. Schedules a grace-period cancel; does not clear yet so
+ * drop can still read the session when dragend precedes drop (WebView2).
+ */
 export function finishModuleDrag(): void {
   scheduleEndModuleDrag();
 }
