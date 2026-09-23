@@ -7,12 +7,16 @@ import {
 } from '@resume/domain';
 import { api } from '../../api/client';
 import { clearModuleDrag, setModuleDragData } from '../dnd/dragPayload';
+import { ConfirmDialog } from './ConfirmDialog';
 import { ModuleEditor } from './ModuleEditor';
 import { ProfileEditor } from './ProfileEditor';
 import { profileCardSummary } from './profileForm';
 import {
-  confirmDeleteModule,
-  confirmDeleteProfile,
+  deleteModuleConfirmMessage,
+  deleteModuleConfirmTitle,
+  deleteProfileConfirmMessage,
+  deleteProfileConfirmTitle,
+  stopCardActionPointer,
 } from './libraryDelete';
 import './contentDatabase.css';
 
@@ -29,6 +33,10 @@ export interface ContentDatabaseProps {
 }
 
 type TabId = LibraryModuleCategory | 'profile';
+
+type PendingDelete =
+  | { kind: 'module'; item: ContentModule }
+  | { kind: 'profile'; item: Profile; applied: boolean };
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'project', label: '项目' },
@@ -66,6 +74,10 @@ export function ContentDatabase({
   const [highlightProfileId, setHighlightProfileId] = useState<string | null>(
     null,
   );
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(
+    null,
+  );
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (disabled) {
@@ -138,48 +150,65 @@ export function ContentDatabase({
     setEditorOpen(true);
   };
 
-  const onDeleteModule = async (m: ContentModule) => {
-    if (disabled) return;
-    if (!confirmDeleteModule(m.title)) return;
-    try {
-      await api.deleteModule(m.id);
-      if (editing?.id === m.id) {
-        setEditorOpen(false);
-        setEditing(null);
-      }
-      onStatus?.(
-        `已删除模块：${m.title}（简历上已拖入的条目仍保留快照）`,
-      );
-      await load();
-      onModulesChanged?.();
-    } catch (e) {
-      onStatus?.(
-        `删除模块失败: ${e instanceof Error ? e.message : String(e)}`,
-      );
-    }
+  const askDeleteModule = (m: ContentModule) => {
+    if (disabled || deleteBusy) return;
+    setPendingDelete({ kind: 'module', item: m });
   };
 
-  const onDeleteProfile = async (p: Profile) => {
-    if (disabled) return;
-    const applied = appliedProfileId === p.id;
-    if (!confirmDeleteProfile(p.name || '未命名', applied)) return;
+  const askDeleteProfile = (p: Profile) => {
+    if (disabled || deleteBusy) return;
+    setPendingDelete({
+      kind: 'profile',
+      item: p,
+      applied: appliedProfileId === p.id,
+    });
+  };
+
+  const executePendingDelete = async () => {
+    if (!pendingDelete || deleteBusy) return;
+    setDeleteBusy(true);
     try {
-      await api.deleteProfile(p.id);
-      if (editingProfile?.id === p.id) {
-        setProfileEditorOpen(false);
-        setEditingProfile(null);
+      if (pendingDelete.kind === 'module') {
+        const m = pendingDelete.item;
+        await api.deleteModule(m.id);
+        setModules((list) => list.filter((x) => x.id !== m.id));
+        if (editing?.id === m.id) {
+          setEditorOpen(false);
+          setEditing(null);
+        }
+        onStatus?.(
+          `已删除模块：${m.title}（简历上已拖入的条目仍保留快照）`,
+        );
+        setPendingDelete(null);
+        await load();
+        onModulesChanged?.();
+      } else {
+        const p = pendingDelete.item;
+        const applied = pendingDelete.applied;
+        await api.deleteProfile(p.id);
+        setProfiles((list) => list.filter((x) => x.id !== p.id));
+        if (editingProfile?.id === p.id) {
+          setProfileEditorOpen(false);
+          setEditingProfile(null);
+        }
+        onStatus?.(
+          applied
+            ? `已删除基本信息卡：${p.name}（已从简历解除应用）`
+            : `已删除基本信息卡：${p.name}`,
+        );
+        setPendingDelete(null);
+        await load();
+        onProfilesChanged?.();
       }
-      onStatus?.(
-        applied
-          ? `已删除基本信息卡：${p.name}（已从简历解除应用）`
-          : `已删除基本信息卡：${p.name}`,
-      );
-      await load();
-      onProfilesChanged?.();
     } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
       onStatus?.(
-        `删除基本信息失败: ${e instanceof Error ? e.message : String(e)}`,
+        pendingDelete.kind === 'module'
+          ? `删除模块失败: ${msg}`
+          : `删除基本信息失败: ${msg}`,
       );
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -197,6 +226,20 @@ export function ContentDatabase({
       );
     }
   };
+
+  const confirmTitle =
+    pendingDelete?.kind === 'module'
+      ? deleteModuleConfirmTitle()
+      : deleteProfileConfirmTitle();
+  const confirmMessage =
+    pendingDelete?.kind === 'module'
+      ? deleteModuleConfirmMessage(pendingDelete.item.title)
+      : pendingDelete
+        ? deleteProfileConfirmMessage(
+            pendingDelete.item.name || '未命名',
+            pendingDelete.applied,
+          )
+        : '';
 
   return (
     <aside className={`cdb${disabled ? ' cdb--disabled' : ''}`}>
@@ -286,10 +329,15 @@ export function ContentDatabase({
                     </span>
                   ))}
                 </div>
-                <div className="cdb__card-actions">
+                <div
+                  className="cdb__card-actions"
+                  onPointerDown={stopCardActionPointer}
+                  onMouseDown={stopCardActionPointer}
+                >
                   <button
                     type="button"
                     className="cdb__edit"
+                    draggable={false}
                     disabled={disabled}
                     onClick={() => {
                       setEditingProfile(p);
@@ -301,6 +349,7 @@ export function ContentDatabase({
                   <button
                     type="button"
                     className="cdb__edit"
+                    draggable={false}
                     disabled={disabled}
                     onClick={() => {
                       void onCopyProfile(p);
@@ -311,6 +360,7 @@ export function ContentDatabase({
                   <button
                     type="button"
                     className="cdb__edit cdb__edit--primary"
+                    draggable={false}
                     disabled={disabled || !onApplyProfile}
                     onClick={() => {
                       void onApplyProfile?.(p.id);
@@ -321,10 +371,9 @@ export function ContentDatabase({
                   <button
                     type="button"
                     className="cdb__edit cdb__edit--danger"
+                    draggable={false}
                     disabled={disabled}
-                    onClick={() => {
-                      void onDeleteProfile(p);
-                    }}
+                    onClick={() => askDeleteProfile(p)}
                   >
                     删除
                   </button>
@@ -341,6 +390,14 @@ export function ContentDatabase({
                 draggable={!disabled}
                 onDragStart={(e) => {
                   if (disabled) return;
+                  const t = e.target;
+                  if (
+                    t instanceof Element &&
+                    t.closest('.cdb__card-actions, button, a, input')
+                  ) {
+                    e.preventDefault();
+                    return;
+                  }
                   setModuleDragData(e.dataTransfer, m.id, m.category);
                   onStatus?.(`拖拽中: ${m.title}`);
                 }}
@@ -366,10 +423,15 @@ export function ContentDatabase({
                     </span>
                   ))}
                 </div>
-                <div className="cdb__card-actions">
+                <div
+                  className="cdb__card-actions"
+                  onPointerDown={stopCardActionPointer}
+                  onMouseDown={stopCardActionPointer}
+                >
                   <button
                     type="button"
                     className="cdb__edit"
+                    draggable={false}
                     disabled={disabled}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -382,10 +444,11 @@ export function ContentDatabase({
                   <button
                     type="button"
                     className="cdb__edit cdb__edit--danger"
+                    draggable={false}
                     disabled={disabled}
                     onClick={(e) => {
                       e.stopPropagation();
-                      void onDeleteModule(m);
+                      askDeleteModule(m);
                     }}
                   >
                     删除
@@ -418,6 +481,19 @@ export function ContentDatabase({
           onProfilesChanged?.();
         }}
         onStatus={onStatus}
+      />
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={confirmTitle}
+        message={confirmMessage}
+        busy={deleteBusy}
+        onCancel={() => {
+          if (!deleteBusy) setPendingDelete(null);
+        }}
+        onConfirm={() => {
+          void executePendingDelete();
+        }}
       />
     </aside>
   );

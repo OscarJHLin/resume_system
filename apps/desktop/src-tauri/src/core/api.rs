@@ -181,7 +181,7 @@ async fn health() -> Json<HealthResponse> {
   Json(HealthResponse {
     ok: true,
     service: "resume-server",
-    phase: "scaffold",
+    phase: "S5",
     persistence: "sqlite-file",
   })
 }
@@ -581,14 +581,26 @@ mod tests {
   use crate::core::db::open_database;
   use axum::body::to_bytes;
   use axum::http::Request;
+  use std::sync::atomic::{AtomicU64, Ordering};
   use tower::ServiceExt;
+
+  static API_SEQ: AtomicU64 = AtomicU64::new(0);
+
+  fn cleanup_db(path: &std::path::Path) {
+    if let Some(dir) = path.parent() {
+      let _ = std::fs::remove_dir_all(dir);
+    }
+  }
 
   fn test_state() -> (AppState, PathBuf) {
     let nanos = std::time::SystemTime::now()
       .duration_since(std::time::UNIX_EPOCH)
       .unwrap()
       .as_nanos();
-    let path = std::env::temp_dir().join(format!("pinlu-api-{nanos}.db"));
+    let seq = API_SEQ.fetch_add(1, Ordering::Relaxed);
+    let dir = std::env::temp_dir().join(format!("pinlu-api-{nanos}-{seq}"));
+    let _ = std::fs::create_dir_all(&dir);
+    let path = dir.join("resume.db");
     let _ = std::fs::remove_file(&path);
     let conn = open_database(&path).unwrap();
     let templates = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../templates");
@@ -610,7 +622,7 @@ mod tests {
       .await
       .unwrap();
     assert_eq!(res.status(), StatusCode::OK);
-    let _ = std::fs::remove_file(&path);
+    cleanup_db(&path);
   }
 
   #[tokio::test]
@@ -780,7 +792,7 @@ mod tests {
     assert!(body.len() > 100);
     assert_eq!(&body[0..2], b"PK");
 
-    let _ = std::fs::remove_file(&path);
+    cleanup_db(&path);
   }
 
   #[tokio::test]
@@ -857,10 +869,7 @@ mod tests {
     let body = to_bytes(res.into_body(), 64 * 1024).await.unwrap();
     let profile: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(profile["hasPhoto"], false);
-
-    let photos = path.parent().unwrap().join("photos");
-    let _ = std::fs::remove_dir_all(&photos);
-    let _ = std::fs::remove_file(&path);
+    cleanup_db(&path);
   }
 
   #[tokio::test]
@@ -879,7 +888,7 @@ mod tests {
       .await
       .unwrap();
     assert_eq!(res.status(), StatusCode::BAD_REQUEST);
-    let _ = std::fs::remove_file(&path);
+    cleanup_db(&path);
   }
 
   #[tokio::test]
@@ -953,9 +962,6 @@ mod tests {
       .await
       .unwrap();
     assert_eq!(res.status(), StatusCode::NOT_FOUND);
-
-    let photos = path.parent().unwrap().join("photos");
-    let _ = std::fs::remove_dir_all(&photos);
-    let _ = std::fs::remove_file(&path);
+    cleanup_db(&path);
   }
 }

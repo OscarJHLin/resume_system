@@ -54,7 +54,7 @@ describe('education helpers', () => {
       educationTimeRange('2023-09-01', '2027-06-30'),
       '2023.09 - 2027.06',
     );
-    assert.equal(educationTimeRange('2026-01', undefined), '2026.01');
+    assert.equal(educationTimeRange('2026-01', undefined), '2026.01 - 至今');
   });
 
   it('empty education/skill defaults', () => {

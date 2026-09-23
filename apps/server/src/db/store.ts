@@ -796,7 +796,8 @@ function normalizeEducation(
     return {
       id: e.id || newId(),
       school: (e.school ?? '').trim(),
-      degree: e.degree?.trim() || undefined,
+      // Always persist degree (even "") so UI does not mask missing as 「本科」.
+      degree: e.degree?.trim() ?? '',
       major: e.major?.trim() || undefined,
       startDate,
       endDate,

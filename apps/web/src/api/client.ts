@@ -26,6 +26,26 @@ async function request<T>(
   init?: RequestInit,
 ): Promise<T> {
   const res = await fetch(path, init);
+  const method = (init?.method ?? 'GET').toUpperCase();
+
+  // DELETE must be 204 — never treat SPA/static 200 HTML (or empty 200) as success.
+  if (method === 'DELETE') {
+    if (res.status === 204) {
+      return undefined as T;
+    }
+    const text = await res.text();
+    let message = text || res.statusText || `DELETE failed (${res.status})`;
+    try {
+      const body = JSON.parse(text) as { message?: string };
+      if (body.message) message = body.message;
+    } catch {
+      if (text.trimStart().startsWith('<')) {
+        message = `DELETE failed (${res.status}): got HTML instead of API response`;
+      }
+    }
+    throw new ApiError(res.status, message);
+  }
+
   if (res.status === 204) {
     return undefined as T;
   }

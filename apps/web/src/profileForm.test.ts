@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import type { Profile } from '@resume/domain';
 import {
   emptyProfileForm,
+  profileToForm,
   validateProfileForm,
 } from './features/library/profileForm.js';
 
@@ -9,6 +11,24 @@ describe('profile form validation', () => {
   it('requires identity fields', () => {
     const r = validateProfileForm(emptyProfileForm());
     assert.equal(r.ok, false);
+  });
+
+  it('does not invent 本科 when stored degree is missing', () => {
+    const profile = {
+      id: 'p1',
+      name: '测',
+      gender: '男',
+      phone: '1',
+      email: 'a@b.c',
+      wechat: 'w',
+      education: [{ id: 'e1', school: '某校' }],
+      skills: [],
+      tags: [],
+      createdAt: '',
+      updatedAt: '',
+    } as Profile;
+    const form = profileToForm(profile);
+    assert.equal(form.education[0]?.degree, '');
   });
 
   it('accepts complete card and keeps education/skills', () => {

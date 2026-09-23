@@ -176,7 +176,11 @@ pub fn normalize_education(items: Option<&Value>) -> Value {
     let mut obj = Map::new();
     obj.insert("id".into(), Value::String(id));
     obj.insert("school".into(), Value::String(school));
-    insert_opt_str(&mut obj, "degree", opt_trim_str(e.get("degree")));
+    // Always persist degree (even "") so UI does not mask missing as 「本科」.
+    obj.insert(
+      "degree".into(),
+      Value::String(opt_trim_str(e.get("degree")).unwrap_or_default()),
+    );
     insert_opt_str(&mut obj, "major", opt_trim_str(e.get("major")));
     insert_opt_str(&mut obj, "startDate", start);
     insert_opt_str(&mut obj, "endDate", end);

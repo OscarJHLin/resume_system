@@ -364,7 +364,11 @@ function PlacementRow({
   if (view.awardLine !== undefined) {
     return (
       <article className="canvas__item">
-        <div className="canvas__item-toolbar">
+        <div
+          className="canvas__item-toolbar"
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           <button type="button" disabled={!canUp} onClick={onUp}>
             ↑
           </button>
@@ -382,7 +386,11 @@ function PlacementRow({
 
   return (
     <article className="canvas__item">
-      <div className="canvas__item-toolbar">
+      <div
+        className="canvas__item-toolbar"
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <button type="button" disabled={!canUp} onClick={onUp}>
           ↑
         </button>

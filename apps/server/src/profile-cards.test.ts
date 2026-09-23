@@ -264,6 +264,59 @@ describe('profile cards + template select', () => {
     assert.equal(exportRes.status, 200);
   });
 
+  it('deletes applied profile, detaches resume, and removes photo file', async () => {
+    const profile = await json<{ id: string; hasPhoto?: boolean }>(
+      'POST',
+      '/api/profiles',
+      {
+        name: '待删卡',
+        gender: '女',
+        email: 'del@x.com',
+        phone: '999',
+        wechat: 'wx_del',
+      },
+    );
+    const tinyPng = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    );
+    const withPhoto = await json<{ id: string; hasPhoto: boolean }>(
+      'PUT',
+      `/api/profiles/${profile.id}/photo`,
+      {
+        dataBase64: tinyPng.toString('base64'),
+        mime: 'image/png',
+      },
+    );
+    assert.equal(withPhoto.hasPhoto, true);
+
+    const resume = await json<{ id: string; profileId: string }>(
+      'POST',
+      '/api/resumes',
+      { title: '挂靠待删', profileId: profile.id },
+    );
+    assert.equal(resume.profileId, profile.id);
+
+    const del = await fetch(`${baseUrl}/api/profiles/${profile.id}`, {
+      method: 'DELETE',
+    });
+    assert.equal(del.status, 204);
+    assert.equal(await del.text(), '');
+
+    const gone = await fetch(`${baseUrl}/api/profiles/${profile.id}`);
+    assert.equal(gone.status, 404);
+    const photoGone = await fetch(
+      `${baseUrl}/api/profiles/${profile.id}/photo`,
+    );
+    assert.equal(photoGone.status, 404);
+
+    const detached = await json<{ profileId: string }>(
+      'GET',
+      `/api/resumes/${resume.id}`,
+    );
+    assert.equal(detached.profileId, '');
+  });
+
   it('domain validateProfileRequired is strict', () => {
     assert.equal(validateProfileRequired({ name: 'x' }).ok, false);
     assert.equal(

@@ -59,8 +59,8 @@ export function profileToForm(p: Profile): ProfileFormValues {
     education: p.education.length
       ? p.education.map((e) => ({
           ...e,
-          // Keep form select in sync with stored degree (avoid display-only 「本科」)
-          degree: e.degree?.trim() || '本科',
+          // Do not invent 「本科」 for missing stored degree (masking bug).
+          degree: e.degree?.trim() ?? '',
         }))
       : [emptyEducationItem()],
     skills: p.skills.length

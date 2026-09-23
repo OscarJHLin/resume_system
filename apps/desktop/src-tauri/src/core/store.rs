@@ -944,14 +944,27 @@ mod tests {
   use super::*;
   use crate::core::db::open_database;
   use serde_json::json;
+  use std::sync::atomic::{AtomicU64, Ordering};
   use std::time::{SystemTime, UNIX_EPOCH};
+
+  static SEED_SEQ: AtomicU64 = AtomicU64::new(0);
+
+  fn cleanup_db(path: &Path) {
+    if let Some(dir) = path.parent() {
+      let _ = std::fs::remove_dir_all(dir);
+    }
+  }
 
   fn seed_db() -> (Store, PathBuf) {
     let nanos = SystemTime::now()
       .duration_since(UNIX_EPOCH)
       .unwrap()
       .as_nanos();
-    let path = std::env::temp_dir().join(format!("pinlu-store-{nanos}.db"));
+    let seq = SEED_SEQ.fetch_add(1, Ordering::Relaxed);
+    // Dedicated dir per test so photos/ is not shared across parallel cases.
+    let dir = std::env::temp_dir().join(format!("pinlu-store-{nanos}-{seq}"));
+    let _ = std::fs::create_dir_all(&dir);
+    let path = dir.join("resume.db");
     let _ = std::fs::remove_file(&path);
     let conn = open_database(&path).unwrap();
     conn.execute(
@@ -1016,7 +1029,7 @@ mod tests {
     assert!(json.get("profileId").is_some());
     assert!(json["placements"][0].get("sortOrder").is_some());
 
-    let _ = std::fs::remove_file(&path);
+    let _ = cleanup_db(&path);
   }
 
   #[test]
@@ -1098,7 +1111,7 @@ mod tests {
     let detached = store.get_resume(&r.id).unwrap();
     assert_eq!(detached.profile_id, "");
 
-    let _ = std::fs::remove_file(&path);
+    cleanup_db(&path);
   }
 
   #[test]
@@ -1204,8 +1217,52 @@ mod tests {
     assert_eq!(still.education[1]["degree"].as_str(), Some("双学位"));
     assert!(still.has_photo);
 
-    let photos = path.parent().unwrap().join("photos");
-    let _ = std::fs::remove_dir_all(&photos);
-    let _ = std::fs::remove_file(&path);
+    cleanup_db(&path);
+  }
+
+  #[test]
+  fn delete_profile_removes_photo_and_detaches_resume() {
+    let (store, path) = seed_db();
+    let p = store
+      .create_profile(ProfileInput {
+        name: "待删",
+        gender: "女",
+        phone: "100",
+        email: "d@e.com",
+        wechat: "wd",
+        qq: None,
+        location: None,
+        summary: None,
+        statement: None,
+        education: None,
+        skills: None,
+        tags: None,
+        notes: None,
+      })
+      .unwrap();
+    let png = [
+      0x89u8, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
+      0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90,
+      0x77, 0x53, 0xde, 0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41, 0x54, 0x08, 0xd7, 0x63, 0xf8,
+      0xff, 0xff, 0x3f, 0x00, 0x05, 0xfe, 0x02, 0xfe, 0xdc, 0xcc, 0x59, 0xe7, 0x00, 0x00, 0x00,
+      0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+    ];
+    let with_photo = store.save_profile_photo(&p.id, &png, "png").unwrap();
+    assert!(with_photo.has_photo);
+    let photo_path = photos_dir(&path).join(format!("{}.png", p.id));
+    assert!(photo_path.is_file());
+
+    let r = store
+      .create_resume(Some("挂靠"), None, Some(&p.id), |_| true)
+      .unwrap();
+    assert_eq!(r.profile_id, p.id);
+
+    store.delete_profile(&p.id).unwrap();
+    assert!(store.get_profile(&p.id).is_err());
+    assert!(!photo_path.is_file());
+    let detached = store.get_resume(&r.id).unwrap();
+    assert_eq!(detached.profile_id, "");
+
+    cleanup_db(&path);
   }
 }

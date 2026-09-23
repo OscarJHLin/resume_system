@@ -1,4 +1,4 @@
-/** Confirm copy for content-library deletes (browser confirm). */
+/** Confirm copy for content-library deletes (in-app dialog; not window.confirm). */
 
 export function deleteModuleConfirmMessage(title: string): string {
   return `确定删除模块「${title}」？\n\n简历上已拖入的条目会保留快照，不会随库删除而消失。`;
@@ -14,13 +14,20 @@ export function deleteProfileConfirmMessage(
   return `确定删除基本信息卡「${name}」？${appliedNote}`;
 }
 
-export function confirmDeleteModule(title: string): boolean {
-  return window.confirm(deleteModuleConfirmMessage(title));
+export function deleteModuleConfirmTitle(): string {
+  return '删除模块';
 }
 
-export function confirmDeleteProfile(
-  name: string,
-  isApplied: boolean,
-): boolean {
-  return window.confirm(deleteProfileConfirmMessage(name, isApplied));
+export function deleteProfileConfirmTitle(): string {
+  return '删除基本信息';
+}
+
+/**
+ * Prevent HTML5 drag on the parent card from swallowing button clicks
+ * (common WKWebView / Chromium failure mode for 删除).
+ */
+export function stopCardActionPointer(
+  e: Pick<Event, 'stopPropagation'> & { preventDefault?: () => void },
+): void {
+  e.stopPropagation();
 }
