@@ -1,6 +1,6 @@
-//! Standalone Rust API for Phase 1–2 对照 (no Tauri).
+//! Standalone Rust API for Phase 1–3 对照 (no Tauri).
 //!
-//! CRUD + photo; `POST /api/resumes/:id/export` → 501 until Phase 3.
+//! CRUD + photo + DOCX export (`POST /api/resumes/:id/export`).
 //!
 //! ```bash
 //! # from apps/desktop/src-tauri

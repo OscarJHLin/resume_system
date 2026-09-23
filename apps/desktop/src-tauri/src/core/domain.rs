@@ -106,6 +106,27 @@ fn format_edu_date(iso: &str) -> String {
   iso.to_string()
 }
 
+const PRESENT_LABEL: &str = "至今";
+
+/// Normalize stored module timeRange for canvas / DOCX.
+/// Start-only (no range separator) → `… - 至今`.
+pub fn display_module_time_range(time_range: Option<&str>) -> String {
+  let Some(raw) = time_range.map(str::trim).filter(|s| !s.is_empty()) else {
+    return String::new();
+  };
+  if raw.contains(PRESENT_LABEL) {
+    return raw.to_string();
+  }
+  if raw.contains('-') || raw.contains('–') || raw.contains('—') {
+    return raw.to_string();
+  }
+  // Also match `\s*[-–—]\s*` via simple scan for ascii hyphen with spaces already covered.
+  if raw.contains(" - ") {
+    return raw.to_string();
+  }
+  format!("{raw} - {PRESENT_LABEL}")
+}
+
 pub fn normalize_tags(tags: Option<&Value>) -> Value {
   let Some(arr) = tags.and_then(|v| v.as_array()) else {
     return json!([]);
@@ -257,6 +278,11 @@ mod tests {
     assert_eq!(
       education_time_range(Some("2026-01"), None, None).as_deref(),
       Some("2026.01 - 至今")
+    );
+    assert_eq!(display_module_time_range(Some("2026.01")), "2026.01 - 至今");
+    assert_eq!(
+      display_module_time_range(Some("2024.01 - 2025.06")),
+      "2024.01 - 2025.06"
     );
   }
 

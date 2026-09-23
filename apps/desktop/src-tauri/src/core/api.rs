@@ -1,4 +1,4 @@
-//! Embedded localhost HTTP — Phase 2 CRUD + photo; export → 501 (Phase 3).
+//! Embedded localhost HTTP — Phase 3 CRUD + photo + DOCX export.
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use axum::body::Body;
 use axum::extract::{Path, Query, State};
-use axum::http::{header, HeaderMap, StatusCode};
+use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{delete, get, patch, post};
 use axum::{Json, Router};
@@ -20,7 +20,9 @@ use crate::core::domain::{
   snapshot_from_module,
 };
 use crate::core::error::ApiError;
+use crate::core::export::{export_docx, sanitize_filename, ExportPhoto};
 use crate::core::models::{HealthResponse, MetaResponse, StorageMeta};
+use crate::core::render::{placeholder_profile, render_to_ir};
 use crate::core::store::{ModuleInput, ProfileInput, Store};
 use crate::core::templates::{is_registered_template_id, list_template_meta, DEFAULT_TEMPLATE_ID};
 
@@ -110,9 +112,6 @@ struct PhotoBody {
   mime: Option<String>,
 }
 
-const EXPORT_PHASE3_MSG: &str =
-  "DOCX export is Phase 3; set RESUME_API=node (default) for export, or wait for Rust exporter";
-
 pub fn router(state: AppState, static_dir: Option<PathBuf>) -> Router {
   let api = Router::new()
     .route("/health", get(health))
@@ -145,7 +144,7 @@ pub fn router(state: AppState, static_dir: Option<PathBuf>) -> Router {
       "/api/resumes/{id}/placements/{placement_id}",
       delete(delete_placement),
     )
-    .route("/api/resumes/{id}/export", post(export_not_implemented))
+    .route("/api/resumes/{id}/export", post(export_resume))
     .with_state(state);
 
   if let Some(dir) = static_dir {
@@ -479,8 +478,62 @@ async fn delete_placement(
   Ok(StatusCode::NO_CONTENT)
 }
 
-async fn export_not_implemented() -> impl IntoResponse {
-  ApiError::NotImplemented(EXPORT_PHASE3_MSG.into())
+async fn export_resume(
+  State(state): State<AppState>,
+  Path(id): Path<String>,
+) -> Result<Response, ApiError> {
+  let resume = state.store.get_resume(&id)?;
+  let profile = if resume.profile_id.trim().is_empty() {
+    placeholder_profile()
+  } else {
+    state.store.get_profile(&resume.profile_id)?
+  };
+  let ir = render_to_ir(
+    &state.templates_dir,
+    &resume.template_id,
+    &profile,
+    &resume.placements,
+    crate::core::domain::now_iso,
+  )?;
+  let photo = if resume.profile_id.trim().is_empty() {
+    None
+  } else {
+    state
+      .store
+      .get_profile_photo(&resume.profile_id)?
+      .map(|(buffer, mime, _)| ExportPhoto { buffer, mime })
+  };
+  let bytes = export_docx(&state.templates_dir, &ir, photo.as_ref())?;
+  let filename = format!("{}.docx", sanitize_filename(&resume.title));
+  let encoded = urlencoding_encode(&filename);
+  let mut headers = HeaderMap::new();
+  headers.insert(
+    header::CONTENT_TYPE,
+    HeaderValue::from_static(
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ),
+  );
+  let disposition = format!("attachment; filename=\"resume.docx\"; filename*=UTF-8''{encoded}");
+  headers.insert(
+    header::CONTENT_DISPOSITION,
+    HeaderValue::from_str(&disposition)
+      .unwrap_or_else(|_| HeaderValue::from_static("attachment; filename=\"resume.docx\"")),
+  );
+  Ok((StatusCode::OK, headers, bytes).into_response())
+}
+
+/// Minimal RFC 3986 encode for Content-Disposition filename* (enough for CJK titles).
+fn urlencoding_encode(s: &str) -> String {
+  let mut out = String::new();
+  for b in s.as_bytes() {
+    match b {
+      b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+        out.push(*b as char);
+      }
+      _ => out.push_str(&format!("%{b:02X}")),
+    }
+  }
+  out
 }
 
 fn profile_input<'a>(body: &'a ProfileBody) -> Result<ProfileInput<'a>, ApiError> {
@@ -696,7 +749,7 @@ mod tests {
     let resume: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(resume["placements"].as_array().unwrap().len(), 1);
 
-    // Export still Phase 3.
+    // Export DOCX (Phase 3).
     let res = app
       .oneshot(
         Request::builder()
@@ -707,7 +760,16 @@ mod tests {
       )
       .await
       .unwrap();
-    assert_eq!(res.status(), StatusCode::NOT_IMPLEMENTED);
+    assert_eq!(res.status(), StatusCode::OK);
+    let ct = res
+      .headers()
+      .get(header::CONTENT_TYPE)
+      .and_then(|v| v.to_str().ok())
+      .unwrap_or("");
+    assert!(ct.contains("wordprocessingml") || ct.contains("octet-stream"));
+    let body = to_bytes(res.into_body(), 2 * 1024 * 1024).await.unwrap();
+    assert!(body.len() > 100);
+    assert_eq!(&body[0..2], b"PK");
 
     let _ = std::fs::remove_file(&path);
   }

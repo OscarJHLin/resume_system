@@ -14,7 +14,7 @@ struct ServerChild(Mutex<Option<Child>>);
 enum ApiBackend {
   /// Default — spawn Node Fastify sidecar (full CRUD + export).
   Node,
-  /// Plan C Phase 2 — in-process Rust HTTP (CRUD + photo; export still 501).
+  /// Plan C Phase 3 — in-process Rust HTTP (CRUD + photo + DOCX export).
   Rust,
 }
 

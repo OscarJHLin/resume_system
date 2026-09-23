@@ -131,7 +131,7 @@ flowchart TB
 
 - [x] 实现 profiles / modules / resumes / placements / photo 的写路径；错误码与 4xx 形状对齐
 - [x] 桌面用环境变量 `RESUME_API=rust|node` 切换（**默认仍为 `node`**）
-- [x] 导出 `POST /api/resumes/:id/export` 暂 **501**（Phase 3）；需要导出时用默认 Node
+- [x] 导出 `POST /api/resumes/:id/export` — Phase 3 已实现（见下）；默认仍 `node`
 - **验收**：
   - [x] Rust 单元/路由测试覆盖建卡、模块 CRUD、placement + snapshot-on-drop、照片上传/删除（temp DB）
   - [ ] 对空库跑完 [05-acceptance.md](./05-acceptance.md) 主路径（UI 冒烟，建议 `RESUME_API=rust` + 副本 DB）— 手工对照
@@ -139,12 +139,16 @@ flowchart TB
 
 ### Phase 3 — 模板渲染 + 导出 parity
 
-- ResumeIR 生成与 DOCX 字节对齐（见 §5）
-- 照片 fitContain、页眉居中、蓝黑简洁版式
+- [x] ResumeIR 生成与 DOCX 字节产出（纯 Rust `docx-rs`，§5 选项 **A**）
+- [x] 照片 fitContain、页眉居中、蓝黑简洁版式（结构/字体/至今/获奖级别对齐 Node）
+- [x] `POST /api/resumes/:id/export` 返回 OOXML + Content-Disposition（与 Node / UI 一致）
 - **验收**：
-  - 同一输入 fixture：IR 快照测试通过
-  - 导出 DOCX 可在 Word/WPS 打开；与 snapshot 导出 **视觉/结构对照清单**（§6）打勾
-  - 「另存为」路径仍经系统对话框（若现状如此则保持）
+  - [x] 同一输入 fixture：IR 冒烟/结构测试通过（`cargo test --lib`）
+  - [x] 导出 DOCX 为非空 ZIP/OOXML；照片可嵌入（单元测试）
+  - [ ] 与 snapshot 导出 **视觉对照清单**（§6 #8）— 手工：Word/WPS 打开对照
+  - [ ] 「另存为」路径仍经系统对话框（前端不变；建议 `RESUME_API=rust` 冒烟）
+
+**Phase 3 导出决策（2026-09-23）**：选用 **A 纯 Rust（`docx-rs`）**。IR 渲染与 Node `modules/template` 对齐；DOCX 段落/Tab/CJK 字体/底边框/fitContain 照片走 `docx-rs`。已知可能细微差距：docx-rs 对非 PNG 会转 PNG 再嵌入（Word 显示通常一致）；行距/字距与 npm `docx` 的 XML 细节未必字节级相同，以视觉对照为准。默认 `RESUME_API` 仍为 **`node`**，至 Phase 4 再切。
 
 ### Phase 4 — 移除 Node sidecar
 
@@ -240,7 +244,7 @@ git push origin snapshot/pre-rust-baseline
 
 ### 7.5 Phase 1–2：Rust API 对照（`RESUME_API`）
 
-**默认仍是 Node**。`RESUME_API=rust` 时读写与照片走进程内 axum；**DOCX 导出仍 501**（Phase 3），需要导出请保持默认 `node`。
+**默认仍是 Node**。`RESUME_API=rust` 时读写、照片与 **DOCX 导出**均走进程内 axum（Phase 3）。
 
 ```bash
 # A) 独立 Rust API（不启 Tauri）— 建议用开发库副本，勿对正式 App Data 做破坏性试验
@@ -261,10 +265,10 @@ curl -s http://127.0.0.1:8788/api/profiles > /tmp/rust.json
 curl -s -X POST http://127.0.0.1:8788/api/profiles \
   -H 'content-type: application/json' \
   -d '{"name":"测","gender":"男","phone":"1","email":"t@e.com","wechat":"w"}'
-# 导出应 501
-curl -s -o /dev/null -w '%{http_code}\n' -X POST http://127.0.0.1:8788/api/resumes/<id>/export
+# 导出应 200 + OOXML
+curl -s -o /tmp/rust-export.docx -w '%{http_code}\n' -X POST http://127.0.0.1:8788/api/resumes/<id>/export
 
-# 桌面壳（CRUD+照片可用；导出请改回 node）
+# 桌面壳（含导出）
 RESUME_API=rust npm run app:desktop
 ```
 
@@ -297,7 +301,7 @@ RESUME_API=rust npm run app:desktop
 ## 10. 建议实现入口
 
 - `apps/desktop/src-tauri/src/lib.rs`：`mod core;` + `RESUME_API`；Phase 4 删除 spawn  
-- 目录：`apps/desktop/src-tauri/src/core/{db,store,api,domain,templates,models,error}.rs`（Phase 2 CRUD 已落地）  
+- 目录：`apps/desktop/src-tauri/src/core/{db,store,api,domain,templates,models,error,render,export}.rs`（Phase 3 导出已落地）  
 - 开发开关：`RESUME_API=rust|node`（默认 Phase 1–3 为 `node`，至 Phase 4 再切默认）  
 - 对照：`cargo run --bin resume_api`（见 §7.5）
 
