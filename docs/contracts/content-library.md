@@ -47,7 +47,7 @@ interface ContentModule {
 | GET | `/api/profiles?q=&tag=` | 列表 |
 | POST | `/api/profiles` | 创建（校验必填） |
 | PUT | `/api/profiles/:id` | 更新 |
-| POST | `/api/profiles/:id/copy` | 复制整卡（新 id；姓名加「（副本）」；有照片则另存文件） |
+| POST | `/api/profiles/:id/copy` | 深拷贝整卡（新 id；姓名加「（副本）」；教育/技能嵌套 id 重新生成；有照片则另存文件） |
 | DELETE | `/api/profiles/:id` | 删除；简历 profileId 置空 |
 | PUT/GET/DELETE | `/api/profiles/:id/photo` | 照片存档（导出不含） |
 

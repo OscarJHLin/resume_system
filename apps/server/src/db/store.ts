@@ -234,24 +234,59 @@ export class Store {
       .run(nowIso(), id);
   }
 
-  /** Full copy of a profile card (new id); photo file duplicated when present. */
+  /** Full deep clone of a profile card (new id); photo file duplicated when present.
+   * Persisted fields are copied verbatim; education/skills get fresh nested ids only. */
   copyProfile(id: string): Profile {
     const src = this.getProfileById(id);
-    const created = this.createProfile({
+    const ts = nowIso();
+    const newIdValue = newId();
+    const education = remintEducationIds(src.education);
+    const skills = remintSkillIds(src.skills);
+    const profile: Profile = {
+      id: newIdValue,
       name: `${src.name.trim()}（副本）`,
       gender: src.gender || '',
-      phone: src.phone || '',
-      email: src.email || '',
-      wechat: src.wechat || '',
+      phone: src.phone,
+      email: src.email,
+      wechat: src.wechat,
       qq: src.qq,
       location: src.location,
       summary: src.summary,
       statement: src.statement,
-      education: src.education,
-      skills: src.skills,
-      tags: src.tags,
+      education,
+      skills,
+      tags: [...src.tags],
       notes: src.notes,
-    });
+      createdAt: ts,
+      updatedAt: ts,
+    };
+    this.db
+      .prepare(
+        `INSERT INTO profile (
+          id, name, gender, phone, email, wechat, qq, location, summary,
+          statement, education_json, skills_json, tags_json, notes, photo_filename,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        profile.id,
+        profile.name,
+        profile.gender ?? null,
+        profile.phone ?? null,
+        profile.email ?? null,
+        profile.wechat ?? null,
+        profile.qq ?? null,
+        profile.location ?? null,
+        profile.summary ?? null,
+        profile.statement ?? null,
+        JSON.stringify(profile.education),
+        JSON.stringify(profile.skills),
+        JSON.stringify(profile.tags),
+        profile.notes ?? null,
+        null,
+        profile.createdAt,
+        profile.updatedAt,
+      );
 
     const photo = this.getProfilePhoto(id);
     if (photo) {
@@ -261,19 +296,19 @@ export class Store {
           : photo.mime.includes('webp')
             ? 'webp'
             : 'jpg';
-      return this.saveProfilePhoto(created.id, photo.buffer, ext);
+      return this.saveProfilePhoto(profile.id, photo.buffer, ext);
     }
     if (src.hasPhoto) {
       const legacy = path.join(photosDir(this.dbPath), 'profile.jpg');
       if (fs.existsSync(legacy)) {
         return this.saveProfilePhoto(
-          created.id,
+          profile.id,
           fs.readFileSync(legacy),
           'jpg',
         );
       }
     }
-    return created;
+    return this.getProfileById(profile.id);
   }
 
   saveProfilePhoto(profileId: string, bytes: Buffer, ext: string): Profile {
@@ -782,4 +817,13 @@ function normalizeSkills(items: SkillBlock[] | undefined): SkillBlock[] {
       body: (s.body ?? '').trim(),
     }))
     .filter((s) => s.title || s.body);
+}
+
+/** Deep-clone education rows with fresh ids (profile copy independence). */
+function remintEducationIds(items: EducationItem[]): EducationItem[] {
+  return items.map((e) => ({ ...e, id: newId() }));
+}
+
+function remintSkillIds(items: SkillBlock[]): SkillBlock[] {
+  return items.map((s) => ({ ...s, id: newId() }));
 }

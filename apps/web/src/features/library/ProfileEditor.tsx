@@ -293,9 +293,18 @@ export function ProfileEditor({
               <label>
                 学历
                 <select
-                  value={edu.degree || '本科'}
+                  value={edu.degree?.trim() || '本科'}
                   onChange={(e) => setEdu(idx, { degree: e.target.value })}
                 >
+                  {/* Preserve stored values not in the current option list */}
+                  {edu.degree?.trim() &&
+                  !(DEGREE_OPTIONS as readonly string[]).includes(
+                    edu.degree.trim(),
+                  ) ? (
+                    <option value={edu.degree.trim()}>
+                      {edu.degree.trim()}
+                    </option>
+                  ) : null}
                   {DEGREE_OPTIONS.map((d) => (
                     <option key={d} value={d}>
                       {d}

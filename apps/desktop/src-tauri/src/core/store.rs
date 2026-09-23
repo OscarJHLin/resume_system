@@ -9,6 +9,7 @@ use serde_json::{json, Value};
 use crate::core::db::photos_dir;
 use crate::core::domain::{
   new_id, normalize_education, normalize_skills, normalize_tags, now_iso,
+  remint_json_array_ids,
   validate_profile_required,
 };
 use crate::core::error::ApiError;
@@ -379,29 +380,49 @@ impl Store {
     Ok(())
   }
 
-  /// Full copy of a profile card (new id); photo file duplicated when present.
-  /// Display name appends `（副本）` so the copy is distinct in the library list.
+  /// Full deep clone of a profile card (new id); photo file duplicated when present.
+  /// Persisted columns are copied verbatim (education/skills JSON reminted with new
+  /// nested ids only). Display name appends `（副本）`.
   pub fn copy_profile(&self, id: &str) -> Result<Profile, ApiError> {
     let src = self.get_profile(id)?;
+    let new_id = new_id();
     let copy_name = format!("{}（副本）", src.name.trim());
-    let phone = src.phone.as_deref().unwrap_or("");
-    let email = src.email.as_deref().unwrap_or("");
-    let wechat = src.wechat.as_deref().unwrap_or("");
-    let created = self.create_profile(ProfileInput {
-      name: &copy_name,
-      gender: &src.gender,
-      phone,
-      email,
-      wechat,
-      qq: src.qq.as_deref(),
-      location: src.location.as_deref(),
-      summary: src.summary.as_deref(),
-      statement: src.statement.as_deref(),
-      education: Some(&src.education),
-      skills: Some(&src.skills),
-      tags: Some(&src.tags),
-      notes: src.notes.as_deref(),
-    })?;
+    let ts = now_iso();
+    // Verbatim field clone — do not re-run create/normalize (avoids defaults / drops).
+    let education = remint_json_array_ids(&src.education);
+    let skills = remint_json_array_ids(&src.skills);
+    let tags = src.tags.clone();
+
+    {
+      let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+      conn
+        .execute(
+          r#"INSERT INTO profile (
+            id, name, gender, phone, email, wechat, qq, location, summary,
+            statement, education_json, skills_json, tags_json, notes, photo_filename,
+            created_at, updated_at
+          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, NULL, ?15, ?16)"#,
+          rusqlite::params![
+            new_id,
+            copy_name,
+            src.gender,
+            src.phone,
+            src.email,
+            src.wechat,
+            src.qq,
+            src.location,
+            src.summary,
+            src.statement,
+            education.to_string(),
+            skills.to_string(),
+            tags.to_string(),
+            src.notes,
+            ts,
+            ts,
+          ],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    }
 
     if let Some((bytes, mime, _)) = self.get_profile_photo(id)? {
       let ext = if mime.contains("png") {
@@ -411,17 +432,17 @@ impl Store {
       } else {
         "jpg"
       };
-      return self.save_profile_photo(&created.id, &bytes, ext);
+      return self.save_profile_photo(&new_id, &bytes, ext);
     }
     if src.has_photo {
       let legacy = photos_dir(&self.db_path).join("profile.jpg");
       if legacy.is_file() {
         let bytes =
           std::fs::read(&legacy).map_err(|e| ApiError::Internal(e.to_string()))?;
-        return self.save_profile_photo(&created.id, &bytes, "jpg");
+        return self.save_profile_photo(&new_id, &bytes, "jpg");
       }
     }
-    Ok(created)
+    self.get_profile(&new_id)
   }
 
   pub fn save_profile_photo(
@@ -1083,13 +1104,32 @@ mod tests {
   #[test]
   fn copy_profile_duplicates_fields_and_photo() {
     let (store, path) = seed_db();
-    let education = json!([{
-      "school": "示例大学",
-      "degree": "本科",
-      "major": "CS",
-      "startDate": "2020-09-01",
-      "endDate": "2024-06-01"
-    }]);
+    let education = json!([
+      {
+        "id": "edu-src-1",
+        "school": "示例大学",
+        "degree": "本科",
+        "major": "软件工程",
+        "startDate": "2020-09-01",
+        "endDate": "2024-06-01",
+        "gpa": "3.5/5",
+        "rank": "专业前10%",
+        "courses": "数据结构"
+      },
+      {
+        "id": "edu-src-2",
+        "school": "示例大学",
+        "degree": "双学位",
+        "major": "投资学",
+        "startDate": "2020-09-01",
+        "endDate": "2024-06-01",
+        "gpa": "3.75/5",
+        "rank": "专业前5%",
+        "courses": "宏观经济学"
+      }
+    ]);
+    let skills = json!([{ "id": "sk-1", "title": "语言", "body": "Rust" }]);
+    let tags = json!(["校招", "双学位测"]);
     let src = store
       .create_profile(ProfileInput {
         name: "丁一",
@@ -1099,11 +1139,11 @@ mod tests {
         wechat: "wd",
         qq: Some("123"),
         location: Some("北京"),
-        summary: Some("后端"),
-        statement: Some("优势"),
+        summary: Some("后端开发"),
+        statement: Some("个人优势陈述"),
         education: Some(&education),
-        skills: Some(&json!([{ "title": "语言", "body": "Rust" }])),
-        tags: Some(&json!(["校招"])),
+        skills: Some(&skills),
+        tags: Some(&tags),
         notes: Some("备注"),
       })
       .unwrap();
@@ -1115,20 +1155,42 @@ mod tests {
       0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
     ];
     store.save_profile_photo(&src.id, &png, "png").unwrap();
+    let src = store.get_profile(&src.id).unwrap();
 
     let copy = store.copy_profile(&src.id).unwrap();
     assert_ne!(copy.id, src.id);
     assert_eq!(copy.name, "丁一（副本）");
-    assert_eq!(copy.gender, "男");
-    assert_eq!(copy.phone.as_deref(), Some("137"));
-    assert_eq!(copy.location.as_deref(), Some("北京"));
-    assert_eq!(copy.summary.as_deref(), Some("后端"));
-    assert_eq!(copy.statement.as_deref(), Some("优势"));
-    assert_eq!(copy.notes.as_deref(), Some("备注"));
+    assert_eq!(copy.gender, src.gender);
+    assert_eq!(copy.phone, src.phone);
+    assert_eq!(copy.email, src.email);
+    assert_eq!(copy.wechat, src.wechat);
+    assert_eq!(copy.qq, src.qq);
+    assert_eq!(copy.location, src.location);
+    assert_eq!(copy.summary, src.summary);
+    assert_eq!(copy.statement, src.statement);
+    assert_eq!(copy.notes, src.notes);
+    assert_eq!(copy.tags, src.tags);
+    assert_eq!(copy.education.as_array().unwrap().len(), 2);
     assert_eq!(
-      copy.education[0]["school"].as_str(),
-      Some("示例大学")
+      copy.education[1]["degree"].as_str(),
+      Some("双学位"),
+      "degree must survive copy verbatim"
     );
+    assert_eq!(copy.education[1]["major"].as_str(), Some("投资学"));
+    assert_eq!(copy.education[1]["gpa"].as_str(), Some("3.75/5"));
+    assert_eq!(copy.education[1]["rank"].as_str(), Some("专业前5%"));
+    assert_eq!(copy.education[1]["courses"].as_str(), Some("宏观经济学"));
+    assert_eq!(copy.education[0]["degree"].as_str(), Some("本科"));
+    // Nested ids must be reminted — no shared mutable identity with source
+    assert_ne!(
+      copy.education[0]["id"].as_str(),
+      src.education[0]["id"].as_str()
+    );
+    assert_ne!(
+      copy.education[1]["id"].as_str(),
+      src.education[1]["id"].as_str()
+    );
+    assert_ne!(copy.skills[0]["id"].as_str(), src.skills[0]["id"].as_str());
     assert_eq!(copy.skills[0]["body"].as_str(), Some("Rust"));
     assert!(copy.has_photo);
 
@@ -1139,6 +1201,7 @@ mod tests {
 
     let still = store.get_profile(&src.id).unwrap();
     assert_eq!(still.name, "丁一");
+    assert_eq!(still.education[1]["degree"].as_str(), Some("双学位"));
     assert!(still.has_photo);
 
     let photos = path.parent().unwrap().join("photos");

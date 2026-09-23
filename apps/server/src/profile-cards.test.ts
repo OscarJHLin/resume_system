@@ -70,25 +70,55 @@ describe('profile cards + template select', () => {
       id: string;
       name: string;
       summary?: string;
+      statement?: string;
+      notes?: string;
+      qq?: string;
+      location?: string;
       hasPhoto?: boolean;
+      education: Array<{
+        id: string;
+        school: string;
+        degree?: string;
+        major?: string;
+        gpa?: string;
+        rank?: string;
+        courses?: string;
+      }>;
+      skills: Array<{ id: string; title: string; body: string }>;
+      tags: string[];
     }>('POST', '/api/profiles', {
       name: '源卡',
       gender: '男',
       email: 'src@x.com',
       phone: '999',
       wechat: 'wx_src',
+      qq: '10001',
+      location: '上海',
       summary: '应聘岗位',
       statement: '陈述',
       education: [
         {
+          id: 'edu-a',
           school: '示例大学',
           degree: '本科',
-          major: '软件',
+          major: '软件工程',
           startDate: '2020-09-01',
           endDate: '2024-06-01',
+          gpa: '3.5/5',
+        },
+        {
+          id: 'edu-b',
+          school: '示例大学',
+          degree: '双学位',
+          major: '投资学',
+          startDate: '2020-09-01',
+          endDate: '2024-06-01',
+          gpa: '3.75/5',
+          rank: '专业前5%',
+          courses: '宏观经济学',
         },
       ],
-      skills: [{ title: '语言', body: 'TS' }],
+      skills: [{ id: 'sk-1', title: '语言', body: 'TS' }],
       tags: ['副本测'],
       notes: '源备注',
     });
@@ -105,20 +135,53 @@ describe('profile cards + template select', () => {
     const copy = await json<{
       id: string;
       name: string;
+      gender?: string;
+      phone?: string;
+      email?: string;
+      wechat?: string;
+      qq?: string;
+      location?: string;
       summary?: string;
       statement?: string;
       notes?: string;
       hasPhoto?: boolean;
-      education: Array<{ school: string }>;
+      education: Array<{
+        id: string;
+        school: string;
+        degree?: string;
+        major?: string;
+        gpa?: string;
+        rank?: string;
+        courses?: string;
+      }>;
+      skills: Array<{ id: string; title: string; body: string }>;
+      tags: string[];
     }>('POST', `/api/profiles/${src.id}/copy`);
 
     assert.notEqual(copy.id, src.id);
     assert.equal(copy.name, '源卡（副本）');
+    assert.equal(copy.gender, '男');
+    assert.equal(copy.phone, '999');
+    assert.equal(copy.email, 'src@x.com');
+    assert.equal(copy.wechat, 'wx_src');
+    assert.equal(copy.qq, '10001');
+    assert.equal(copy.location, '上海');
     assert.equal(copy.summary, '应聘岗位');
     assert.equal(copy.statement, '陈述');
     assert.equal(copy.notes, '源备注');
+    assert.deepEqual(copy.tags, ['副本测']);
     assert.equal(copy.hasPhoto, true);
-    assert.equal(copy.education[0]?.school, '示例大学');
+    assert.equal(copy.education.length, 2);
+    assert.equal(copy.education[0]?.degree, '本科');
+    assert.equal(copy.education[1]?.degree, '双学位');
+    assert.equal(copy.education[1]?.major, '投资学');
+    assert.equal(copy.education[1]?.gpa, '3.75/5');
+    assert.equal(copy.education[1]?.rank, '专业前5%');
+    assert.equal(copy.education[1]?.courses, '宏观经济学');
+    assert.notEqual(copy.education[0]?.id, src.education[0]?.id);
+    assert.notEqual(copy.education[1]?.id, src.education[1]?.id);
+    assert.notEqual(copy.skills[0]?.id, src.skills[0]?.id);
+    assert.equal(copy.skills[0]?.body, 'TS');
 
     const origPhoto = await fetch(`${baseUrl}/api/profiles/${src.id}/photo`);
     const copyPhoto = await fetch(`${baseUrl}/api/profiles/${copy.id}/photo`);
@@ -128,8 +191,12 @@ describe('profile cards + template select', () => {
     const copyBuf = Buffer.from(await copyPhoto.arrayBuffer());
     assert.deepEqual(origBuf, copyBuf);
 
-    const still = await json<{ name: string }>('GET', `/api/profiles/${src.id}`);
+    const still = await json<{
+      name: string;
+      education: Array<{ degree?: string }>;
+    }>('GET', `/api/profiles/${src.id}`);
     assert.equal(still.name, '源卡');
+    assert.equal(still.education[1]?.degree, '双学位');
 
     const missing = await fetch(`${baseUrl}/api/profiles/no-such/copy`, {
       method: 'POST',

@@ -224,6 +224,27 @@ pub fn normalize_skills(items: Option<&Value>) -> Value {
   Value::Array(out)
 }
 
+/// Deep-clone a JSON array of objects (education / skills), minting fresh `id`s
+/// so a profile copy does not share nested identity with the source row.
+pub fn remint_json_array_ids(items: &Value) -> Value {
+  let Some(arr) = items.as_array() else {
+    return items.clone();
+  };
+  Value::Array(
+    arr
+      .iter()
+      .map(|item| {
+        let mut obj = match item.as_object() {
+          Some(m) => m.clone(),
+          None => return item.clone(),
+        };
+        obj.insert("id".into(), Value::String(new_id()));
+        Value::Object(obj)
+      })
+      .collect(),
+  )
+}
+
 fn opt_trim_str(v: Option<&Value>) -> Option<String> {
   v.and_then(|x| x.as_str())
     .map(str::trim)
