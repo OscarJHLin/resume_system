@@ -50,8 +50,8 @@ npm run app
 
 | 平台 | 下载 | 安装 |
 |---|---|---|
-| **macOS** | `拼履_x.y.z_*.dmg` 或 `.app` | 打开 DMG，拖到「应用程序」 |
-| **Windows** | `拼履_x.y.z_x64-setup.exe`（NSIS） | 双击安装 |
+| **macOS** | `Pinlu_x.y.z_*.dmg` / `Pinlu.app`（Finder / 菜单栏显示 **拼履**） | 打开 DMG，拖到「应用程序」 |
+| **Windows** | `Pinlu_x.y.z_x64-setup.exe`（NSIS） | 双击安装 |
 
 **热更新：** 从 v1.2 起，已安装的桌面端会在启动时检查 Release 的 `latest.json`，有新版本则自动下载并重启（见 [ADR-0005](docs/adr/0005-desktop-updater.md)）。用户 SQLite 数据保留在 App Data，不被覆盖。
 

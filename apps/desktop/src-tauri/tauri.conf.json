@@ -43,7 +43,9 @@
       "desktop-resources/templates": "templates"
     },
     "macOS": {
-      "minimumSystemVersion": "11.0"
+      "minimumSystemVersion": "11.0",
+      "bundleName": "拼履",
+      "infoPlist": "Info.plist"
     },
     "windows": {
       "nsis": {
