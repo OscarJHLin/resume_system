@@ -40,7 +40,6 @@
     ],
     "resources": {
       "../../web/dist": "web-dist",
-      "desktop-resources/server": "server",
       "desktop-resources/templates": "templates"
     },
     "macOS": {

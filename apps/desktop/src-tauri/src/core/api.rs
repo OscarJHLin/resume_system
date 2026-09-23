@@ -170,7 +170,7 @@ pub async fn serve(
   let listener = tokio::net::TcpListener::bind(addr)
     .await
     .map_err(|e| format!("bind {addr}: {e}"))?;
-  log::info!("[拼履] Rust API listening on http://{addr}/ (RESUME_API=rust)");
+  log::info!("[拼履] Rust API listening on http://{addr}/");
   axum::serve(listener, app)
     .await
     .map_err(|e| format!("serve: {e}"))

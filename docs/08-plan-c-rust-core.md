@@ -96,13 +96,13 @@ flowchart TB
 | Export DOCX | npm `docx` | 见 §5 导出策略 |
 | Health / meta | `/health`、`/api/meta` | 同契约，便于探针与对照 |
 
-### 3.3 最终删除（在验收通过后）
+### 3.3 最终删除（Phase 4 已完成）
 
-- Tauri `spawn_local_server` / `find_node` / 对用户提示「请安装 Node」
-- 安装包内 `desktop-resources/server/`
-- 终端用户对 Node 22+ 的运行时依赖（**构建机**编前端仍可用 Node）
+- [x] Tauri `find_node` / 对用户提示「请安装 Node」
+- [x] 安装包内 `desktop-resources/server/`
+- [x] 终端用户对 Node 22+ 的运行时依赖（**构建机**编前端仍可用 Node）
 
-`apps/server` 可在过渡期保留为对照实现与 `npm test`；完全切齐后再标为 legacy 或仅 CI 对照。
+`apps/server` 保留为浏览器 `npm run app`、合同测试与可选 `RESUME_API=node` 开发对照；不打进桌面安装包。
 
 ---
 
@@ -148,18 +148,23 @@ flowchart TB
   - [ ] 与 snapshot 导出 **视觉对照清单**（§6 #8）— 手工：Word/WPS 打开对照
   - [ ] 「另存为」路径仍经系统对话框（前端不变；建议 `RESUME_API=rust` 冒烟）
 
-**Phase 3 导出决策（2026-09-23）**：选用 **A 纯 Rust（`docx-rs`）**。IR 渲染与 Node `modules/template` 对齐；DOCX 段落/Tab/CJK 字体/底边框/fitContain 照片走 `docx-rs`。已知可能细微差距：docx-rs 对非 PNG 会转 PNG 再嵌入（Word 显示通常一致）；行距/字距与 npm `docx` 的 XML 细节未必字节级相同，以视觉对照为准。默认 `RESUME_API` 仍为 **`node`**，至 Phase 4 再切。
+**Phase 3 导出决策（2026-09-23）**：选用 **A 纯 Rust（`docx-rs`）**。IR 渲染与 Node `modules/template` 对齐；DOCX 段落/Tab/CJK 字体/底边框/fitContain 照片走 `docx-rs`。已知可能细微差距：docx-rs 对非 PNG 会转 PNG 再嵌入（Word 显示通常一致）；行距/字距与 npm `docx` 的 XML 细节未必字节级相同，以视觉对照为准。
 
+**Phase 4（2026-09-23）**：桌面默认进程内 Rust；`RESUME_API` 默认 `rust`；打包资源仅 `web-dist` + `templates/`。`apps/server` 保留给浏览器开发。
 ### Phase 4 — 移除 Node sidecar
 
-- 默认仅 Rust API；删除 spawn / Node 探测 / bundle server.mjs
-- 更新 README / 安装说明：**无需 Node**
-- **验收**：干净机器（无 Node）安装包可完成验收清单；有 Node 的机器行为不变
+- [x] 默认仅 Rust API；删除 `find_node` / 打包 `server.mjs`；安装包路径不再 spawn Node
+- [x] 开发可选 `RESUME_API=node`（monorepo `npm` 起 Fastify；打包拒绝）
+- [x] 更新 README / ADR / 安装说明：**无需 Node**
+- **验收**：
+  - [x] `cargo test --lib`；零环境变量启动走 Rust
+  - [ ] 干净机器（无 Node）安装包可完成验收清单 — Phase 5 冒烟
+  - [ ] 有 Node 的机器行为不变（浏览器 `npm run app` 仍可用）— 手工
 
 ### Phase 5 — 打包与 CI
 
-- `desktop-release.yml`：构建产物不含 server 资源；updater 仍上传 `latest.json`
-- Mac + Win 安装包冒烟
+- [ ] `desktop-release.yml`：构建产物不含 server 资源（Phase 4 已改 workflow 文案）；updater 仍上传 `latest.json`
+- [ ] Mac + Win 安装包冒烟
 - **验收**：tag `v*` 流水线绿；已装旧版（Node sidecar）用户可热更到无 Node 版且 **DB 保留**
 
 ---
@@ -222,7 +227,7 @@ git worktree add ../resume_system_pre_rust snapshot/pre-rust-node-sidecar
 npm install && npm run app
 # 打开 http://127.0.0.1:8787/ ，按 docs/05-acceptance.md
 
-# 或桌面壳（仍会 spawn Node）
+# 或桌面壳（默认 Rust；对照可用 RESUME_API=node）
 npm run app:desktop
 ```
 
@@ -242,9 +247,9 @@ git push origin refs/tags/snapshot/pre-rust-node-sidecar
 git push origin snapshot/pre-rust-baseline
 ```
 
-### 7.5 Phase 1–2：Rust API 对照（`RESUME_API`）
+### 7.5 Phase 4：桌面默认 Rust；对照仍可用 Node
 
-**默认仍是 Node**。`RESUME_API=rust` 时读写、照片与 **DOCX 导出**均走进程内 axum（Phase 3）。
+**默认是 Rust**（零环境变量 / 安装包）。`RESUME_API=node` 仅 monorepo 开发对照。
 
 ```bash
 # A) 独立 Rust API（不启 Tauri）— 建议用开发库副本，勿对正式 App Data 做破坏性试验
@@ -254,7 +259,7 @@ RESUME_TEMPLATES_DIR=../../../templates \
 PORT=8788 \
 cargo run --bin resume_api
 
-# 另开终端：同一 DB 起 Node（8787）做字段对照
+# 另开终端：同一 DB 起 Node（8787）做字段对照（浏览器包，非桌面依赖）
 RESUME_DB_PATH=./data/resume.db PORT=8787 npm run start -w @resume/server
 
 # 读路径 diff
@@ -268,8 +273,11 @@ curl -s -X POST http://127.0.0.1:8788/api/profiles \
 # 导出应 200 + OOXML
 curl -s -o /tmp/rust-export.docx -w '%{http_code}\n' -X POST http://127.0.0.1:8788/api/resumes/<id>/export
 
-# 桌面壳（含导出）
-RESUME_API=rust npm run app:desktop
+# 桌面壳（默认 Rust，无需 RESUME_API）
+npm run app:desktop
+
+# 可选：对照 Node Fastify
+RESUME_API=node npm run app:desktop
 ```
 
 单元测试：`cd apps/desktop/src-tauri && cargo test --lib`
@@ -300,9 +308,9 @@ RESUME_API=rust npm run app:desktop
 
 ## 10. 建议实现入口
 
-- `apps/desktop/src-tauri/src/lib.rs`：`mod core;` + `RESUME_API`；Phase 4 删除 spawn  
-- 目录：`apps/desktop/src-tauri/src/core/{db,store,api,domain,templates,models,error,render,export}.rs`（Phase 3 导出已落地）  
-- 开发开关：`RESUME_API=rust|node`（默认 Phase 1–3 为 `node`，至 Phase 4 再切默认）  
+- `apps/desktop/src-tauri/src/lib.rs`：默认 `start_rust_api`；可选 `RESUME_API=node`（monorepo）
+- 目录：`apps/desktop/src-tauri/src/core/{db,store,api,domain,templates,models,error,render,export}.rs`
+- 打包：`scripts/prepare-desktop-bundle.sh` → `web-dist` + `templates/`（无 server）
 - 对照：`cargo run --bin resume_api`（见 §7.5）
 
 详见 `apps/desktop/README.md`。

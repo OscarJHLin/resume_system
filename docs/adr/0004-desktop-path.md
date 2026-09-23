@@ -56,13 +56,14 @@ flowchart TB
 ## 后果
 
 - S1–S4 **原型**可在浏览器双终端或 `npm run app` / Tauri 壳下验收。
-- **过渡态（已交付的 v1.x 安装包）**：桌面壳仍依赖本机 **Node 22+** 启动内置 API（`server.mjs` sidecar）。该路径已用 git tag **`snapshot/pre-rust-node-sidecar`** 冻结，供对照。
-- **已采纳下一路径（Plan C）**：Rust 进程内核心，消除终端用户 Node 依赖——见 [ADR-0006](./0006-rust-core.md) 与 [docs/08-plan-c-rust-core.md](../08-plan-c-rust-core.md)。不再走「捆绑 Node runtime」方案。
-- 安装包资源（过渡）：`web-dist` + `server/server.mjs` + `templates/`；Plan C 完成后去掉 `server/`。**禁止**打包 `data/` / `*.db` / `photos/`。
-- CI：`.github/workflows/desktop-release.yml` 在 tag `v*` 时构建 macOS + Windows 并上传 Release（热更新见 [ADR-0005](./0005-desktop-updater.md)）。
+- **历史过渡态（已交付的 v1.x 安装包）**：曾依赖本机 **Node 22+** sidecar（`server.mjs`）。该路径已用 git tag **`snapshot/pre-rust-node-sidecar`** 冻结，供对照。
+- **当前桌面路径（Plan C Phase 4+）**：Rust 进程内核心，**终端用户零 Node 依赖**——见 [ADR-0006](./0006-rust-core.md) 与 [docs/08-plan-c-rust-core.md](../08-plan-c-rust-core.md)。
+- 安装包资源：`web-dist` + `templates/`（**不含** `server/`）。**禁止**打包 `data/` / `*.db` / `photos/`。
+- CI：`.github/workflows/desktop-release.yml` 在 tag `v*` 时构建 macOS + Windows 并上传 Release（热更新见 [ADR-0005](./0005-desktop-updater.md)）。构建机仍用 Node 编前端；用户机器不需要 Node。
 - 禁止把权威数据只放在浏览器 IndexedDB 而无法导出到文件型 SQLite（与迁移原则冲突）。
 - SQLite：开发 `./data/resume.db`（**gitignored**，首次启动自动创建，无需用户配置）；Tauri 使用系统 **app data** 目录下自动建库；**更新不得清空用户库**。
-- **分发隔离**：安装包只带 UI（及过渡期 API 资源）；**禁止**把开发机 `data/`、`*.db`、`photos/` 打进 bundle。每位用户的数据只存在本机。
+- **分发隔离**：安装包只带 UI + 模板；**禁止**把开发机 `data/`、`*.db`、`photos/` 打进 bundle。每位用户的数据只存在本机。
+- 浏览器验收仍可用 monorepo `apps/server`（`npm run app`）；与桌面运行时解耦。
 
 ## 非目标（本 ADR）
 

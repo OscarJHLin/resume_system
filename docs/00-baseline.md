@@ -4,15 +4,15 @@
 - product: **拼履**（模块拖放组装履历；技术包名仍为 `@resume/*`）
 - repository: `/Users/linyunhe/ai_project/resume_system`
 - pre-Rust snapshot: tag **`snapshot/pre-rust-node-sidecar`** @ `a9fc8f0422bc4f05646f3feabf2e19d97889f24d`
-- worktree: **可验收**：蓝黑简洁模板、内容库四标签、`npm run app` / Tauri 壳（Node sidecar）
-- 环境目标: 近端本地 Web + API + SQLite；桌面壳已分发（依赖本机 Node）；**下一步 Plan C** 迁 Rust 核心（[08-plan-c-rust-core.md](./08-plan-c-rust-core.md)）
+- worktree: **可验收**：蓝黑简洁模板、内容库四标签、`npm run app` / Tauri 壳（**Rust 进程内 API**，无需 Node）
+- 环境目标: 近端本地 Web + API + SQLite；桌面壳 **Plan C Phase 4**：零用户 Node（[08-plan-c-rust-core.md](./08-plan-c-rust-core.md)）
 
 ## 当前能力分层
 
 | 类别 | 现状 |
 |---|---|
-| 已验证（本机） | S1–S5；模块表单 CRUD；证件照；DOCX 导出；`npm test`；`npm run app`；Tauri 安装包 + 热更新 |
-| 进行中 / 已决策 | Plan C：Rust 进程内核心，消除终端用户 Node（ADR-0006） |
+| 已验证（本机） | S1–S5；模块表单 CRUD；证件照；DOCX 导出；`npm test`；`npm run app`；Tauri + 热更新；Rust 核心 CRUD/导出 |
+| 进行中 | Plan C Phase 5：安装包 CI 冒烟 / 干净机无 Node 验收 |
 | 仅设计 / 未做 | 多模板设计器、PDF、JD |
 | 持久化 | `RESUME_DB_PATH` 或 `./data/resume.db`；Tauri→app data dir（更新不擦库） |
 | 被阻塞 | 无 |

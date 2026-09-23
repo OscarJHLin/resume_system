@@ -38,7 +38,7 @@ jobs:
       - name: npm ci
         run: npm ci
 
-      - name: Prepare desktop bundle (server + templates)
+      - name: Prepare desktop bundle (web + templates)
         run: npm run desktop:prepare
 
       - name: Build Tauri + upload Release assets
@@ -64,8 +64,7 @@ jobs:
             已安装用户下次启动会检查 GitHub Release 的 `latest.json`，有新版本则自动下载并重启（需签名包）。
 
             ### 运行要求
-            - 本机需安装 **Node.js 22+**（桌面壳拉起内置 API；从开始菜单/访达打开时会自动探测常见安装路径）
-            - Windows 安装 Node 时请勾选 **Add to PATH**；macOS 可用官方包或 `brew install node`
+            - **无需安装 Node.js**（进程内 Rust API）
             - 数据在系统 App Data，**不**携带开发者数据库
 
             ### 数据路径

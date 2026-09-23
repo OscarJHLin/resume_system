@@ -24,13 +24,13 @@
 
 ## 技术栈（摘要）
 
-TypeScript monorepo · Vite/React · TipTap · Fastify · `node:sqlite` · `docx` · **Tauri 2 壳（可选）**。
+TypeScript monorepo · Vite/React · TipTap · Fastify（浏览器开发）· **Tauri 2 + Rust 核心（桌面）**。
 
 ## 环境要求
 
-- Node.js **22+**（`node:sqlite`）
-- npm 10+
-- 桌面壳另需：Rust/Cargo（已装则可 `npm run app:desktop`）
+- **浏览器开发 / `npm run app`：** Node.js **22+**、npm 10+（Fastify `apps/server`）
+- **桌面安装包：** 无需 Node；双击即用（Rust 进程内 API）
+- **本地构建桌面壳：** 另需 Rust/Cargo（`npm run app:desktop`）
 
 ## 一键验收（推荐，无需双终端）
 
@@ -55,7 +55,7 @@ npm run app
 
 **热更新：** 从 v1.2 起，已安装的桌面端会在启动时检查 Release 的 `latest.json`，有新版本则自动下载并重启（见 [ADR-0005](docs/adr/0005-desktop-updater.md)）。用户 SQLite 数据保留在 App Data，不被覆盖。
 
-**运行要求：** 本机安装 [Node.js 22+](https://nodejs.org)（拼履桌面壳会拉起内置 API；**不**附带开发者 `data/`）。
+**运行要求：** 安装包**不需要**本机 Node（Plan C Phase 4：进程内 Rust API）。**不**附带开发者 `data/`。
 
 **用户数据目录（独立于仓库）：**
 - macOS: `~/Library/Application Support/com.pinlu.desktop/resume.db`

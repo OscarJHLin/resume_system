@@ -1,7 +1,7 @@
-//! Plan C Phase 3: Rust core (SQLite + localhost HTTP CRUD + DOCX export).
+//! Plan C Phase 4: Rust core (SQLite + localhost HTTP CRUD + DOCX export).
 //!
-//! Mirrors Node Fastify `/api/*` JSON shapes. Default desktop flag remains
-//! `RESUME_API=node`; set `RESUME_API=rust` for in-process API including export.
+//! Mirrors Node Fastify `/api/*` JSON shapes. Desktop default is in-process Rust;
+//! optional monorepo escape hatch: `RESUME_API=node`.
 
 pub mod api;
 pub mod db;

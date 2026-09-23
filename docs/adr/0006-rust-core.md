@@ -31,9 +31,9 @@ GUI 启动时常找不到 PATH 中的 Node（见 `lib.rs` 的探测逻辑），�
 ## 后果
 
 - 实现按 [08-plan-c-rust-core.md](../08-plan-c-rust-core.md) 垂直切片推进；对照基线见 git tag **`snapshot/pre-rust-node-sidecar`**。
-- ADR-0004「首版仍依赖本机 Node」改为**过渡态**；验收目标改为无 Node 安装包。
-- 开发期可暂时保留 `apps/server` 作对照与合同测试；移除 Node spawn 后打包资源不再含 `desktop-resources/server/`。
-- CI `desktop-release.yml` 最终不再假设本机 Node 运行时存在于用户机器（构建机仍可用 Node 编前端）。
+- ADR-0004「首版仍依赖本机 Node」已为**历史过渡态**；**Phase 4 起**桌面默认进程内 Rust，安装包零 Node。
+- `apps/server` 保留为浏览器 `npm run app`、合同测试与可选 `RESUME_API=node` 开发对照；打包资源**不含** `desktop-resources/server/`。
+- CI `desktop-release.yml`：构建机仍用 Node 编前端；用户机器不需要 Node 运行时。
 
 ## 非目标（本 ADR / 第一里程碑）
 
