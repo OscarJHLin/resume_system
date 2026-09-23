@@ -1,17 +1,26 @@
 # @resume/desktop（拼履 Tauri 壳）
 
-## 当前（snapshot / pre-Plan C）
+## 当前（snapshot / pre-Plan C + Phase 1）
 
 - Tauri 2 WebView 加载打包的 `apps/web`
-- 启动时 **spawn 本机 Node** 运行捆绑 `desktop-resources/server/server.mjs`（Fastify + SQLite + DOCX）
+- **默认**启动时 spawn 本机 Node 运行捆绑 `desktop-resources/server/server.mjs`（Fastify + SQLite + DOCX）
+- **Phase 1**：可选 `RESUME_API=rust` → 进程内 axum 只读 API（同端口 / 同 JSON GET）；写路径 501；Node spawn 代码仍保留
 - 用户数据：OS App Data 下 `resume.db` + `photos/`（不打进安装包）
 - 热更新：见仓库 `docs/adr/0005-desktop-updater.md`
 
 开发：
 
 ```bash
-# 仓库根
+# 仓库根 — 默认 Node sidecar
 npm run app:desktop
+
+# Phase 1 Rust 只读（对照用；CRUD/导出勿依赖此模式）
+RESUME_API=rust npm run app:desktop
+
+# 无 Tauri 的 curl 对照（Rust 默认 8788）
+cd apps/desktop/src-tauri
+RESUME_DB_PATH=../../../data/resume.db RESUME_TEMPLATES_DIR=../../../templates \
+  PORT=8788 cargo run --bin resume_api
 ```
 
 ## Plan C（进行中）— Rust 进程内核心
@@ -22,11 +31,12 @@ npm run app:desktop
 
 ### TODO（实现时勾选）
 
-- [ ] `src/core/`：rusqlite 打开 App Data DB（只读 → CRUD）
-- [ ] 嵌入 HTTP 或 Tauri commands，对齐现有 `/api/*` JSON
-- [ ] 模板 → ResumeIR → DOCX（优先纯 Rust）
-- [ ] Feature flag `RESUME_API=rust|node` 过渡
-- [ ] 移除 `spawn_local_server` / `find_node` 与 bundle `server/`
-- [ ] CI 安装包冒烟：无 Node 干净机验收
+- [x] `src/core/`：rusqlite 打开 App Data DB（只读 GET）
+- [x] 嵌入 HTTP（axum），对齐现有 `/api/*` JSON（读路径）
+- [x] Feature flag `RESUME_API=rust|node` 过渡（默认 node）
+- [ ] 模板 → ResumeIR → DOCX（优先纯 Rust）— Phase 3
+- [ ] CRUD 写入迁 Rust — Phase 2
+- [ ] 移除 `spawn_local_server` / `find_node` 与 bundle `server/` — Phase 4
+- [ ] CI 安装包冒烟：无 Node 干净机验收 — Phase 5
 
 **禁止**：把仓库 `data/resume.db` 打进资源；迁移时 truncate 用户表。

@@ -2,11 +2,32 @@ use std::fs::OpenOptions;
 use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::Manager;
 
+pub mod core;
+
 struct ServerChild(Mutex<Option<Child>>);
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ApiBackend {
+  /// Default — spawn Node Fastify sidecar (full CRUD + export).
+  Node,
+  /// Plan C Phase 1 — in-process Rust read-only HTTP (same port / JSON GETs).
+  Rust,
+}
+
+fn api_backend() -> ApiBackend {
+  match std::env::var("RESUME_API")
+    .unwrap_or_else(|_| "node".into())
+    .to_ascii_lowercase()
+    .as_str()
+  {
+    "rust" => ApiBackend::Rust,
+    _ => ApiBackend::Node,
+  }
+}
 
 fn repo_root() -> PathBuf {
   if let Ok(root) = std::env::var("RESUME_ROOT") {
@@ -338,6 +359,44 @@ fn spawn_local_server(app: &tauri::AppHandle) -> Result<(Child, PathBuf), String
   Ok((child, data_dir))
 }
 
+/// Start Plan C Rust read-only HTTP on the same host/port the WebView expects.
+fn start_rust_api(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+  let paths = resolve_paths(app)?;
+  let data_dir = app
+    .path()
+    .app_data_dir()
+    .map_err(|e| e.to_string())?;
+  std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
+  let db_path = data_dir.join("resume.db");
+
+  let (conn, _photos) = core::ensure_db(&db_path)?;
+  let state = core::AppState {
+    store: Arc::new(core::Store::new(conn, db_path)),
+    templates_dir: paths.templates_dir.clone(),
+  };
+  let static_dir = Some(paths.static_dir.clone());
+  let host = std::env::var("HOST").unwrap_or_else(|_| "127.0.0.1".into());
+  let port: u16 = std::env::var("PORT")
+    .ok()
+    .and_then(|p| p.parse().ok())
+    .unwrap_or(8787);
+
+  std::thread::Builder::new()
+    .name("pinlu-rust-api".into())
+    .spawn(move || {
+      let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .expect("tokio runtime");
+      if let Err(e) = rt.block_on(core::serve(state, static_dir, &host, port)) {
+        eprintln!("[拼履] Rust API stopped: {e}");
+      }
+    })
+    .map_err(|e| format!("spawn Rust API thread: {e}"))?;
+
+  Ok(data_dir)
+}
+
 fn wait_for_health(port: &str) -> Result<(), String> {
   let addr = format!("127.0.0.1:{port}");
   for _ in 0..80 {
@@ -349,7 +408,7 @@ fn wait_for_health(port: &str) -> Result<(), String> {
     )
     .is_ok()
     {
-      // Port open — give Fastify a beat to finish listen.
+      // Port open — give server a beat to finish listen.
       std::thread::sleep(Duration::from_millis(150));
       return Ok(());
     }
@@ -371,25 +430,46 @@ pub fn run() {
     .manage(ServerChild(Mutex::new(None)))
     .setup(|app| {
       let port = std::env::var("PORT").unwrap_or_else(|_| "8787".into());
+      let backend = api_backend();
       // Never panic here: macOS ObjC didFinishLaunching cannot unwind → SIGABRT.
       // Windows: same — show a dialog instead of hard abort.
-      let (child, data_dir) = match spawn_local_server(app.handle()) {
-        Ok(v) => v,
-        Err(e) => {
-          show_startup_error(&e);
-          app.handle().exit(1);
-          return Ok(());
+      let data_dir = match backend {
+        ApiBackend::Rust => match start_rust_api(app.handle()) {
+          Ok(dir) => dir,
+          Err(e) => {
+            show_startup_error(&e);
+            app.handle().exit(1);
+            return Ok(());
+          }
+        },
+        ApiBackend::Node => {
+          let (child, data_dir) = match spawn_local_server(app.handle()) {
+            Ok(v) => v,
+            Err(e) => {
+              show_startup_error(&e);
+              app.handle().exit(1);
+              return Ok(());
+            }
+          };
+          {
+            let state = app.state::<ServerChild>();
+            *state.0.lock().unwrap() = Some(child);
+          }
+          data_dir
         }
       };
-      {
-        let state = app.state::<ServerChild>();
-        *state.0.lock().unwrap() = Some(child);
-      }
+
       if let Err(e) = wait_for_health(&port) {
-        let hint = format!(
-          "{e}\n\n若已安装 Node，请确认版本 ≥ 22。{}",
-          app_log_hint(&data_dir)
-        );
+        let hint = match backend {
+          ApiBackend::Rust => format!(
+            "{e}\n\nRESUME_API=rust 启动失败。{}",
+            app_log_hint(&data_dir)
+          ),
+          ApiBackend::Node => format!(
+            "{e}\n\n若已安装 Node，请确认版本 ≥ 22。{}",
+            app_log_hint(&data_dir)
+          ),
+        };
         show_startup_error(&hint);
         app.handle().exit(1);
         return Ok(());

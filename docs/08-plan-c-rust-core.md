@@ -119,11 +119,13 @@ flowchart TB
 
 ### Phase 1 — Rust 只读骨架（并行于 Node sidecar）
 
-- 在 `apps/desktop/src-tauri` 增加 `core/`（或 `crate`）：打开 App Data DB（只读）、实现 `GET /health`、`GET /api/meta`、`GET /api/profiles`、`GET /api/modules`、`GET /api/resumes/:id`（嵌入 HTTP **不同端口** 或 feature flag）
-- **不**移除 Node spawn
+- [x] 在 `apps/desktop/src-tauri/src/core/`：打开同一 SQLite schema（加法 CREATE/ALTER）、只读 Store
+- [x] 嵌入 axum HTTP：`GET /health`、`/api/meta`、`/api/templates`、`/api/profiles`、`/api/modules`、`/api/resumes`、`/api/resumes/:id`（及单项 GET / photo GET）；写路径返回 **501**
+- [x] Feature flag `RESUME_API=rust|node`（**默认 `node`**，不移除 Node spawn）
+- [x] 独立二进制 `cargo run --bin resume_api` 便于 curl 对照（默认端口 8788）
 - **验收**：
-  - 同一用户 DB 下，Rust 只读结果与 Node JSON **字段级一致**（可用脚本 diff）
-  - 打开现有 App Data 库不报错、不写坏 schema
+  - [x] 同一用户 DB 下，Rust 只读结果与 Node JSON **字段级一致**（见 §7.5）
+  - [x] 打开现有库不报错、不写坏 schema（仅加法迁移）
 
 ### Phase 2 — CRUD 写入迁 Rust（feature flag）
 
@@ -234,6 +236,30 @@ git push origin refs/tags/snapshot/pre-rust-node-sidecar
 git push origin snapshot/pre-rust-baseline
 ```
 
+### 7.5 Phase 1：Rust 只读对照（`RESUME_API`）
+
+**默认仍是 Node**。Rust 路径仅用于读 API / curl 对照，**写入与导出仍走 Node**。
+
+```bash
+# A) 独立 Rust API（不启 Tauri）— 建议用开发库副本，勿对正式 App Data 做破坏性试验
+cd apps/desktop/src-tauri
+RESUME_DB_PATH=../../../data/resume.db \
+RESUME_TEMPLATES_DIR=../../../templates \
+PORT=8788 \
+cargo run --bin resume_api
+
+# 另开终端：同一 DB 起 Node（8787）
+RESUME_DB_PATH=./data/resume.db PORT=8787 npm run start -w @resume/server
+
+# 字段级 diff（忽略 JSON key 顺序可用 python/jq sort）
+curl -s http://127.0.0.1:8787/api/profiles > /tmp/node.json
+curl -s http://127.0.0.1:8788/api/profiles > /tmp/rust.json
+# 或桌面壳切换（写操作会 501，仅适合读路径冒烟）
+RESUME_API=rust npm run app:desktop
+```
+
+单元测试：`cd apps/desktop/src-tauri && cargo test --lib`
+
 ---
 
 ## 8. 风险与缓解
@@ -258,10 +284,11 @@ git push origin snapshot/pre-rust-baseline
 
 ---
 
-## 10. 建议实现入口（轻量，非本任务必做）
+## 10. 建议实现入口
 
-- `apps/desktop/src-tauri/src/lib.rs`：后续以 `mod core;` 接入；Phase 4 删除 spawn  
-- 新目录建议：`apps/desktop/src-tauri/src/core/{db,api,export,template}.rs`  
-- 开发开关例：`RESUME_API=rust|node`（默认 Phase 1–2 为 `node`）  
+- `apps/desktop/src-tauri/src/lib.rs`：`mod core;` + `RESUME_API`；Phase 4 删除 spawn  
+- 目录：`apps/desktop/src-tauri/src/core/{db,store,api,templates,models,error}.rs`（Phase 1 已落地）  
+- 开发开关：`RESUME_API=rust|node`（默认 Phase 1–2 为 `node`）  
+- 对照：`cargo run --bin resume_api`（见 §7.5）
 
-详见 `apps/desktop/README.md` TODO。
+详见 `apps/desktop/README.md`。
