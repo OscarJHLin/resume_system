@@ -67,4 +67,4 @@
 
 ## 建议下一步（唯一）
 
-**S4 已完成（MVP 主路径可演示）。** 后续可选增强：从库刷新快照、多模板、PDF、Tauri 桌面壳（ADR-0004）——择一单独立项，勿并行发散。
+**桌面 Plan C（Rust 核心）**：按 [08-plan-c-rust-core.md](./08-plan-c-rust-core.md) / [ADR-0006](./adr/0006-rust-core.md) 垂直切片推进；对照 tag `snapshot/pre-rust-node-sidecar`。勿与多模板 / PDF / JD 并行发散。

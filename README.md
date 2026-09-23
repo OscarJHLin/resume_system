@@ -18,7 +18,8 @@
 | [docs/05-acceptance.md](docs/05-acceptance.md) | 验收清单 |
 | [docs/06-template-lin-v1.md](docs/06-template-lin-v1.md) | default-v1 / 蓝黑简洁简历 notes |
 | [docs/07-template-packs.md](docs/07-template-packs.md) | `templates/` 包格式（如何加第二套模板） |
-| [docs/adr/](docs/adr/) | 技术决策（栈 / 编辑器 / 导出 / 桌面路径） |
+| [docs/08-plan-c-rust-core.md](docs/08-plan-c-rust-core.md) | **Plan C**：桌面核心迁 Rust（消除用户 Node） |
+| [docs/adr/](docs/adr/) | 技术决策（栈 / 编辑器 / 导出 / 桌面 / Updater / Rust 核心） |
 | [docs/contracts/](docs/contracts/) | 跨模块合同 |
 
 ## 技术栈（摘要）
