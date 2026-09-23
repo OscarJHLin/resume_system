@@ -108,11 +108,18 @@ jobs:
           ls -lh "$EXE" "$SIG"
           ZIP="${EXE%.exe}.zip"
           powershell.exe -NoProfile -Command "Compress-Archive -Path '$EXE' -DestinationPath '$ZIP' -Force"
-          # tauri-action may already have uploaded; --clobber can 422 — delete then upload.
+          # tauri-action may already have uploaded; delete by asset id then upload
+          # (name-based delete-asset is flaky on Windows runners → 422 already exists).
+          REPO="${{ github.repository }}"
+          TAG="${{ github.ref_name }}"
           for f in "$EXE" "$SIG" "$ZIP"; do
             name=$(basename "$f")
-            gh release delete-asset "${{ github.ref_name }}" "$name" -y 2>/dev/null || true
-            gh release upload "${{ github.ref_name }}" "$f"
+            asset_id=$(gh api "repos/${REPO}/releases/tags/${TAG}" \
+              --jq ".assets[] | select(.name==\"${name}\") | .id" | head -1 || true)
+            if [ -n "${asset_id}" ]; then
+              gh api -X DELETE "repos/${REPO}/releases/assets/${asset_id}" || true
+            fi
+            gh release upload "$TAG" "$f"
           done
           echo "Uploaded:"
-          gh release view "${{ github.ref_name }}" --json assets --jq '.assets[].name'
+          gh release view "$TAG" --json assets --jq '.assets[].name'
