@@ -1,7 +1,8 @@
 # @resume/desktop（拼履 Tauri 壳）
 
-## 当前（Plan C Phase 4）
+## 当前（正式版 GA · Plan C Phase 4）
 
+- 产品版本 **1.5.0**（GitHub tag `v1.5`）— 首个非 Beta 正式桌面包
 - Tauri 2 WebView 加载打包的 `apps/web`
 - **默认**进程内 axum（CRUD + 照片 + DOCX `docx-rs`）——**无需本机 Node**
 - 可选开发对照：`RESUME_API=node` → monorepo 内 `npm run start -w @resume/server`（仅仓库开发；安装包拒绝）
