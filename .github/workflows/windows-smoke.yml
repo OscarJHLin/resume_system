@@ -1,0 +1,71 @@
+name: Windows smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows-smoke:
+    name: Windows API + static checks
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Typecheck + unit tests
+        run: |
+          npm run typecheck
+          npm test
+
+      - name: Prepare desktop web bundle
+        run: npm run desktop:prepare
+
+      - name: Cargo test (incl. save_docx sanitize)
+        working-directory: apps/desktop/src-tauri
+        run: cargo test --lib
+
+      - name: Cargo check Windows desktop binary
+        working-directory: apps/desktop/src-tauri
+        run: cargo check --bins
+
+      - name: Headless Rust API smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          TMPDB="${RUNNER_TEMP}/pinlu-smoke.db"
+          rm -f "$TMPDB"
+          cd apps/desktop/src-tauri
+          RESUME_DB_PATH="$TMPDB" \
+            RESUME_TEMPLATES_DIR="../../../templates" \
+            PORT=8799 \
+            cargo run --quiet --bin resume_api &
+          PID=$!
+          cleanup() { kill "$PID" 2>/dev/null || true; }
+          trap cleanup EXIT
+          for i in $(seq 1 40); do
+            if curl -sf "http://127.0.0.1:8799/health" >/dev/null 2>&1; then
+              break
+            fi
+            sleep 0.5
+          done
+          curl -sf "http://127.0.0.1:8799/health"
+          echo
+          curl -sf "http://127.0.0.1:8799/api/templates" | head -c 200
+          echo
+          # Static UI present when desktop:prepare copied dist
+          test -f ../../../apps/web/dist/index.html
+          echo "windows-smoke ok"

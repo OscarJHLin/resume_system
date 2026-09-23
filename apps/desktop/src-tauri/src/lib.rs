@@ -239,10 +239,17 @@ fn kill_child_tree(child: &mut Child) {
 /// Native save-as for exported DOCX.
 ///
 /// WKWebView exposes `showSaveFilePicker` but rejects instantly with `AbortError`
-/// (no panel). Treating that as cancel made export look broken. This command shows
-/// a real macOS/Windows save panel and writes the bytes.
+/// (no panel). WebView2 may abort or lack FS Access after navigating to
+/// `http://127.0.0.1`. This command shows a real OS save panel and writes bytes.
+///
+/// Uses `AsyncFileDialog` + parent window so the panel is modal to the app on
+/// Windows (sync `FileDialog` from a worker thread often fails / hides behind).
 #[tauri::command]
-fn save_docx(suggested_name: String, data_base64: String) -> Result<Option<String>, String> {
+async fn save_docx(
+  window: tauri::WebviewWindow,
+  suggested_name: String,
+  data_base64: String,
+) -> Result<Option<String>, String> {
   let safe = sanitize_save_name(&suggested_name);
   let bytes = base64::engine::general_purpose::STANDARD
     .decode(data_base64.trim())
@@ -251,14 +258,19 @@ fn save_docx(suggested_name: String, data_base64: String) -> Result<Option<Strin
     return Err("empty DOCX payload".into());
   }
 
-  let path = rfd::FileDialog::new()
+  let file = rfd::AsyncFileDialog::new()
     .set_file_name(&safe)
     .add_filter("Word 文档", &["docx"])
-    .save_file();
+    .set_parent(&window)
+    .save_file()
+    .await;
 
-  match path {
+  match file {
     None => Ok(None),
-    Some(path) => {
+    Some(handle) => {
+      let path = handle.path().to_path_buf();
+      // Ensure .docx extension if the user cleared the filter extension on Win.
+      let path = ensure_docx_path(path);
       std::fs::write(&path, &bytes).map_err(|e| format!("写入失败: {e}"))?;
       let name = path
         .file_name()
@@ -269,7 +281,7 @@ fn save_docx(suggested_name: String, data_base64: String) -> Result<Option<Strin
   }
 }
 
-fn sanitize_save_name(suggested: &str) -> String {
+pub(crate) fn sanitize_save_name(suggested: &str) -> String {
   let cleaned: String = suggested
     .chars()
     .map(|c| match c {
@@ -287,6 +299,41 @@ fn sanitize_save_name(suggested: &str) -> String {
     base.into()
   } else {
     format!("{base}.docx")
+  }
+}
+
+fn ensure_docx_path(path: PathBuf) -> PathBuf {
+  let name = path
+    .file_name()
+    .map(|n| n.to_string_lossy().into_owned())
+    .unwrap_or_else(|| "resume.docx".into());
+  if name.to_ascii_lowercase().ends_with(".docx") {
+    path
+  } else {
+    path.with_file_name(format!("{name}.docx"))
+  }
+}
+
+#[cfg(test)]
+mod save_docx_tests {
+  use super::{ensure_docx_path, sanitize_save_name};
+  use std::path::PathBuf;
+
+  #[test]
+  fn sanitize_strips_windows_forbidden_chars() {
+    assert_eq!(sanitize_save_name("a/b:c?.docx"), "a_b_c_.docx");
+    assert_eq!(sanitize_save_name("我的简历"), "我的简历.docx");
+    assert_eq!(sanitize_save_name("   "), "resume.docx");
+  }
+
+  #[test]
+  fn ensure_docx_appends_extension() {
+    let p = ensure_docx_path(PathBuf::from(r"C:\Users\x\简历"));
+    assert!(p
+      .file_name()
+      .unwrap()
+      .to_string_lossy()
+      .ends_with(".docx"));
   }
 }
 

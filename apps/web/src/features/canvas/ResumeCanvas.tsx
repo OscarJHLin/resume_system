@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type {
   Profile,
   ResumeDocument,
@@ -17,8 +17,11 @@ import {
 import {
   clearModuleDrag,
   dropZoneClassName,
+  getPlacePayload,
   readModuleDragData,
+  takePlacePayloadOnClick,
 } from '../dnd/dragPayload';
+import { subscribePlaceSession } from '../dnd/dragSession';
 import { placementsForSection } from '../editor/docModel';
 import { canMovePlacement } from '../editor/placementOrder';
 import { api } from '../../api/client';
@@ -276,8 +279,17 @@ function PlaceableSection({
 }) {
   const [hover, setHover] = useState(false);
   const [invalid, setInvalid] = useState(false);
+  const [placeArmed, setPlaceArmed] = useState(() => getPlacePayload() != null);
   const items = placementsForSection(resume, sectionId);
   const orderedIds = items.map((p) => p.id);
+
+  useEffect(
+    () =>
+      subscribePlaceSession(() => {
+        setPlaceArmed(getPlacePayload() != null);
+      }),
+    [],
+  );
 
   if (!isPlaceableSection(sectionId)) return null;
 
@@ -286,7 +298,7 @@ function PlaceableSection({
       <h2>{title}</h2>
       <div
         className={dropZoneClassName('canvas__drop', {
-          active: hover,
+          active: hover || placeArmed,
           invalid: hover && invalid,
         })}
         onDragOver={(e) => {
@@ -321,9 +333,27 @@ function PlaceableSection({
           }
           void onDropModule(sectionId, payload.moduleId);
         }}
+        onClick={(e) => {
+          const t = e.target;
+          if (
+            t instanceof Element &&
+            t.closest('.canvas__item-toolbar, button, a, input')
+          ) {
+            return;
+          }
+          const payload = takePlacePayloadOnClick();
+          if (!payload) return;
+          if (decideModuleDrop(payload.category, sectionId) !== 'accept') {
+            onStatus?.(`不能将 ${payload.category} 放入「${title}」`);
+            return;
+          }
+          void onDropModule(sectionId, payload.moduleId);
+        }}
       >
         {items.length === 0 ? (
-          <p className="canvas__drop-hint">将右侧匹配记录拖入此处</p>
+          <p className="canvas__drop-hint">
+            将右侧匹配记录拖入此处；或点「放入」后再点本区块
+          </p>
         ) : (
           items.map((p) => (
             <PlacementRow

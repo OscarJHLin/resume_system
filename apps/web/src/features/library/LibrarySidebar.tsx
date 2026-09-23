@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Category, ContentModule } from '@resume/domain';
 import { CATEGORIES } from '@resume/domain';
 import { api } from '../../api/client';
-import { setModuleDragData, clearModuleDrag } from '../dnd/dragPayload';
+import { setModuleDragData, finishModuleDrag } from '../dnd/dragPayload';
 import { ModuleEditor } from './ModuleEditor';
 import './library.css';
 
@@ -160,7 +160,7 @@ export function LibrarySidebar({
               setModuleDragData(e.dataTransfer, m.id, m.category);
               onStatus?.(`拖拽中: ${m.title}`);
             }}
-            onDragEnd={() => clearModuleDrag()}
+            onDragEnd={() => finishModuleDrag()}
           >
             <div className="library__item-top">
               <span className="library__cat">{CATEGORY_LABEL[m.category]}</span>

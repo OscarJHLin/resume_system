@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NodeViewContent, NodeViewWrapper } from '@tiptap/react';
 import type { NodeViewProps } from '@tiptap/react';
 import type { SectionId } from '@resume/domain';
@@ -6,8 +6,11 @@ import { SECTION_LABELS, decideModuleDrop } from '@resume/domain';
 import {
   clearModuleDrag,
   dropZoneClassName,
+  getPlacePayload,
   readModuleDragData,
+  takePlacePayloadOnClick,
 } from '../../dnd/dragPayload';
+import { subscribePlaceSession } from '../../dnd/dragSession';
 import type { ResumeEditorCallbacks } from '../extensions';
 
 export function ResumeSectionView({ node, extension }: NodeViewProps) {
@@ -18,6 +21,15 @@ export function ResumeSectionView({ node, extension }: NodeViewProps) {
 
   const [hover, setHover] = useState(false);
   const [invalid, setInvalid] = useState(false);
+  const [placeArmed, setPlaceArmed] = useState(() => getPlacePayload() != null);
+
+  useEffect(
+    () =>
+      subscribePlaceSession(() => {
+        setPlaceArmed(getPlacePayload() != null);
+      }),
+    [],
+  );
 
   return (
     <NodeViewWrapper
@@ -29,7 +41,7 @@ export function ResumeSectionView({ node, extension }: NodeViewProps) {
       {placeable ? (
         <div
           className={dropZoneClassName('editor__drop', {
-            active: hover,
+            active: hover || placeArmed,
             invalid: hover && invalid,
           })}
           onDragOver={(e) => {
@@ -59,6 +71,27 @@ export function ResumeSectionView({ node, extension }: NodeViewProps) {
               opts.onStatus?.('无法读取拖拽数据');
               return;
             }
+            const decision = decideModuleDrop(payload.category, sectionId);
+            if (decision !== 'accept') {
+              opts.onStatus?.(
+                decision === 'reject-section'
+                  ? '该区块不接受模块'
+                  : `模块类型 ${payload.category} 不能放入 ${SECTION_LABELS[sectionId]}`,
+              );
+              return;
+            }
+            void opts.onDropModule?.(sectionId, payload.moduleId);
+          }}
+          onClick={(e) => {
+            const t = e.target;
+            if (
+              t instanceof Element &&
+              t.closest('button, a, input, .editor__item-toolbar')
+            ) {
+              return;
+            }
+            const payload = takePlacePayloadOnClick();
+            if (!payload) return;
             const decision = decideModuleDrop(payload.category, sectionId);
             if (decision !== 'accept') {
               opts.onStatus?.(

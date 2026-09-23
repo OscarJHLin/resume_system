@@ -6,7 +6,11 @@ import {
   displayModuleTimeRange,
 } from '@resume/domain';
 import { api } from '../../api/client';
-import { clearModuleDrag, setModuleDragData } from '../dnd/dragPayload';
+import {
+  finishModuleDrag,
+  pickModuleForPlace,
+  setModuleDragData,
+} from '../dnd/dragPayload';
 import { ConfirmDialog } from './ConfirmDialog';
 import { ModuleEditor } from './ModuleEditor';
 import { ProfileEditor } from './ProfileEditor';
@@ -401,7 +405,7 @@ export function ContentDatabase({
                   setModuleDragData(e.dataTransfer, m.id, m.category);
                   onStatus?.(`拖拽中: ${m.title}`);
                 }}
-                onDragEnd={() => clearModuleDrag()}
+                onDragEnd={() => finishModuleDrag()}
               >
                 <div className="cdb__card-row">
                   <span className="cdb__field cdb__title">{m.title}</span>
@@ -428,6 +432,22 @@ export function ContentDatabase({
                   onPointerDown={stopCardActionPointer}
                   onMouseDown={stopCardActionPointer}
                 >
+                  <button
+                    type="button"
+                    className="cdb__edit cdb__edit--place"
+                    draggable={false}
+                    disabled={disabled}
+                    title="拖拽不可用时：点此选中，再点击左侧简历区块放入"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      pickModuleForPlace(m.id, m.category);
+                      onStatus?.(
+                        `已选中「${m.title}」— 点击左侧对应区块放入（也可直接拖拽）`,
+                      );
+                    }}
+                  >
+                    放入
+                  </button>
                   <button
                     type="button"
                     className="cdb__edit"

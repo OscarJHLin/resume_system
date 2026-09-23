@@ -131,6 +131,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  /* WebView2: make the card itself the drag image source */
+  -webkit-user-drag: element;
+  user-select: none;
 }
 
 .cdb__card:active {
@@ -236,7 +239,8 @@
   -webkit-user-drag: none;
 }
 
-.cdb__edit--primary {
+.cdb__edit--primary,
+.cdb__edit--place {
   border-color: #0b6e6e;
   color: #0b6e6e;
   font-weight: 600;

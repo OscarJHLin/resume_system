@@ -50,22 +50,20 @@ jobs:
         with:
           projectPath: apps/desktop
           tagName: ${{ github.ref_name }}
-          releaseName: 拼履 ${{ github.ref_name }} 正式版
+          releaseName: 拼履 ${{ github.ref_name }}
           releaseBody: |
-            ## 拼履 ${{ github.ref_name }} — 正式版（GA）
+            ## 拼履 ${{ github.ref_name }}
 
-            首个非 Beta 正式发布。模块化简历：内容库 → 模板画布 → DOCX。
+            Windows / macOS 桌面修复补丁（WebView2 UX）。
 
             ### 下载安装
-            - **macOS**: 下载 `Pinlu_1.5.0_*.dmg`，打开后拖到「应用程序」（Finder / 菜单栏显示 **拼履**）
-            - **Windows**: 下载 `Pinlu_1.5.0_x64-setup.exe`（NSIS）并运行
+            - **macOS**: 下载 `Pinlu_*_*.dmg`，打开后拖到「应用程序」（Finder / 菜单栏显示 **拼履**）
+            - **Windows**: 下载 `Pinlu_*_x64-setup.exe`（NSIS）并运行
 
-            ### 本版亮点
-            - **拼履**品牌与 mint-green 应用图标
-            - 基本信息卡一键复制
-            - 导出 DOCX 使用系统原生保存对话框
-            - 内容库删除可靠性修复
-            - macOS 中文显示名 **拼履**（包产物仍为 ASCII `Pinlu_*`）
+            ### 本版修复（Windows 重点）
+            - **导出**: Tauri IPC 优先走 `__TAURI_INTERNALS__`；原生保存对话框挂到主窗口（AsyncFileDialog）
+            - **拖拽**: 修复 WebView2 dragend/drop 竞态；增加「放入」→ 点击画布区块的备用路径
+            - **日期**: 逐步日期面板 portal + fixed，避免被模态 overflow 裁切
 
             ### 运行要求
             - **无需安装 Node.js**（进程内 Rust API）

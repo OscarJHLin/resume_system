@@ -3,27 +3,71 @@
  *
  * Desktop (Tauri): native save panel via `save_docx` — WKWebView's
  * `showSaveFilePicker` rejects instantly with AbortError (no UI), which used
- * to surface as「已取消导出」.
+ * to surface as「已取消导出」. WebView2 may expose the picker but still abort
+ * or lack FS Access permissions after we navigate to http://127.0.0.1.
+ *
+ * Prefer `__TAURI_INTERNALS__.invoke` on remote pages (withGlobalTauri wrapper
+ * can be missing); never fall through to the browser picker inside Tauri.
+ *
  * Browser (`npm run app`): File System Access API, then prompt + <a download>.
  */
 
-type SaveResult =
+export type SaveResult =
   | { mode: 'picker' | 'download' | 'tauri'; name: string }
   | { mode: 'cancelled' };
 
-function normalizeDocxName(suggestedName: string): string {
+type TauriInvoke = <T>(
+  cmd: string,
+  args?: Record<string, unknown>,
+) => Promise<T>;
+
+export function normalizeDocxName(suggestedName: string): string {
   const safe =
     suggestedName.trim().replace(/[\\/:*?"<>|]+/g, '_') || 'resume.docx';
   return safe.toLowerCase().endsWith('.docx') ? safe : `${safe}.docx`;
 }
 
-function isTauriShell(): boolean {
-  if (typeof window === 'undefined') return false;
-  const w = window as Window & {
-    __TAURI_INTERNALS__?: unknown;
+/** True when running inside a Tauri WebView (packaged or `tauri dev`). */
+export function isTauriShell(
+  win: Window & {
+    __TAURI_INTERNALS__?: { invoke?: unknown };
     __TAURI__?: { core?: { invoke?: unknown } };
-  };
-  return Boolean(w.__TAURI_INTERNALS__ || w.__TAURI__?.core?.invoke);
+  } = typeof window !== 'undefined'
+    ? (window as Window & {
+        __TAURI_INTERNALS__?: { invoke?: unknown };
+        __TAURI__?: { core?: { invoke?: unknown } };
+      })
+    : ({} as Window),
+): boolean {
+  return Boolean(
+    win.__TAURI_INTERNALS__?.invoke || win.__TAURI__?.core?.invoke,
+  );
+}
+
+/**
+ * Resolve IPC invoke for remote http://127.0.0.1 UI.
+ * Internals first — withGlobalTauri is flaky after location.replace on WebView2.
+ */
+export function resolveTauriInvoke(
+  win: Window & {
+    __TAURI_INTERNALS__?: { invoke?: TauriInvoke };
+    __TAURI__?: { core?: { invoke?: TauriInvoke } };
+  } = typeof window !== 'undefined'
+    ? (window as Window & {
+        __TAURI_INTERNALS__?: { invoke?: TauriInvoke };
+        __TAURI__?: { core?: { invoke?: TauriInvoke } };
+      })
+    : ({} as Window),
+): TauriInvoke | null {
+  const internals = win.__TAURI_INTERNALS__?.invoke;
+  if (typeof internals === 'function') {
+    return internals.bind(win.__TAURI_INTERNALS__) as TauriInvoke;
+  }
+  const global = win.__TAURI__?.core?.invoke;
+  if (typeof global === 'function') {
+    return global.bind(win.__TAURI__?.core) as TauriInvoke;
+  }
+  return null;
 }
 
 async function blobToBase64(blob: Blob): Promise<string> {
@@ -39,16 +83,13 @@ async function blobToBase64(blob: Blob): Promise<string> {
 async function saveViaTauri(
   blob: Blob,
   withExt: string,
-): Promise<SaveResult | null> {
-  const w = window as Window & {
-    __TAURI__?: {
-      core?: {
-        invoke: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
-      };
-    };
-  };
-  const invoke = w.__TAURI__?.core?.invoke;
-  if (!invoke) return null;
+): Promise<SaveResult> {
+  const invoke = resolveTauriInvoke();
+  if (!invoke) {
+    throw new Error(
+      '桌面导出通道不可用（Tauri IPC 未注入）。请重启应用或重装最新版。',
+    );
+  }
 
   const dataBase64 = await blobToBase64(blob);
   const saved = await invoke<string | null>('save_docx', {
@@ -67,14 +108,7 @@ export async function saveDocxWithPicker(
 
   // Packaged / `tauri dev` WebView — never use showSaveFilePicker (false AbortError).
   if (isTauriShell()) {
-    try {
-      const viaTauri = await saveViaTauri(blob, withExt);
-      if (viaTauri) return viaTauri;
-    } catch (e) {
-      throw new Error(
-        `桌面导出保存失败: ${e instanceof Error ? e.message : String(e)}`,
-      );
-    }
+    return saveViaTauri(blob, withExt);
   }
 
   const w = window as Window & {

@@ -2,7 +2,7 @@
 
 ## 当前（正式版 GA · Plan C Phase 4）
 
-- 产品版本 **1.5.0**（GitHub tag `v1.5`）— 首个非 Beta 正式桌面包
+- 产品版本 **1.5.1**（GitHub tag `v1.5.1`）— Windows WebView2 UX 补丁（导出 / 拖拽 / 日期）
 - Tauri 2 WebView 加载打包的 `apps/web`
 - **默认**进程内 axum（CRUD + 照片 + DOCX `docx-rs`）——**无需本机 Node**
 - 可选开发对照：`RESUME_API=node` → monorepo 内 `npm run start -w @resume/server`（仅仓库开发；安装包拒绝）
@@ -41,6 +41,15 @@ RESUME_DB_PATH=../../../data/resume.db RESUME_TEMPLATES_DIR=../../../templates \
 - [x] CRUD 写入迁 Rust — Phase 2（profiles / modules / resumes / placements / photo）
 - [x] 模板 → ResumeIR → DOCX（纯 Rust `docx-rs`）— Phase 3
 - [x] 移除 `find_node` / 打包 `server.mjs`；默认进程内 Rust — Phase 4
-- [ ] CI 安装包冒烟：无 Node 干净机验收 — Phase 5
+- [x] CI Windows smoke：typecheck / tests / cargo / headless API — Phase 5（见 `.github/workflows/windows-smoke.yml`）
 
 **禁止**：把仓库 `data/resume.db` 打进资源；迁移时 truncate 用户表。
+
+## Windows 手工验收清单（安装包）
+
+在干净 Windows 10/11 + WebView2 上安装 `Pinlu_*_x64-setup.exe` 后：
+
+1. **导出** — 打开任意简历 →「导出 DOCX」→ 应弹出系统「另存为」对话框；选路径后状态栏显示「已保存 …」（不应出现「已取消导出」且无对话框）。
+2. **拖拽** — 内容库拖一条项目经历到左侧「项目经历」区块；若拖拽失灵，点卡片「放入」再点左侧对应区块。
+3. **日期** — 编辑模块 → 点「开始」日期 → 年/月/日面板应完整可见可点，选完后字段显示中文日期。
+4. **数据** — 关闭重开后内容仍在 `%APPDATA%\com.pinlu.desktop\resume.db`（勿删用户库做验收）。
