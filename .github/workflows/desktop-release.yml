@@ -123,7 +123,11 @@ jobs:
             if [ -n "${asset_id}" ]; then
               gh api -X DELETE "repos/${REPO}/releases/assets/${asset_id}" || true
             fi
-            gh release upload "$TAG" "$f"
+            gh release upload "$TAG" "$f" --clobber || {
+              sleep 10
+              gh release upload "$TAG" "$f" --clobber || \
+                gh api "repos/${REPO}/releases/tags/${TAG}" --jq ".assets[].name" | grep -qx "${name}"
+            }
           done
           echo "Uploaded:"
           gh release view "$TAG" --json assets --jq '.assets[].name'
