@@ -1,10 +1,12 @@
-//! Plan C Phase 1: Rust read-only core (SQLite + localhost HTTP).
+//! Plan C Phase 2: Rust core (SQLite + localhost HTTP CRUD).
 //!
-//! Mirrors key GET routes from `apps/server` so UI / curl can对照 Node.
-//! Writes remain on the Node sidecar until Phase 2 (`RESUME_API=node` default).
+//! Mirrors Node Fastify `/api/*` JSON shapes. Default desktop flag remains
+//! `RESUME_API=node`; set `RESUME_API=rust` for in-process API. Export DOCX
+//! stays 501 until Phase 3 (use Node, or Node flag).
 
 pub mod api;
 pub mod db;
+pub mod domain;
 pub mod error;
 pub mod models;
 pub mod store;

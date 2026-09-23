@@ -129,11 +129,13 @@ flowchart TB
 
 ### Phase 2 — CRUD 写入迁 Rust（feature flag）
 
-- 实现 profiles / modules / resumes / placements / photo 的写路径；错误码与 4xx 形状对齐
-- 桌面用环境变量或编译 feature 在「Node API」与「Rust API」间切换
+- [x] 实现 profiles / modules / resumes / placements / photo 的写路径；错误码与 4xx 形状对齐
+- [x] 桌面用环境变量 `RESUME_API=rust|node` 切换（**默认仍为 `node`**）
+- [x] 导出 `POST /api/resumes/:id/export` 暂 **501**（Phase 3）；需要导出时用默认 Node
 - **验收**：
-  - 对空库跑完 [05-acceptance.md](./05-acceptance.md) 主路径（建卡、CRUD、拖入）数据落在同一 `resume.db`
-  - 重启后数据仍在；与 snapshot 行为一致（含 snapshot-on-drop：改库不改已落简历）
+  - [x] Rust 单元/路由测试覆盖建卡、模块 CRUD、placement + snapshot-on-drop、照片上传/删除（temp DB）
+  - [ ] 对空库跑完 [05-acceptance.md](./05-acceptance.md) 主路径（UI 冒烟，建议 `RESUME_API=rust` + 副本 DB）— 手工对照
+  - [x] 改库不改已落简历（snapshot-on-drop 测试）
 
 ### Phase 3 — 模板渲染 + 导出 parity
 
@@ -236,9 +238,9 @@ git push origin refs/tags/snapshot/pre-rust-node-sidecar
 git push origin snapshot/pre-rust-baseline
 ```
 
-### 7.5 Phase 1：Rust 只读对照（`RESUME_API`）
+### 7.5 Phase 1–2：Rust API 对照（`RESUME_API`）
 
-**默认仍是 Node**。Rust 路径仅用于读 API / curl 对照，**写入与导出仍走 Node**。
+**默认仍是 Node**。`RESUME_API=rust` 时读写与照片走进程内 axum；**DOCX 导出仍 501**（Phase 3），需要导出请保持默认 `node`。
 
 ```bash
 # A) 独立 Rust API（不启 Tauri）— 建议用开发库副本，勿对正式 App Data 做破坏性试验
@@ -248,13 +250,21 @@ RESUME_TEMPLATES_DIR=../../../templates \
 PORT=8788 \
 cargo run --bin resume_api
 
-# 另开终端：同一 DB 起 Node（8787）
+# 另开终端：同一 DB 起 Node（8787）做字段对照
 RESUME_DB_PATH=./data/resume.db PORT=8787 npm run start -w @resume/server
 
-# 字段级 diff（忽略 JSON key 顺序可用 python/jq sort）
+# 读路径 diff
 curl -s http://127.0.0.1:8787/api/profiles > /tmp/node.json
 curl -s http://127.0.0.1:8788/api/profiles > /tmp/rust.json
-# 或桌面壳切换（写操作会 501，仅适合读路径冒烟）
+
+# 写路径冒烟（Rust）
+curl -s -X POST http://127.0.0.1:8788/api/profiles \
+  -H 'content-type: application/json' \
+  -d '{"name":"测","gender":"男","phone":"1","email":"t@e.com","wechat":"w"}'
+# 导出应 501
+curl -s -o /dev/null -w '%{http_code}\n' -X POST http://127.0.0.1:8788/api/resumes/<id>/export
+
+# 桌面壳（CRUD+照片可用；导出请改回 node）
 RESUME_API=rust npm run app:desktop
 ```
 
@@ -287,8 +297,8 @@ RESUME_API=rust npm run app:desktop
 ## 10. 建议实现入口
 
 - `apps/desktop/src-tauri/src/lib.rs`：`mod core;` + `RESUME_API`；Phase 4 删除 spawn  
-- 目录：`apps/desktop/src-tauri/src/core/{db,store,api,templates,models,error}.rs`（Phase 1 已落地）  
-- 开发开关：`RESUME_API=rust|node`（默认 Phase 1–2 为 `node`）  
+- 目录：`apps/desktop/src-tauri/src/core/{db,store,api,domain,templates,models,error}.rs`（Phase 2 CRUD 已落地）  
+- 开发开关：`RESUME_API=rust|node`（默认 Phase 1–3 为 `node`，至 Phase 4 再切默认）  
 - 对照：`cargo run --bin resume_api`（见 §7.5）
 
 详见 `apps/desktop/README.md`。

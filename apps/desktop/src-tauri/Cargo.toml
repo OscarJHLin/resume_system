@@ -22,13 +22,16 @@ tauri = { version = "2", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
-# Plan C Phase 1 — Rust read-only API core
+# Plan C Phase 1–2 — Rust API core (CRUD + photo; export → Phase 3)
 rusqlite = { version = "0.32", features = ["bundled"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "fs", "sync", "time"] }
 axum = "0.8"
 tower-http = { version = "0.6", features = ["fs"] }
 tower = { version = "0.5", features = ["util"] }
 thiserror = "2"
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+base64 = "0.22"
 
 [[bin]]
 name = "resume_api"

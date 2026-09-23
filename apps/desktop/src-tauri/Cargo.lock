@@ -2558,6 +2558,8 @@ name = "pinlu"
 version = "1.2.0"
 dependencies = [
  "axum",
+ "base64 0.22.1",
+ "chrono",
  "log",
  "rusqlite",
  "serde",
@@ -2571,6 +2573,7 @@ dependencies = [
  "tokio",
  "tower",
  "tower-http",
+ "uuid",
 ]
 
 [[package]]

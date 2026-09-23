@@ -67,6 +67,13 @@ fn fallback_meta() -> Vec<TemplateMeta> {
   }]
 }
 
+/// True when `id` appears in scanned template manifests (or fallback default).
+pub fn is_registered_template_id(templates_dir: &Path, id: &str) -> bool {
+  list_template_meta(templates_dir)
+    .iter()
+    .any(|t| t.id == id)
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;

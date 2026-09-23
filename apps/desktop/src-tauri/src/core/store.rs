@@ -1,4 +1,4 @@
-//! Read-only store — mirrors list/get helpers in `apps/server/src/db/store.ts`.
+//! Store — mirrors `apps/server/src/db/store.ts` (read + write).
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -7,10 +7,41 @@ use rusqlite::{Connection, OptionalExtension};
 use serde_json::{json, Value};
 
 use crate::core::db::photos_dir;
+use crate::core::domain::{
+  new_id, normalize_education, normalize_skills, normalize_tags, now_iso,
+  validate_profile_required,
+};
 use crate::core::error::ApiError;
 use crate::core::models::{
   ContentModule, Profile, ResumeDocument, ResumeSummary, SectionPlacement,
 };
+use crate::core::templates::DEFAULT_TEMPLATE_ID;
+
+pub struct ProfileInput<'a> {
+  pub name: &'a str,
+  pub gender: &'a str,
+  pub phone: &'a str,
+  pub email: &'a str,
+  pub wechat: &'a str,
+  pub qq: Option<&'a str>,
+  pub location: Option<&'a str>,
+  pub summary: Option<&'a str>,
+  pub statement: Option<&'a str>,
+  pub education: Option<&'a Value>,
+  pub skills: Option<&'a Value>,
+  pub tags: Option<&'a Value>,
+  pub notes: Option<&'a str>,
+}
+
+pub struct ModuleInput<'a> {
+  pub category: &'a str,
+  pub title: &'a str,
+  pub subtitle: Option<&'a str>,
+  pub project_type: Option<&'a str>,
+  pub time_range: Option<&'a str>,
+  pub body: &'a str,
+  pub tags: Option<&'a Value>,
+}
 
 pub struct Store {
   conn: Mutex<Connection>,
@@ -229,6 +260,465 @@ impl Store {
     })
   }
 
+  pub fn create_profile(&self, input: ProfileInput<'_>) -> Result<Profile, ApiError> {
+    validate_profile_required(
+      Some(input.name),
+      Some(input.gender),
+      Some(input.email),
+      Some(input.phone),
+      Some(input.wechat),
+    )?;
+    let ts = now_iso();
+    let id = new_id();
+    let education = normalize_education(input.education);
+    let skills = normalize_skills(input.skills);
+    let tags = normalize_tags(input.tags);
+    let name = input.name.trim();
+    let gender = input.gender.trim();
+    let phone = input.phone.trim();
+    let email = input.email.trim();
+    let wechat = input.wechat.trim();
+    let qq = trim_opt(input.qq);
+    let location = trim_opt(input.location);
+    let summary = trim_opt(input.summary);
+    let statement = trim_opt(input.statement);
+    let notes = trim_opt(input.notes);
+
+    {
+      let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+      conn
+        .execute(
+          r#"INSERT INTO profile (
+            id, name, gender, phone, email, wechat, qq, location, summary,
+            statement, education_json, skills_json, tags_json, notes, photo_filename,
+            created_at, updated_at
+          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, NULL, ?15, ?16)"#,
+          rusqlite::params![
+            id,
+            name,
+            gender,
+            phone,
+            email,
+            wechat,
+            qq,
+            location,
+            summary,
+            statement,
+            education.to_string(),
+            skills.to_string(),
+            tags.to_string(),
+            notes,
+            ts,
+            ts,
+          ],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    }
+    self.get_profile(&id)
+  }
+
+  pub fn update_profile(&self, id: &str, input: ProfileInput<'_>) -> Result<Profile, ApiError> {
+    let _ = self.get_profile(id)?;
+    validate_profile_required(
+      Some(input.name),
+      Some(input.gender),
+      Some(input.email),
+      Some(input.phone),
+      Some(input.wechat),
+    )?;
+    let education = normalize_education(input.education);
+    let skills = normalize_skills(input.skills);
+    let tags = normalize_tags(input.tags);
+    let updated_at = now_iso();
+    {
+      let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+      conn
+        .execute(
+          r#"UPDATE profile SET
+            name = ?1, gender = ?2, phone = ?3, email = ?4, wechat = ?5, qq = ?6,
+            location = ?7, summary = ?8, statement = ?9, education_json = ?10, skills_json = ?11,
+            tags_json = ?12, notes = ?13, updated_at = ?14
+           WHERE id = ?15"#,
+          rusqlite::params![
+            input.name.trim(),
+            input.gender.trim(),
+            input.phone.trim(),
+            input.email.trim(),
+            input.wechat.trim(),
+            trim_opt(input.qq),
+            trim_opt(input.location),
+            trim_opt(input.summary),
+            trim_opt(input.statement),
+            education.to_string(),
+            skills.to_string(),
+            tags.to_string(),
+            trim_opt(input.notes),
+            updated_at,
+            id,
+          ],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    }
+    self.get_profile(id)
+  }
+
+  pub fn delete_profile(&self, id: &str) -> Result<(), ApiError> {
+    let _ = self.get_profile(id)?;
+    let _ = self.clear_profile_photo(id)?;
+    let ts = now_iso();
+    let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+    conn
+      .execute("DELETE FROM profile WHERE id = ?1", [id])
+      .map_err(|e| ApiError::Internal(e.to_string()))?;
+    conn
+      .execute(
+        "UPDATE resume SET profile_id = '', updated_at = ?1 WHERE profile_id = ?2",
+        rusqlite::params![ts, id],
+      )
+      .map_err(|e| ApiError::Internal(e.to_string()))?;
+    Ok(())
+  }
+
+  pub fn save_profile_photo(
+    &self,
+    profile_id: &str,
+    bytes: &[u8],
+    ext: &str,
+  ) -> Result<Profile, ApiError> {
+    let _ = self.get_profile(profile_id)?;
+    let safe_ext = ext.trim_start_matches('.').to_lowercase();
+    if !matches!(safe_ext.as_str(), "jpg" | "jpeg" | "png" | "webp") {
+      return Err(ApiError::bad_request("photo must be jpg, png, or webp"));
+    }
+    let filename = format!(
+      "{}.{}",
+      profile_id,
+      if safe_ext == "jpeg" { "jpg" } else { &safe_ext }
+    );
+    let dir = photos_dir(&self.db_path);
+    if let Ok(entries) = std::fs::read_dir(&dir) {
+      for entry in entries.flatten() {
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if name.starts_with(&format!("{profile_id}.")) {
+          let _ = std::fs::remove_file(entry.path());
+        }
+      }
+    }
+    std::fs::write(dir.join(&filename), bytes).map_err(|e| ApiError::Internal(e.to_string()))?;
+    let ts = now_iso();
+    {
+      let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+      conn
+        .execute(
+          "UPDATE profile SET photo_filename = ?1, updated_at = ?2 WHERE id = ?3",
+          rusqlite::params![filename, ts, profile_id],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    }
+    self.get_profile(profile_id)
+  }
+
+  pub fn clear_profile_photo(&self, profile_id: &str) -> Result<Profile, ApiError> {
+    {
+      let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+      let filename: Option<String> = conn
+        .query_row(
+          "SELECT photo_filename FROM profile WHERE id = ?1",
+          [profile_id],
+          |row| row.get(0),
+        )
+        .optional()
+        .map_err(|e| ApiError::Internal(e.to_string()))?
+        .ok_or_else(|| ApiError::not_found(format!("Profile {profile_id} not found")))?;
+      if let Some(name) = filename {
+        let full = photos_dir(&self.db_path).join(&name);
+        if full.is_file() {
+          let _ = std::fs::remove_file(full);
+        }
+      }
+      let ts = now_iso();
+      conn
+        .execute(
+          "UPDATE profile SET photo_filename = NULL, updated_at = ?1 WHERE id = ?2",
+          rusqlite::params![ts, profile_id],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    }
+    self.get_profile(profile_id)
+  }
+
+  pub fn create_module(&self, input: ModuleInput<'_>) -> Result<ContentModule, ApiError> {
+    if input.title.trim().is_empty() {
+      return Err(ApiError::bad_request("title is required"));
+    }
+    let ts = now_iso();
+    let id = new_id();
+    let tags = normalize_tags(input.tags);
+    let title = input.title.trim().to_string();
+    let mod_ = ContentModule {
+      id: id.clone(),
+      category: input.category.to_string(),
+      title: title.clone(),
+      subtitle: input.subtitle.map(str::to_string),
+      project_type: input.project_type.map(str::to_string),
+      time_range: input.time_range.map(str::to_string),
+      body: input.body.to_string(),
+      tags: tags.clone(),
+      created_at: ts.clone(),
+      updated_at: ts.clone(),
+    };
+    let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+    conn
+      .execute(
+        r#"INSERT INTO content_module
+         (id, category, title, subtitle, project_type, time_range, body, tags_json, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"#,
+        rusqlite::params![
+          mod_.id,
+          mod_.category,
+          mod_.title,
+          mod_.subtitle,
+          mod_.project_type,
+          mod_.time_range,
+          mod_.body,
+          tags.to_string(),
+          mod_.created_at,
+          mod_.updated_at,
+        ],
+      )
+      .map_err(|e| ApiError::Internal(e.to_string()))?;
+    Ok(mod_)
+  }
+
+  pub fn update_module(&self, id: &str, input: ModuleInput<'_>) -> Result<ContentModule, ApiError> {
+    let _ = self.get_module(id)?;
+    if input.title.trim().is_empty() {
+      return Err(ApiError::bad_request("title is required"));
+    }
+    let tags = normalize_tags(input.tags);
+    let updated_at = now_iso();
+    {
+      let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+      conn
+        .execute(
+          r#"UPDATE content_module SET category = ?1, title = ?2, subtitle = ?3, project_type = ?4,
+           time_range = ?5, body = ?6, tags_json = ?7, updated_at = ?8 WHERE id = ?9"#,
+          rusqlite::params![
+            input.category,
+            input.title.trim(),
+            input.subtitle,
+            input.project_type,
+            input.time_range,
+            input.body,
+            tags.to_string(),
+            updated_at,
+            id,
+          ],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    }
+    self.get_module(id)
+  }
+
+  pub fn delete_module(&self, id: &str) -> Result<(), ApiError> {
+    let _ = self.get_module(id)?;
+    let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+    conn
+      .execute("DELETE FROM content_module WHERE id = ?1", [id])
+      .map_err(|e| ApiError::Internal(e.to_string()))?;
+    Ok(())
+  }
+
+  pub fn create_resume(
+    &self,
+    title: Option<&str>,
+    template_id: Option<&str>,
+    profile_id: Option<&str>,
+    templates_ok: impl Fn(&str) -> bool,
+  ) -> Result<ResumeDocument, ApiError> {
+    let template_id = template_id.unwrap_or(DEFAULT_TEMPLATE_ID);
+    if !templates_ok(template_id) {
+      return Err(ApiError::bad_request(format!("unknown template: {template_id}")));
+    }
+    if let Some(pid) = profile_id.filter(|s| !s.is_empty()) {
+      let _ = self.get_profile(pid)?;
+    }
+    let id = new_id();
+    let updated_at = now_iso();
+    let doc_title = title
+      .map(str::trim)
+      .filter(|s| !s.is_empty())
+      .unwrap_or("未命名简历");
+    {
+      let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+      conn
+        .execute(
+          "INSERT INTO resume (id, title, template_id, profile_id, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+          rusqlite::params![id, doc_title, template_id, profile_id.unwrap_or(""), updated_at],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    }
+    self.get_resume(&id)
+  }
+
+  pub fn patch_resume(
+    &self,
+    id: &str,
+    title: Option<&str>,
+    profile_id: Option<Option<&str>>,
+    template_id: Option<&str>,
+    templates_ok: impl Fn(&str) -> bool,
+  ) -> Result<ResumeDocument, ApiError> {
+    let _ = self.get_resume(id)?;
+    if let Some(t) = title {
+      if t.trim().is_empty() {
+        return Err(ApiError::bad_request("title cannot be empty"));
+      }
+      let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+      conn
+        .execute(
+          "UPDATE resume SET title = ?1, updated_at = ?2 WHERE id = ?3",
+          rusqlite::params![t.trim(), now_iso(), id],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    }
+    if let Some(tid) = template_id {
+      if !templates_ok(tid) {
+        return Err(ApiError::bad_request(format!("unknown template: {tid}")));
+      }
+      let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+      conn
+        .execute(
+          "UPDATE resume SET template_id = ?1, updated_at = ?2 WHERE id = ?3",
+          rusqlite::params![tid, now_iso(), id],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    }
+    if let Some(pid_opt) = profile_id {
+      let pid = pid_opt.unwrap_or("");
+      if !pid.is_empty() {
+        let _ = self.get_profile(pid)?;
+      }
+      let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+      conn
+        .execute(
+          "UPDATE resume SET profile_id = ?1, updated_at = ?2 WHERE id = ?3",
+          rusqlite::params![pid, now_iso(), id],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    }
+    self.get_resume(id)
+  }
+
+  pub fn add_placement(
+    &self,
+    resume_id: &str,
+    section: &str,
+    snapshot: Value,
+  ) -> Result<SectionPlacement, ApiError> {
+    let resume = self.get_resume(resume_id)?;
+    let max_order = resume
+      .placements
+      .iter()
+      .filter(|p| p.section == section)
+      .map(|p| p.sort_order)
+      .max()
+      .unwrap_or(-1);
+    let placement = SectionPlacement {
+      id: new_id(),
+      section: section.to_string(),
+      sort_order: max_order + 1,
+      snapshot: snapshot.clone(),
+    };
+    {
+      let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+      conn
+        .execute(
+          r#"INSERT INTO section_placement (id, resume_id, section, sort_order, snapshot_json)
+           VALUES (?1, ?2, ?3, ?4, ?5)"#,
+          rusqlite::params![
+            placement.id,
+            resume_id,
+            section,
+            placement.sort_order,
+            snapshot.to_string(),
+          ],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+      conn
+        .execute(
+          "UPDATE resume SET updated_at = ?1 WHERE id = ?2",
+          rusqlite::params![now_iso(), resume_id],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    }
+    Ok(placement)
+  }
+
+  pub fn reorder_placements(
+    &self,
+    resume_id: &str,
+    section: &str,
+    ordered_ids: &[String],
+  ) -> Result<ResumeDocument, ApiError> {
+    let resume = self.get_resume(resume_id)?;
+    let section_ids: std::collections::HashSet<_> = resume
+      .placements
+      .iter()
+      .filter(|p| p.section == section)
+      .map(|p| p.id.as_str())
+      .collect();
+    if ordered_ids.len() != section_ids.len()
+      || ordered_ids.iter().any(|id| !section_ids.contains(id.as_str()))
+    {
+      return Err(ApiError::bad_request(
+        "orderedPlacementIds must match section placements",
+      ));
+    }
+    {
+      let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+      for (index, pid) in ordered_ids.iter().enumerate() {
+        conn
+          .execute(
+            "UPDATE section_placement SET sort_order = ?1 WHERE id = ?2 AND resume_id = ?3",
+            rusqlite::params![index as i64, pid, resume_id],
+          )
+          .map_err(|e| ApiError::Internal(e.to_string()))?;
+      }
+      conn
+        .execute(
+          "UPDATE resume SET updated_at = ?1 WHERE id = ?2",
+          rusqlite::params![now_iso(), resume_id],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    }
+    self.get_resume(resume_id)
+  }
+
+  pub fn delete_placement(&self, resume_id: &str, placement_id: &str) -> Result<(), ApiError> {
+    let _ = self.get_resume(resume_id)?;
+    let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+    let n = conn
+      .execute(
+        "DELETE FROM section_placement WHERE id = ?1 AND resume_id = ?2",
+        rusqlite::params![placement_id, resume_id],
+      )
+      .map_err(|e| ApiError::Internal(e.to_string()))?;
+    if n == 0 {
+      return Err(ApiError::not_found(format!(
+        "Placement {placement_id} not found"
+      )));
+    }
+    conn
+      .execute(
+        "UPDATE resume SET updated_at = ?1 WHERE id = ?2",
+        rusqlite::params![now_iso(), resume_id],
+      )
+      .map_err(|e| ApiError::Internal(e.to_string()))?;
+    Ok(())
+  }
+
   fn map_profile_row(&self, row: &rusqlite::Row<'_>) -> rusqlite::Result<Profile> {
     let photo_filename: Option<String> = row.get("photo_filename")?;
     let updated_at: String = row.get("updated_at")?;
@@ -287,6 +777,10 @@ impl Store {
 }
 
 /// SQL NULL → omit field; empty string kept (matches Node `row.x ?? undefined`).
+fn trim_opt(v: Option<&str>) -> Option<String> {
+  v.map(str::trim).filter(|s| !s.is_empty()).map(str::to_string)
+}
+
 fn opt_string(v: Option<String>) -> Option<String> {
   v
 }
@@ -383,6 +877,7 @@ fn module_matches(m: &ContentModule, q: Option<&str>, tag: Option<&str>) -> bool
 mod tests {
   use super::*;
   use crate::core::db::open_database;
+  use serde_json::json;
   use std::time::{SystemTime, UNIX_EPOCH};
 
   fn seed_db() -> (Store, PathBuf) {
@@ -454,6 +949,88 @@ mod tests {
     assert!(json.get("templateId").is_some());
     assert!(json.get("profileId").is_some());
     assert!(json["placements"][0].get("sortOrder").is_some());
+
+    let _ = std::fs::remove_file(&path);
+  }
+
+  #[test]
+  fn create_update_delete_and_reorder() {
+    let (store, path) = seed_db();
+    let p = store
+      .create_profile(ProfileInput {
+        name: "Carol",
+        gender: "女",
+        phone: "139",
+        email: "c@e.com",
+        wechat: "wc",
+        qq: None,
+        location: Some("上海"),
+        summary: None,
+        statement: None,
+        education: None,
+        skills: None,
+        tags: Some(&json!(["new"])),
+        notes: None,
+      })
+      .unwrap();
+    assert_eq!(p.name, "Carol");
+    assert_eq!(p.location.as_deref(), Some("上海"));
+
+    let m = store
+      .create_module(ModuleInput {
+        category: "internship",
+        title: "Intern",
+        subtitle: Some("Co"),
+        project_type: None,
+        time_range: Some("2024"),
+        body: "did stuff",
+        tags: Some(&json!(["job"])),
+      })
+      .unwrap();
+    assert_eq!(m.category, "internship");
+
+    let r = store
+      .create_resume(Some("Doc"), None, Some(&p.id), |_| true)
+      .unwrap();
+    assert_eq!(r.title, "Doc");
+    assert_eq!(r.profile_id, p.id);
+
+    let snap = crate::core::domain::snapshot_from_module(&m);
+    let pl = store.add_placement(&r.id, "internships", snap).unwrap();
+    assert_eq!(pl.sort_order, 0);
+
+    let m2 = store
+      .create_module(ModuleInput {
+        category: "internship",
+        title: "Intern2",
+        subtitle: None,
+        project_type: None,
+        time_range: None,
+        body: "b2",
+        tags: None,
+      })
+      .unwrap();
+    let pl2 = store
+      .add_placement(
+        &r.id,
+        "internships",
+        crate::core::domain::snapshot_from_module(&m2),
+      )
+      .unwrap();
+    assert_eq!(pl2.sort_order, 1);
+
+    let reordered = store
+      .reorder_placements(&r.id, "internships", &[pl2.id.clone(), pl.id.clone()])
+      .unwrap();
+    assert_eq!(reordered.placements[0].id, pl2.id);
+    assert_eq!(reordered.placements[0].sort_order, 0);
+    assert_eq!(reordered.placements[1].id, pl.id);
+
+    store.delete_placement(&r.id, &pl.id).unwrap();
+    store.delete_module(&m.id).unwrap();
+    store.delete_profile(&p.id).unwrap();
+    let detached = store.get_resume(&r.id).unwrap();
+    assert_eq!(detached.profile_id, "");
 
     let _ = std::fs::remove_file(&path);
   }
