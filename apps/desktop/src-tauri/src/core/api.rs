@@ -5,8 +5,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::body::Body;
-use axum::extract::{Path, Query, State};
+use axum::extract::{DefaultBodyLimit, Path, Query, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
+use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{delete, get, patch, post};
 use axum::{Json, Router};
@@ -14,6 +15,12 @@ use base64::Engine;
 use serde::Deserialize;
 use serde_json::Value;
 use tower_http::services::{ServeDir, ServeFile};
+
+/// 10 MiB: photo uploads send base64 JSON (5MB image ≈ 6.7MB payload + wrapper).
+/// Axum's default is 2 MiB — that caused `length limit exceeded` on ID photos.
+const MAX_REQUEST_BODY_BYTES: usize = 10 * 1024 * 1024;
+const MAX_PHOTO_BYTES: usize = 5 * 1024 * 1024;
+const PHOTO_TOO_LARGE_MSG: &str = "上传内容过大（照片请小于 5MB）";
 
 use crate::core::domain::{
   category_allowed_in_section, is_category, is_placeable_section, is_section_id,
@@ -146,6 +153,8 @@ pub fn router(state: AppState, static_dir: Option<PathBuf>) -> Router {
       delete(delete_placement),
     )
     .route("/api/resumes/{id}/export", post(export_resume))
+    .layer(DefaultBodyLimit::max(MAX_REQUEST_BODY_BYTES))
+    .layer(middleware::from_fn(map_payload_too_large))
     .with_state(state);
 
   if let Some(dir) = static_dir {
@@ -155,6 +164,22 @@ pub fn router(state: AppState, static_dir: Option<PathBuf>) -> Router {
   } else {
     api
   }
+}
+
+/// Rewrite axum's English 413 body into the same Chinese JSON as Fastify.
+async fn map_payload_too_large(req: axum::extract::Request, next: Next) -> Response {
+  let res = next.run(req).await;
+  if res.status() != StatusCode::PAYLOAD_TOO_LARGE {
+    return res;
+  }
+  (
+    StatusCode::PAYLOAD_TOO_LARGE,
+    Json(serde_json::json!({
+      "error": "PayloadTooLarge",
+      "message": PHOTO_TOO_LARGE_MSG,
+    })),
+  )
+    .into_response()
 }
 
 /// Bind and serve until process exit. Call from a dedicated thread / tokio runtime.
@@ -305,8 +330,8 @@ async fn put_profile_photo(
   if bytes.is_empty() {
     return Err(ApiError::bad_request("empty photo"));
   }
-  if bytes.len() > 5 * 1024 * 1024 {
-    return Err(ApiError::bad_request("photo too large (max 5MB)"));
+  if bytes.len() > MAX_PHOTO_BYTES {
+    return Err(ApiError::bad_request(PHOTO_TOO_LARGE_MSG));
   }
   Ok(Json(state.store.save_profile_photo(&id, &bytes, ext)?))
 }
@@ -869,6 +894,189 @@ mod tests {
     let body = to_bytes(res.into_body(), 64 * 1024).await.unwrap();
     let profile: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(profile["hasPhoto"], false);
+    cleanup_db(&path);
+  }
+
+  #[tokio::test]
+  async fn photo_upload_accepts_payload_over_axum_default_2mb() {
+    let (state, path) = test_state();
+    let app = router(state, None);
+
+    let res = app
+      .clone()
+      .oneshot(
+        Request::builder()
+          .method("POST")
+          .uri("/api/profiles")
+          .header("content-type", "application/json")
+          .body(Body::from(
+            r#"{"name":"大图","gender":"女","phone":"1","email":"big@e.com","wechat":"w"}"#,
+          ))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(res.status(), StatusCode::CREATED);
+    let body = to_bytes(res.into_body(), 64 * 1024).await.unwrap();
+    let profile: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let id = profile["id"].as_str().unwrap();
+
+    // ~1.6MB binary → ~2.1MB base64 JSON (exceeds axum DefaultBodyLimit 2MB).
+    let mut raw = vec![0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+    raw.resize(1_600_008, 0);
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&raw);
+    let payload = format!(r#"{{"dataBase64":"{b64}","mime":"image/png"}}"#);
+    assert!(
+      payload.len() > 2 * 1024 * 1024,
+      "test payload must exceed axum's old 2MB default"
+    );
+
+    let res = app
+      .clone()
+      .oneshot(
+        Request::builder()
+          .method("PUT")
+          .uri(format!("/api/profiles/{id}/photo"))
+          .header("content-type", "application/json")
+          .body(Body::from(payload))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let body = to_bytes(res.into_body(), 64 * 1024).await.unwrap();
+    let profile: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(profile["hasPhoto"], true);
+    cleanup_db(&path);
+  }
+
+  #[tokio::test]
+  async fn photo_upload_rejects_oversize_with_chinese_message() {
+    let (state, path) = test_state();
+    let app = router(state, None);
+
+    let res = app
+      .clone()
+      .oneshot(
+        Request::builder()
+          .method("POST")
+          .uri("/api/profiles")
+          .header("content-type", "application/json")
+          .body(Body::from(
+            r#"{"name":"超限","gender":"男","phone":"1","email":"x@e.com","wechat":"w"}"#,
+          ))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    let body = to_bytes(res.into_body(), 64 * 1024).await.unwrap();
+    let profile: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let id = profile["id"].as_str().unwrap();
+
+    // Decoded > 5MB but request body still under 10MB limit.
+    let mut raw = vec![0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+    raw.resize(5 * 1024 * 1024 + 8 + 64, 0);
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&raw);
+    let payload = format!(r#"{{"dataBase64":"{b64}","mime":"image/png"}}"#);
+    assert!(payload.len() < MAX_REQUEST_BODY_BYTES);
+
+    let res = app
+      .clone()
+      .oneshot(
+        Request::builder()
+          .method("PUT")
+          .uri(format!("/api/profiles/{id}/photo"))
+          .header("content-type", "application/json")
+          .body(Body::from(payload))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    let body = to_bytes(res.into_body(), 64 * 1024).await.unwrap();
+    let err: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(err["message"], PHOTO_TOO_LARGE_MSG);
+
+    // Body over HTTP limit → 413 with the same Chinese message.
+    let huge = "x".repeat(MAX_REQUEST_BODY_BYTES + 1024);
+    let res = app
+      .oneshot(
+        Request::builder()
+          .method("PUT")
+          .uri(format!("/api/profiles/{id}/photo"))
+          .header("content-type", "application/json")
+          .body(Body::from(format!(
+            r#"{{"dataBase64":"{huge}","mime":"image/png"}}"#
+          )))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(res.status(), StatusCode::PAYLOAD_TOO_LARGE);
+    let body = to_bytes(res.into_body(), 64 * 1024).await.unwrap();
+    let err: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(err["error"], "PayloadTooLarge");
+    assert_eq!(err["message"], PHOTO_TOO_LARGE_MSG);
+    cleanup_db(&path);
+  }
+
+  #[tokio::test]
+  async fn create_profile_then_photo_save_flow() {
+    let (state, path) = test_state();
+    let app = router(state, None);
+
+    // Mirrors UI: create card fields, then PUT photo in the same save sequence.
+    let res = app
+      .clone()
+      .oneshot(
+        Request::builder()
+          .method("POST")
+          .uri("/api/profiles")
+          .header("content-type", "application/json")
+          .body(Body::from(
+            r#"{"name":"草稿照","gender":"女","phone":"139","email":"d@e.com","wechat":"wx"}"#,
+          ))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(res.status(), StatusCode::CREATED);
+    let body = to_bytes(res.into_body(), 64 * 1024).await.unwrap();
+    let profile: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let id = profile["id"].as_str().unwrap().to_string();
+    assert_eq!(profile["hasPhoto"], false);
+
+    let png_b64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    let res = app
+      .clone()
+      .oneshot(
+        Request::builder()
+          .method("PUT")
+          .uri(format!("/api/profiles/{id}/photo"))
+          .header("content-type", "application/json")
+          .body(Body::from(format!(
+            r#"{{"dataBase64":"{png_b64}","mime":"image/png"}}"#
+          )))
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let body = to_bytes(res.into_body(), 64 * 1024).await.unwrap();
+    let with_photo: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(with_photo["hasPhoto"], true);
+    assert_eq!(with_photo["id"], id);
+
+    let res = app
+      .oneshot(
+        Request::builder()
+          .uri(format!("/api/profiles/{id}/photo"))
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
     cleanup_db(&path);
   }
 

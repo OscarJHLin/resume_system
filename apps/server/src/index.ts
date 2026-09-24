@@ -12,8 +12,8 @@ import { registerHealthRoutes } from './modules/health.js';
 import { registerApiRoutes } from './routes/api.js';
 import { loadTemplateRegistry } from './modules/template/registry.js';
 
-/** 8 MiB: photo uploads send base64 JSON (5MB image ≈ 6.7MB payload). */
-const BODY_LIMIT = 8 * 1024 * 1024;
+/** 10 MiB: photo uploads send base64 JSON (5MB image ≈ 6.7MB payload + wrapper). */
+const BODY_LIMIT = 10 * 1024 * 1024;
 
 export function buildApp(dbPath: string = defaultDbPath()) {
   loadTemplateRegistry();

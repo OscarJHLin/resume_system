@@ -13,6 +13,7 @@ import {
   validateProfileForm,
   type ProfileFormValues,
 } from './profileForm';
+import { prepareProfilePhoto, type PreparedPhoto } from './profilePhoto';
 import { StepDatePicker } from './StepDatePicker';
 import './moduleEditor.css';
 
@@ -35,11 +36,17 @@ export function ProfileEditor({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  /** Local pick waiting for Save — create or replace photo in one step. */
+  const [pendingPhoto, setPendingPhoto] = useState<PreparedPhoto | null>(null);
+  /** User cleared an existing server photo; applied on Save. */
+  const [photoCleared, setPhotoCleared] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setPendingPhoto(null);
+    setPhotoCleared(false);
     setValues(editing ? profileToForm(editing) : emptyProfileForm());
     setPhotoPreview(
       editing?.hasPhoto
@@ -71,6 +78,10 @@ export function ProfileEditor({
     });
   };
 
+  const showClearPhoto =
+    Boolean(pendingPhoto) ||
+    (!photoCleared && Boolean(editing?.hasPhoto && photoPreview));
+
   const save = async () => {
     const result = validateProfileForm(values);
     if (!result.ok) {
@@ -80,9 +91,20 @@ export function ProfileEditor({
     setBusy(true);
     setError(null);
     try {
-      const saved = editing
+      let saved = editing
         ? await api.updateProfile(editing.id, result.payload)
         : await api.createProfile(result.payload);
+
+      if (pendingPhoto) {
+        saved = await api.uploadProfilePhoto(
+          saved.id,
+          pendingPhoto.dataBase64,
+          pendingPhoto.mime,
+        );
+      } else if (photoCleared && editing) {
+        saved = await api.clearProfilePhoto(saved.id);
+      }
+
       onStatus?.(
         editing ? `已更新基本信息：${saved.name}` : `已创建基本信息：${saved.name}`,
       );
@@ -106,7 +128,8 @@ export function ProfileEditor({
         </div>
 
         <p className="moded__hint">
-          必填：姓名、性别、邮箱、手机号、微信号。教育 / 技术能力可添加多段。照片上传后，应用到简历即可显示在左侧页眉与导出 DOCX。
+          必填：姓名、性别、邮箱、手机号、微信号。教育 / 技术能力可添加多段。可先选择照片再填写信息，点「保存」一并写入资料库；应用到简历后显示在左侧页眉与导出
+          DOCX。
         </p>
 
         <fieldset className="moded__fieldset">
@@ -201,32 +224,20 @@ export function ProfileEditor({
               <button
                 type="button"
                 className="moded__linkish"
-                disabled={busy || !editing}
+                disabled={busy}
                 onClick={() => fileRef.current?.click()}
               >
-                {editing ? '上传 / 更换' : '请先保存卡片后再上传'}
+                {photoPreview || pendingPhoto ? '更换照片' : '选择照片'}
               </button>
-              {editing?.hasPhoto && (
+              {showClearPhoto && (
                 <button
                   type="button"
                   className="moded__linkish"
                   disabled={busy}
                   onClick={() => {
-                    void (async () => {
-                      setBusy(true);
-                      try {
-                        const p = await api.clearProfilePhoto(editing.id);
-                        setPhotoPreview(null);
-                        onSaved(p);
-                        onStatus?.('已清除照片');
-                      } catch (e) {
-                        setError(
-                          e instanceof Error ? e.message : String(e),
-                        );
-                      } finally {
-                        setBusy(false);
-                      }
-                    })();
+                    setPendingPhoto(null);
+                    setPhotoPreview(null);
+                    if (editing?.hasPhoto) setPhotoCleared(true);
                   }}
                 >
                   清除照片
@@ -241,31 +252,15 @@ export function ProfileEditor({
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 e.target.value = '';
-                if (!file || !editing) return;
+                if (!file) return;
                 void (async () => {
                   setBusy(true);
+                  setError(null);
                   try {
-                    if (file.size > 5 * 1024 * 1024) {
-                      throw new Error('照片请小于 5MB');
-                    }
-                    const mime =
-                      file.type ||
-                      (file.name.toLowerCase().endsWith('.png')
-                        ? 'image/png'
-                        : file.name.toLowerCase().endsWith('.webp')
-                          ? 'image/webp'
-                          : 'image/jpeg');
-                    const dataUrl = await readFileAsDataUrl(file);
-                    const p = await api.uploadProfilePhoto(
-                      editing.id,
-                      dataUrl,
-                      mime,
-                    );
-                    setPhotoPreview(
-                      api.profilePhotoUrl(p.id, p.updatedAt),
-                    );
-                    onSaved(p);
-                    onStatus?.('照片已保存到基本信息卡');
+                    const prepared = await prepareProfilePhoto(file);
+                    setPendingPhoto(prepared);
+                    setPhotoCleared(false);
+                    setPhotoPreview(prepared.previewUrl);
                   } catch (err) {
                     setError(
                       err instanceof Error ? err.message : String(err),
@@ -467,13 +462,4 @@ export function ProfileEditor({
       </div>
     </div>
   );
-}
-
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error ?? new Error('read failed'));
-    reader.readAsDataURL(file);
-  });
 }

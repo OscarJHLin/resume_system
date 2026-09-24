@@ -195,7 +195,7 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
     const bytes = Buffer.from(raw, 'base64');
     if (bytes.length === 0) throw badRequest('empty photo');
     if (bytes.length > 5 * 1024 * 1024) {
-      throw badRequest('photo too large (max 5MB)');
+      throw badRequest('上传内容过大（照片请小于 5MB）');
     }
     return store.saveProfilePhoto(req.params.id, bytes, ext);
   });

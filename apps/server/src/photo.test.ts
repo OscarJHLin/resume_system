@@ -132,4 +132,70 @@ describe('profile photo storage (canvas + DOCX)', () => {
     const updated = (await put.json()) as { hasPhoto: boolean };
     assert.equal(updated.hasPhoto, true);
   });
+
+  it('rejects decoded photo over 5MB with Chinese message', async () => {
+    const profile = await fetch(`${baseUrl}/api/profiles`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ...FULL_PROFILE,
+        email: 'toolarge@example.com',
+        phone: '13900000002',
+      }),
+    }).then(async (r) => {
+      assert.equal(r.status, 201);
+      return r.json() as Promise<{ id: string }>;
+    });
+
+    const raw = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      Buffer.alloc(5 * 1024 * 1024 + 64, 0),
+    ]);
+    const put = await fetch(`${baseUrl}/api/profiles/${profile.id}/photo`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        dataBase64: raw.toString('base64'),
+        mime: 'image/png',
+      }),
+    });
+    assert.equal(put.status, 400);
+    const err = (await put.json()) as { message: string };
+    assert.match(err.message, /5MB/);
+  });
+
+  it('create then photo in one save sequence (UI draft flow)', async () => {
+    const created = await fetch(`${baseUrl}/api/profiles`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ...FULL_PROFILE,
+        name: '草稿带照片',
+        email: 'draftphoto@example.com',
+        phone: '13900000003',
+      }),
+    }).then(async (r) => {
+      assert.equal(r.status, 201);
+      return r.json() as Promise<{ id: string; hasPhoto: boolean }>;
+    });
+    assert.equal(created.hasPhoto, false);
+
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    );
+    const withPhoto = await fetch(`${baseUrl}/api/profiles/${created.id}/photo`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        dataBase64: png.toString('base64'),
+        mime: 'image/png',
+      }),
+    }).then(async (r) => {
+      assert.equal(r.status, 200);
+      return r.json() as Promise<{ id: string; hasPhoto: boolean }>;
+    });
+    assert.equal(withPhoto.id, created.id);
+    assert.equal(withPhoto.hasPhoto, true);
+  });
 });
