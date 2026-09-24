@@ -52,25 +52,25 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: 拼履 ${{ github.ref_name }}
           releaseBody: |
-            ## 拼履 ${{ github.ref_name }}（1.6.0）
+            ## 拼履 ${{ github.ref_name }}（1.6.1）
 
-            跨端拖拽修复 + 应用内更新提示。
+            照片上传体验修复；隐藏侧栏「放入」按钮（请直接拖拽）。
 
             ### 下载安装
             | 平台 | 文件 | 安装 |
             |---|---|---|
-            | **macOS**（Apple Silicon） | `Pinlu_1.6.0_aarch64.dmg` | 打开 DMG，拖到「应用程序」（Finder / 菜单栏显示 **拼履**） |
-            | **Windows**（x64） | `Pinlu_1.6.0_x64-setup.exe` | 双击运行 NSIS 安装程序 |
+            | **macOS**（Apple Silicon） | `Pinlu_1.6.1_aarch64.dmg` | 打开 DMG，拖到「应用程序」（Finder / 菜单栏显示 **拼履**） |
+            | **Windows**（x64） | `Pinlu_1.6.1_x64-setup.exe` | 双击运行 NSIS 安装程序 |
 
             `.sig` / `.app.tar.gz` / `-setup.zip` / `latest.json` 为自动更新所用，无需手动下载。
 
             ### 本版更新
-            - **拖拽修复（Mac / Windows 通用）**：右侧内容库 → 左侧画布改为指针拖拽（pointer events）。根因是 Tauri 原生 dragDrop 处理器吞掉了 HTML5 的 dragover / drop，导致卡片拖不进画布。「放入」按钮仍保留为无障碍 / 备用路径。
-            - **应用内更新提示**：发现新版本时顶部显示「发现新版本」横幅，点「立即更新」下载并显示进度，完成后重启；顶栏新增「检查更新」按钮可手动检查。不再静默自动安装。
+            - **照片**：新建/编辑基本信息可先选照片再保存；提高上传体积上限，修复 `length limit exceeded`
+            - **界面**：侧栏模块卡片去掉「放入」按钮，请直接拖到左侧对应区块
 
             ### 升级说明
-            - 已安装 **≤ v1.5.3** 的用户：旧版内置的是静默更新器，这一次会**静默**下载并升级到 1.6.0（无提示，自动重启）。
-            - 从 1.6.0 起，之后每次更新都会显示应用内横幅，由你点击「立即更新」确认。
+            - 已安装 **1.6.0** 的用户：应用内会提示新版本，点「立即更新」即可
+            - 用户数据在 App Data，升级不覆盖
 
             ### 运行要求
             - **无需安装 Node.js**（进程内 Rust API）

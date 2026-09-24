@@ -298,7 +298,7 @@ function PlaceableSection({
       >
         {items.length === 0 ? (
           <p className="canvas__drop-hint">
-            将右侧匹配记录拖入此处；或点「放入」后再点本区块
+            将右侧匹配记录拖入此处
           </p>
         ) : (
           items.map((p) => (

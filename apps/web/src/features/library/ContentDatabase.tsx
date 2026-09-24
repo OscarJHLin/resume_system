@@ -6,7 +6,6 @@ import {
   displayModuleTimeRange,
 } from '@resume/domain';
 import { api } from '../../api/client';
-import { armPointerPick } from '../dnd/dragSession';
 import { startModulePointerDrag } from '../dnd/pointerDrag';
 import { ConfirmDialog } from './ConfirmDialog';
 import { ModuleEditor } from './ModuleEditor';
@@ -424,22 +423,6 @@ export function ContentDatabase({
                   onPointerDown={stopCardActionPointer}
                   onMouseDown={stopCardActionPointer}
                 >
-                  <button
-                    type="button"
-                    className="cdb__edit cdb__edit--place"
-                    draggable={false}
-                    disabled={disabled}
-                    title="拖拽不可用时：点此选中，再点击左侧简历区块放入"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      armPointerPick({ moduleId: m.id, category: m.category });
-                      onStatus?.(
-                        `已选中「${m.title}」— 点击左侧对应区块放入（也可直接拖拽）`,
-                      );
-                    }}
-                  >
-                    放入
-                  </button>
                   <button
                     type="button"
                     className="cdb__edit"

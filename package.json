@@ -1,7 +1,7 @@
 {
   "name": "resume-system",
   "private": true,
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "拼履 — modular resume assembler (content library → template → DOCX)",
   "workspaces": [
     "apps/*",
