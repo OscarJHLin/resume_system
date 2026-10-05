@@ -14,7 +14,8 @@ use crate::core::domain::{
 };
 use crate::core::error::ApiError;
 use crate::core::models::{
-  ContentModule, Profile, ResumeDocument, ResumeSummary, SectionPlacement,
+  ContentModule, Profile, ResumeCustomSection, ResumeDocument, ResumeSummary,
+  SectionPlacement,
 };
 use crate::core::templates::DEFAULT_TEMPLATE_ID;
 
@@ -27,13 +28,15 @@ pub struct ProfileInput<'a> {
   pub qq: Option<&'a str>,
   pub location: Option<&'a str>,
   pub summary: Option<&'a str>,
+  pub expected_salary: Option<&'a str>,
+  pub target_city: Option<&'a str>,
+  pub hobbies: Option<&'a str>,
   pub statement: Option<&'a str>,
   pub education: Option<&'a Value>,
   pub skills: Option<&'a Value>,
   pub tags: Option<&'a Value>,
   pub notes: Option<&'a str>,
 }
-
 pub struct ModuleInput<'a> {
   pub category: &'a str,
   pub title: &'a str,
@@ -251,12 +254,31 @@ impl Store {
       .collect::<Result<Vec<_>, _>>()
       .map_err(|e| ApiError::Internal(e.to_string()))?;
 
+    let mut custom_stmt = conn
+      .prepare(
+        "SELECT id, title, sort_order FROM resume_custom_section
+         WHERE resume_id = ?1 ORDER BY sort_order, id",
+      )
+      .map_err(|e| ApiError::Internal(e.to_string()))?;
+    let custom_sections = custom_stmt
+      .query_map([id], |r| {
+        Ok(ResumeCustomSection {
+          id: r.get(0)?,
+          title: r.get(1)?,
+          sort_order: r.get(2)?,
+        })
+      })
+      .map_err(|e| ApiError::Internal(e.to_string()))?
+      .collect::<Result<Vec<_>, _>>()
+      .map_err(|e| ApiError::Internal(e.to_string()))?;
+
     Ok(ResumeDocument {
       id: row.0,
       title: row.1,
       template_id: row.2,
       profile_id: row.3,
       placements,
+      custom_sections,
       updated_at: row.4,
     })
   }
@@ -282,6 +304,9 @@ impl Store {
     let qq = trim_opt(input.qq);
     let location = trim_opt(input.location);
     let summary = trim_opt(input.summary);
+    let expected_salary = trim_opt(input.expected_salary);
+    let target_city = trim_opt(input.target_city);
+    let hobbies = trim_opt(input.hobbies);
     let statement = trim_opt(input.statement);
     let notes = trim_opt(input.notes);
 
@@ -291,9 +316,10 @@ impl Store {
         .execute(
           r#"INSERT INTO profile (
             id, name, gender, phone, email, wechat, qq, location, summary,
+            expected_salary, target_city, hobbies,
             statement, education_json, skills_json, tags_json, notes, photo_filename,
             created_at, updated_at
-          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, NULL, ?15, ?16)"#,
+          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, NULL, ?18, ?19)"#,
           rusqlite::params![
             id,
             name,
@@ -304,6 +330,9 @@ impl Store {
             qq,
             location,
             summary,
+            expected_salary,
+            target_city,
+            hobbies,
             statement,
             education.to_string(),
             skills.to_string(),
@@ -337,9 +366,10 @@ impl Store {
         .execute(
           r#"UPDATE profile SET
             name = ?1, gender = ?2, phone = ?3, email = ?4, wechat = ?5, qq = ?6,
-            location = ?7, summary = ?8, statement = ?9, education_json = ?10, skills_json = ?11,
-            tags_json = ?12, notes = ?13, updated_at = ?14
-           WHERE id = ?15"#,
+            location = ?7, summary = ?8, expected_salary = ?9, target_city = ?10, hobbies = ?11,
+            statement = ?12, education_json = ?13, skills_json = ?14,
+            tags_json = ?15, notes = ?16, updated_at = ?17
+           WHERE id = ?18"#,
           rusqlite::params![
             input.name.trim(),
             input.gender.trim(),
@@ -349,6 +379,9 @@ impl Store {
             trim_opt(input.qq),
             trim_opt(input.location),
             trim_opt(input.summary),
+            trim_opt(input.expected_salary),
+            trim_opt(input.target_city),
+            trim_opt(input.hobbies),
             trim_opt(input.statement),
             education.to_string(),
             skills.to_string(),
@@ -399,9 +432,10 @@ impl Store {
         .execute(
           r#"INSERT INTO profile (
             id, name, gender, phone, email, wechat, qq, location, summary,
+            expected_salary, target_city, hobbies,
             statement, education_json, skills_json, tags_json, notes, photo_filename,
             created_at, updated_at
-          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, NULL, ?15, ?16)"#,
+          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, NULL, ?18, ?19)"#,
           rusqlite::params![
             new_id,
             copy_name,
@@ -412,6 +446,9 @@ impl Store {
             src.qq,
             src.location,
             src.summary,
+            src.expected_salary,
+            src.target_city,
+            src.hobbies,
             src.statement,
             education.to_string(),
             skills.to_string(),
@@ -785,6 +822,131 @@ impl Store {
     Ok(())
   }
 
+  pub fn list_custom_sections(
+    &self,
+    resume_id: &str,
+  ) -> Result<Vec<ResumeCustomSection>, ApiError> {
+    let resume = self.get_resume(resume_id)?;
+    Ok(resume.custom_sections)
+  }
+
+  pub fn create_custom_section(
+    &self,
+    resume_id: &str,
+    title: &str,
+  ) -> Result<ResumeCustomSection, ApiError> {
+    let title = title.trim();
+    if title.is_empty() {
+      return Err(ApiError::bad_request("title is required"));
+    }
+    let resume = self.get_resume(resume_id)?;
+    let max_order = resume
+      .custom_sections
+      .iter()
+      .map(|s| s.sort_order)
+      .max()
+      .unwrap_or(-1);
+    let section = ResumeCustomSection {
+      id: new_id(),
+      title: title.to_string(),
+      sort_order: max_order + 1,
+    };
+    {
+      let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+      conn
+        .execute(
+          r#"INSERT INTO resume_custom_section (id, resume_id, title, sort_order)
+           VALUES (?1, ?2, ?3, ?4)"#,
+          rusqlite::params![section.id, resume_id, section.title, section.sort_order],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+      conn
+        .execute(
+          "UPDATE resume SET updated_at = ?1 WHERE id = ?2",
+          rusqlite::params![now_iso(), resume_id],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    }
+    Ok(section)
+  }
+
+  pub fn patch_custom_section(
+    &self,
+    resume_id: &str,
+    section_id: &str,
+    title: &str,
+  ) -> Result<ResumeCustomSection, ApiError> {
+    let title = title.trim();
+    if title.is_empty() {
+      return Err(ApiError::bad_request("title is required"));
+    }
+    let resume = self.get_resume(resume_id)?;
+    if !resume.custom_sections.iter().any(|s| s.id == section_id) {
+      return Err(ApiError::not_found(format!(
+        "Custom section {section_id} not found"
+      )));
+    }
+    {
+      let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+      conn
+        .execute(
+          "UPDATE resume_custom_section SET title = ?1 WHERE id = ?2 AND resume_id = ?3",
+          rusqlite::params![title, section_id, resume_id],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+      conn
+        .execute(
+          "UPDATE resume SET updated_at = ?1 WHERE id = ?2",
+          rusqlite::params![now_iso(), resume_id],
+        )
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    }
+    let resume = self.get_resume(resume_id)?;
+    resume
+      .custom_sections
+      .into_iter()
+      .find(|s| s.id == section_id)
+      .ok_or_else(|| ApiError::not_found(format!("Custom section {section_id} not found")))
+  }
+
+  pub fn delete_custom_section(
+    &self,
+    resume_id: &str,
+    section_id: &str,
+  ) -> Result<(), ApiError> {
+    let resume = self.get_resume(resume_id)?;
+    if !resume.custom_sections.iter().any(|s| s.id == section_id) {
+      return Err(ApiError::not_found(format!(
+        "Custom section {section_id} not found"
+      )));
+    }
+    let conn = self.conn.lock().map_err(|e| ApiError::Internal(e.to_string()))?;
+    conn
+      .execute(
+        "DELETE FROM section_placement WHERE resume_id = ?1 AND section = ?2",
+        rusqlite::params![resume_id, section_id],
+      )
+      .map_err(|e| ApiError::Internal(e.to_string()))?;
+    conn
+      .execute(
+        "DELETE FROM resume_custom_section WHERE id = ?1 AND resume_id = ?2",
+        rusqlite::params![section_id, resume_id],
+      )
+      .map_err(|e| ApiError::Internal(e.to_string()))?;
+    conn
+      .execute(
+        "UPDATE resume SET updated_at = ?1 WHERE id = ?2",
+        rusqlite::params![now_iso(), resume_id],
+      )
+      .map_err(|e| ApiError::Internal(e.to_string()))?;
+    Ok(())
+  }
+
+  pub fn custom_section_ids(&self, resume_id: &str) -> Result<Vec<String>, ApiError> {
+    let resume = self.get_resume(resume_id)?;
+    Ok(resume.custom_sections.into_iter().map(|s| s.id).collect())
+  }
+
   fn map_profile_row(&self, row: &rusqlite::Row<'_>) -> rusqlite::Result<Profile> {
     let photo_filename: Option<String> = row.get("photo_filename")?;
     let updated_at: String = row.get("updated_at")?;
@@ -814,6 +976,9 @@ impl Store {
       qq: opt_string(row.get("qq")?),
       location: opt_string(row.get("location")?),
       summary: opt_string(row.get("summary")?),
+      expected_salary: opt_string(row.get("expected_salary")?),
+      target_city: opt_string(row.get("target_city")?),
+      hobbies: opt_string(row.get("hobbies")?),
       statement: opt_string(row.get("statement")?),
       education: parse_json_value(&education_json, json!([])),
       skills: parse_json_value(skills_json.as_deref().unwrap_or("[]"), json!([])),
@@ -876,6 +1041,9 @@ fn profile_matches(p: &Profile, q: Option<&str>, tag: Option<&str>) -> bool {
       p.phone.clone().unwrap_or_default(),
       p.wechat.clone().unwrap_or_default(),
       p.summary.clone().unwrap_or_default(),
+      p.expected_salary.clone().unwrap_or_default(),
+      p.target_city.clone().unwrap_or_default(),
+      p.hobbies.clone().unwrap_or_default(),
       p.statement.clone().unwrap_or_default(),
       p.notes.clone().unwrap_or_default(),
     ];
@@ -1045,6 +1213,9 @@ mod tests {
         qq: None,
         location: Some("上海"),
         summary: None,
+        expected_salary: None,
+        target_city: None,
+        hobbies: None,
         statement: None,
         education: None,
         skills: None,
@@ -1153,6 +1324,9 @@ mod tests {
         qq: Some("123"),
         location: Some("北京"),
         summary: Some("后端开发"),
+        expected_salary: Some("15-20k"),
+        target_city: Some("上海"),
+        hobbies: Some("篮球"),
         statement: Some("个人优势陈述"),
         education: Some(&education),
         skills: Some(&skills),
@@ -1180,6 +1354,9 @@ mod tests {
     assert_eq!(copy.qq, src.qq);
     assert_eq!(copy.location, src.location);
     assert_eq!(copy.summary, src.summary);
+    assert_eq!(copy.expected_salary, src.expected_salary);
+    assert_eq!(copy.target_city, src.target_city);
+    assert_eq!(copy.hobbies, src.hobbies);
     assert_eq!(copy.statement, src.statement);
     assert_eq!(copy.notes, src.notes);
     assert_eq!(copy.tags, src.tags);
@@ -1233,6 +1410,9 @@ mod tests {
         qq: None,
         location: None,
         summary: None,
+        expected_salary: None,
+        target_city: None,
+        hobbies: None,
         statement: None,
         education: None,
         skills: None,
@@ -1262,6 +1442,49 @@ mod tests {
     assert!(!photo_path.is_file());
     let detached = store.get_resume(&r.id).unwrap();
     assert_eq!(detached.profile_id, "");
+
+    cleanup_db(&path);
+  }
+
+  #[test]
+  fn create_custom_section_and_place_custom_module() {
+    let (store, path) = seed_db();
+    let r = store
+      .create_resume(Some("自定义栏"), None, None, |_| true)
+      .unwrap();
+    assert!(r.custom_sections.is_empty());
+
+    let section = store
+      .create_custom_section(&r.id, "爱好与兴趣")
+      .unwrap();
+    assert_eq!(section.title, "爱好与兴趣");
+    assert_eq!(section.sort_order, 0);
+
+    let m = store
+      .create_module(ModuleInput {
+        category: "custom",
+        title: "篮球",
+        subtitle: None,
+        project_type: None,
+        time_range: Some("2020"),
+        body: "校队三年",
+        tags: None,
+      })
+      .unwrap();
+    let snap = crate::core::domain::snapshot_from_module(&m);
+    let pl = store.add_placement(&r.id, &section.id, snap).unwrap();
+    assert_eq!(pl.section, section.id);
+
+    let doc = store.get_resume(&r.id).unwrap();
+    assert_eq!(doc.custom_sections.len(), 1);
+    assert_eq!(doc.custom_sections[0].title, "爱好与兴趣");
+    assert_eq!(doc.placements.len(), 1);
+    assert_eq!(doc.placements[0].section, section.id);
+
+    store.delete_custom_section(&r.id, &section.id).unwrap();
+    let after = store.get_resume(&r.id).unwrap();
+    assert!(after.custom_sections.is_empty());
+    assert!(after.placements.is_empty());
 
     cleanup_db(&path);
   }

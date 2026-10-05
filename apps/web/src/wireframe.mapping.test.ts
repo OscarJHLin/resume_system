@@ -32,4 +32,13 @@ describe('wireframe field mapping', () => {
     assert.match(labelsForCategory('internship').title, /标题/);
     assert.match(labelsForCategory('internship').projectType, /技术栈|岗位/);
   });
+
+  it('custom modules only expose title / time / body', () => {
+    const labels = labelsForCategory('custom');
+    assert.equal(labels.title, '标题');
+    assert.equal(labels.body, '正文');
+    assert.equal(labels.showWorkstation, false);
+    assert.equal(labels.showProjectType, false);
+    assert.equal(labels.showTime, true);
+  });
 });

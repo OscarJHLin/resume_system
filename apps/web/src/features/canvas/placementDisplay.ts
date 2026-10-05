@@ -1,7 +1,7 @@
 import {
   displayModuleTimeRange,
+  isCustomSectionId,
   type ModuleSnapshot,
-  type SectionId,
 } from '@resume/domain';
 
 /**
@@ -9,10 +9,11 @@ import {
  * Always surfaces title, subtitle (担任的职责/部门), projectType (技术栈/岗位),
  * timeRange, and body — never drop a saved field when another is present.
  * Awards: projectType = 级别, subtitle = 颁发机构.
+ * Custom sections: title | time + body (like projects, no mid column).
  */
 export function placementDisplayFields(
   snapshot: ModuleSnapshot,
-  section: SectionId,
+  section: string,
 ): {
   title: string;
   /** Tech stack / role / 级别 — styled smaller + italic on canvas. */
@@ -46,6 +47,17 @@ export function placementDisplayFields(
       awardLine: [title, projectType, subtitle, timeRange, bodyLines.join(' ')]
         .filter(Boolean)
         .join('，'),
+    };
+  }
+
+  if (isCustomSectionId(section) || snapshot.category === 'custom') {
+    return {
+      title,
+      projectType: '',
+      subtitle: '',
+      middle: '',
+      timeRange,
+      bodyLines,
     };
   }
 

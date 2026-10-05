@@ -16,6 +16,7 @@ const CATEGORY_LABEL: Record<LibraryModuleCategory, string> = {
   project: '项目经历',
   internship: '实习经历',
   award: '获奖与证书',
+  custom: '自定义',
 };
 
 export interface ModuleEditorProps {
@@ -38,7 +39,9 @@ export function ModuleEditor({
   onStatus,
 }: ModuleEditorProps) {
   const initialCat: LibraryModuleCategory =
-    defaultCategory === 'internship' || defaultCategory === 'award'
+    defaultCategory === 'internship' ||
+    defaultCategory === 'award' ||
+    defaultCategory === 'custom'
       ? defaultCategory
       : 'project';
   const [values, setValues] = useState<ModuleFormValues>(emptyForm(initialCat));
@@ -194,14 +197,16 @@ export function ModuleEditor({
           />
         </label>
 
-        <label className="moded__field">
-          <span>{labels.tags}</span>
-          <input
-            value={values.tagsText}
-            onChange={(e) => set('tagsText', e.target.value)}
-            placeholder="TypeScript, 简历"
-          />
-        </label>
+        {values.category !== 'custom' && (
+          <label className="moded__field">
+            <span>{labels.tags}</span>
+            <input
+              value={values.tagsText}
+              onChange={(e) => set('tagsText', e.target.value)}
+              placeholder="TypeScript, 简历"
+            />
+          </label>
+        )}
 
         {error && (
           <p className="moded__error" role="alert">

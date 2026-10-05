@@ -4,7 +4,7 @@ import {
   useSyncExternalStore,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import type { ModuleDragPayload, SectionId } from '@resume/domain';
+import type { ModuleDragPayload } from '@resume/domain';
 import {
   cancelModuleDrag,
   clearPointerPick,
@@ -128,13 +128,18 @@ export interface DropZoneHandlers {
  * click on the zone; a wrong-section click keeps the 「放入」 pick armed.
  */
 export function useDropZone<T extends HTMLElement>(
-  section: SectionId,
+  section: string,
   handlers: DropZoneHandlers,
+  customSectionIds?: readonly string[],
 ) {
   const ref = useRef<T>(null);
+  const customIdsRef = useRef(customSectionIds);
+  useEffect(() => {
+    customIdsRef.current = customSectionIds;
+  }, [customSectionIds]);
 
   const place = (payload: ModuleDragPayload): boolean => {
-    const verdict = judgeDrop(payload, section);
+    const verdict = judgeDrop(payload, section, customIdsRef.current);
     if (!verdict.ok) {
       handlers.onReject(verdict.message);
       return false;
@@ -159,7 +164,8 @@ export function useDropZone<T extends HTMLElement>(
 
   const snap = usePlaceSnapshot();
   const payload = snap.dragging ?? snap.picked;
-  const compatible = payload != null && judgeDrop(payload, section).ok;
+  const compatible =
+    payload != null && judgeDrop(payload, section, customSectionIds).ok;
   const hovered = snap.dragging != null && snap.hoverSection === section;
 
   const placePicked = () => {

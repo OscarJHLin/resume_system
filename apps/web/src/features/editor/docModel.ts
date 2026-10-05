@@ -23,7 +23,7 @@ export const SECTION_ORDER: readonly SectionId[] = [
 
 export function placementsForSection(
   resume: ResumeDocument | null,
-  sectionId: SectionId,
+  sectionId: string,
 ): SectionPlacement[] {
   if (!resume) return [];
   return resume.placements

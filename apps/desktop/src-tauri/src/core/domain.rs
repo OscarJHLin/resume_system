@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::core::error::ApiError;
 use crate::core::models::ContentModule;
 
-pub const CATEGORIES: &[&str] = &["skill", "project", "internship", "award"];
+pub const CATEGORIES: &[&str] = &["skill", "project", "internship", "award", "custom"];
 pub const GENDERS: &[&str] = &["男", "女"];
 pub const SECTION_IDS: &[&str] = &[
   "basic",
@@ -36,7 +36,34 @@ pub fn is_section_id(value: &str) -> bool {
 }
 
 pub fn is_placeable_section(section: &str) -> bool {
+  is_builtin_placeable_section(section)
+}
+
+pub fn is_builtin_placeable_section(section: &str) -> bool {
   PLACEABLE_SECTIONS.contains(&section)
+}
+
+/// Custom section ids are UUIDs (any version).
+pub fn is_custom_section_id(value: &str) -> bool {
+  let b = value.as_bytes();
+  if b.len() != 36 {
+    return false;
+  }
+  for (i, c) in b.iter().enumerate() {
+    match i {
+      8 | 13 | 18 | 23 => {
+        if *c != b'-' {
+          return false;
+        }
+      }
+      _ => {
+        if !c.is_ascii_hexdigit() {
+          return false;
+        }
+      }
+    }
+  }
+  true
 }
 
 pub fn is_gender(value: &str) -> bool {
@@ -52,6 +79,38 @@ pub fn category_allowed_in_section(category: &str, section: &str) -> bool {
   }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DropDecision {
+  Accept,
+  RejectSection,
+  RejectCategory,
+}
+
+/// Mirror of `packages/domain` `decideModuleDrop`.
+pub fn decide_module_drop(
+  category: &str,
+  section: &str,
+  custom_section_ids: Option<&[String]>,
+) -> DropDecision {
+  if category == "custom" {
+    if !is_custom_section_id(section) {
+      return DropDecision::RejectSection;
+    }
+    if let Some(ids) = custom_section_ids {
+      if !ids.iter().any(|id| id == section) {
+        return DropDecision::RejectSection;
+      }
+    }
+    return DropDecision::Accept;
+  }
+  if !is_builtin_placeable_section(section) {
+    return DropDecision::RejectSection;
+  }
+  if !category_allowed_in_section(category, section) {
+    return DropDecision::RejectCategory;
+  }
+  DropDecision::Accept
+}
 pub fn validate_profile_required(
   name: Option<&str>,
   gender: Option<&str>,
@@ -317,5 +376,18 @@ mod tests {
     assert!(!category_allowed_in_section("project", "awards"));
     assert!(is_placeable_section("projects"));
     assert!(!is_placeable_section("skills"));
+    let custom = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee".to_string();
+    assert_eq!(
+      decide_module_drop("custom", &custom, Some(std::slice::from_ref(&custom))),
+      DropDecision::Accept
+    );
+    assert_eq!(
+      decide_module_drop("custom", "projects", None),
+      DropDecision::RejectSection
+    );
+    assert_eq!(
+      decide_module_drop("project", &custom, None),
+      DropDecision::RejectSection
+    );
   }
 }

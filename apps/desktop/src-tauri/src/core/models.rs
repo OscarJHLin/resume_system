@@ -23,6 +23,12 @@ pub struct Profile {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub summary: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
+  pub expected_salary: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub target_city: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub hobbies: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
   pub statement: Option<String>,
   pub education: Value,
   pub skills: Value,
@@ -35,6 +41,13 @@ pub struct Profile {
   pub updated_at: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ResumeCustomSection {
+  pub id: String,
+  pub title: String,
+  pub sort_order: i64,
+}
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ContentModule {
@@ -81,9 +94,9 @@ pub struct ResumeDocument {
   pub template_id: String,
   pub profile_id: String,
   pub placements: Vec<SectionPlacement>,
+  pub custom_sections: Vec<ResumeCustomSection>,
   pub updated_at: String,
 }
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TemplateMeta {
   pub id: String,

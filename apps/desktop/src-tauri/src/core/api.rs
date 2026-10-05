@@ -23,10 +23,9 @@ const MAX_PHOTO_BYTES: usize = 5 * 1024 * 1024;
 const PHOTO_TOO_LARGE_MSG: &str = "上传内容过大（照片请小于 5MB）";
 
 use crate::core::domain::{
-  category_allowed_in_section, is_category, is_placeable_section, is_section_id,
-  snapshot_from_module,
-};
-use crate::core::error::ApiError;
+  decide_module_drop, is_category, is_custom_section_id, is_section_id, snapshot_from_module,
+  DropDecision,
+};use crate::core::error::ApiError;
 use crate::core::export::{export_docx, sanitize_filename, ExportPhoto};
 use crate::core::models::{HealthResponse, MetaResponse, StorageMeta};
 use crate::core::render::{placeholder_profile, render_to_ir};
@@ -63,6 +62,9 @@ struct ProfileBody {
   qq: Option<String>,
   location: Option<String>,
   summary: Option<String>,
+  expected_salary: Option<String>,
+  target_city: Option<String>,
+  hobbies: Option<String>,
   statement: Option<String>,
   education: Option<Value>,
   skills: Option<Value>,
@@ -70,6 +72,11 @@ struct ProfileBody {
   notes: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CustomSectionBody {
+  title: Option<String>,
+}
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ModuleBody {
@@ -143,6 +150,14 @@ pub fn router(state: AppState, static_dir: Option<PathBuf>) -> Router {
     )
     .route("/api/resumes", get(list_resumes).post(create_resume))
     .route("/api/resumes/{id}", get(get_resume).patch(patch_resume))
+    .route(
+      "/api/resumes/{id}/custom-sections",
+      get(list_custom_sections).post(create_custom_section),
+    )
+    .route(
+      "/api/resumes/{id}/custom-sections/{section_id}",
+      patch(patch_custom_section).delete(delete_custom_section),
+    )
     .route("/api/resumes/{id}/placements", post(add_placement))
     .route(
       "/api/resumes/{id}/placements/reorder",
@@ -451,6 +466,48 @@ async fn patch_resume(
   )?))
 }
 
+async fn list_custom_sections(
+  State(state): State<AppState>,
+  Path(id): Path<String>,
+) -> Result<impl IntoResponse, ApiError> {
+  Ok(Json(state.store.list_custom_sections(&id)?))
+}
+
+async fn create_custom_section(
+  State(state): State<AppState>,
+  Path(id): Path<String>,
+  Json(body): Json<CustomSectionBody>,
+) -> Result<impl IntoResponse, ApiError> {
+  let title = body
+    .title
+    .as_deref()
+    .ok_or_else(|| ApiError::bad_request("title is required"))?;
+  let section = state.store.create_custom_section(&id, title)?;
+  Ok((StatusCode::CREATED, Json(section)))
+}
+
+async fn patch_custom_section(
+  State(state): State<AppState>,
+  Path((id, section_id)): Path<(String, String)>,
+  Json(body): Json<CustomSectionBody>,
+) -> Result<impl IntoResponse, ApiError> {
+  let title = body
+    .title
+    .as_deref()
+    .ok_or_else(|| ApiError::bad_request("title is required"))?;
+  Ok(Json(
+    state.store.patch_custom_section(&id, &section_id, title)?,
+  ))
+}
+
+async fn delete_custom_section(
+  State(state): State<AppState>,
+  Path((id, section_id)): Path<(String, String)>,
+) -> Result<impl IntoResponse, ApiError> {
+  state.store.delete_custom_section(&id, &section_id)?;
+  Ok(StatusCode::NO_CONTENT)
+}
+
 async fn add_placement(
   State(state): State<AppState>,
   Path(id): Path<String>,
@@ -459,24 +516,28 @@ async fn add_placement(
   let section = body
     .section
     .as_deref()
-    .filter(|s| is_section_id(s))
+    .filter(|s| !s.is_empty())
     .ok_or_else(|| ApiError::bad_request("valid section is required"))?;
-  if !is_placeable_section(section) {
-    return Err(ApiError::bad_request(format!(
-      "section {section} does not accept placements"
-    )));
-  }
   let module_id = body
     .module_id
     .as_deref()
     .filter(|s| !s.is_empty())
     .ok_or_else(|| ApiError::bad_request("moduleId is required"))?;
   let mod_ = state.store.get_module(module_id)?;
-  if !category_allowed_in_section(&mod_.category, section) {
-    return Err(ApiError::bad_request(format!(
-      "category {} cannot be placed in section {section}",
-      mod_.category
-    )));
+  let custom_ids = state.store.custom_section_ids(&id)?;
+  match decide_module_drop(&mod_.category, section, Some(&custom_ids)) {
+    DropDecision::Accept => {}
+    DropDecision::RejectSection => {
+      return Err(ApiError::bad_request(format!(
+        "section {section} does not accept placements"
+      )));
+    }
+    DropDecision::RejectCategory => {
+      return Err(ApiError::bad_request(format!(
+        "category {} cannot be placed in section {section}",
+        mod_.category
+      )));
+    }
   }
   let snapshot = snapshot_from_module(&mod_);
   let placement = state.store.add_placement(&id, section, snapshot)?;
@@ -491,8 +552,16 @@ async fn reorder_placements(
   let section = body
     .section
     .as_deref()
-    .filter(|s| is_section_id(s))
+    .filter(|s| is_section_id(s) || is_custom_section_id(s))
     .ok_or_else(|| ApiError::bad_request("valid section is required"))?;
+  if is_custom_section_id(section) {
+    let ids = state.store.custom_section_ids(&id)?;
+    if !ids.iter().any(|s| s == section) {
+      return Err(ApiError::bad_request(format!(
+        "section {section} does not accept placements"
+      )));
+    }
+  }
   let ordered = body
     .ordered_placement_ids
     .as_ref()
@@ -527,6 +596,7 @@ async fn export_resume(
     &resume.template_id,
     &profile,
     &resume.placements,
+    &resume.custom_sections,
     crate::core::domain::now_iso,
   )?;
   let photo = if resume.profile_id.trim().is_empty() {
@@ -580,6 +650,9 @@ fn profile_input<'a>(body: &'a ProfileBody) -> Result<ProfileInput<'a>, ApiError
     qq: body.qq.as_deref(),
     location: body.location.as_deref(),
     summary: body.summary.as_deref(),
+    expected_salary: body.expected_salary.as_deref(),
+    target_city: body.target_city.as_deref(),
+    hobbies: body.hobbies.as_deref(),
     statement: body.statement.as_deref(),
     education: body.education.as_ref(),
     skills: body.skills.as_ref(),

@@ -5,6 +5,7 @@
   "version": "1.2.1",
   "description": "蓝黑简洁版式：居中证件照→姓名→应聘岗位→联系；节标题 14pt；条目标题加粗；技术栈小一号斜体；正文宋体常规",
   "photoInTemplate": true,
+  "customSectionTitleStyle": "sectionHeading",
   "photo": {
     "placement": "above-name-center",
     "widthPx": 98,

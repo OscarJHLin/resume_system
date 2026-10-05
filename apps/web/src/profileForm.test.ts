@@ -50,6 +50,9 @@ describe('profile form validation', () => {
     };
     form.skills[0] = { id: '', title: '编程语言', body: 'Python' };
     form.statement = '优势陈述一行';
+    form.expectedSalary = '15-20k';
+    form.targetCity = '上海';
+    form.hobbies = '篮球';
     form.tagsText = '校招, 全栈';
     const r = validateProfileForm(form);
     assert.equal(r.ok, true);
@@ -57,6 +60,9 @@ describe('profile form validation', () => {
       assert.equal(r.payload.education?.length, 1);
       assert.equal(r.payload.skills?.[0]?.title, '编程语言');
       assert.equal(r.payload.statement, '优势陈述一行');
+      assert.equal(r.payload.expectedSalary, '15-20k');
+      assert.equal(r.payload.targetCity, '上海');
+      assert.equal(r.payload.hobbies, '篮球');
       assert.deepEqual(r.payload.tags, ['校招', '全栈']);
     }
   });

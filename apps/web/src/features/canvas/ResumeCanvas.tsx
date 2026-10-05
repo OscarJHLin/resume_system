@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
+import { useMemo } from 'react';
 import type {
   Profile,
   ResumeDocument,
-  SectionId,
   SectionPlacement,
   SkillBlock,
 } from '@resume/domain';
@@ -11,7 +11,7 @@ import {
   SECTION_LABELS,
   TARGET_ROLE_PREFIX,
   educationTimeRange,
-  isPlaceableSection,
+  isBuiltinPlaceableSection,
 } from '@resume/domain';
 import { dropZoneClassName } from '../dnd/dropTarget';
 import { useDropZone } from '../dnd/pointerDrag';
@@ -25,13 +25,15 @@ export interface ResumeCanvasProps {
   resume: ResumeDocument | null;
   profile: Profile | null;
   connectionError?: boolean;
-  onDropModule: (section: SectionId, moduleId: string) => Promise<void>;
+  onDropModule: (section: string, moduleId: string) => Promise<void>;
   onDeletePlacement: (placementId: string) => Promise<void>;
   onMovePlacement: (
-    section: SectionId,
+    section: string,
     placementId: string,
     direction: 'up' | 'down',
   ) => Promise<void>;
+  onCreateCustomSection?: (title: string) => Promise<void>;
+  onDeleteCustomSection?: (sectionId: string) => Promise<void>;
   onStatus?: (message: string) => void;
 }
 
@@ -46,8 +48,15 @@ export function ResumeCanvas({
   onDropModule,
   onDeletePlacement,
   onMovePlacement,
+  onCreateCustomSection,
+  onDeleteCustomSection,
   onStatus,
 }: ResumeCanvasProps) {
+  const customSectionIds = useMemo(
+    () => (resume?.customSections ?? []).map((s) => s.id),
+    [resume?.customSections],
+  );
+
   if (connectionError) {
     return (
       <main className="canvas">
@@ -79,8 +88,29 @@ export function ResumeCanvas({
     profile?.phone,
     profile?.email,
     profile?.wechat ? `微信: ${profile.wechat}` : undefined,
+    profile?.expectedSalary?.trim()
+      ? `期望薪资: ${profile.expectedSalary.trim()}`
+      : undefined,
+    profile?.targetCity?.trim()
+      ? `目标城市: ${profile.targetCity.trim()}`
+      : undefined,
+    profile?.hobbies?.trim() ? `爱好: ${profile.hobbies.trim()}` : undefined,
   ].filter(Boolean);
   const showPhoto = Boolean(profile?.hasPhoto && profile.id);
+  const customSections = [...(resume.customSections ?? [])].sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
+
+  const askNewCustomSection = () => {
+    const title = window.prompt('新建栏目标题', '爱好与兴趣');
+    if (title == null) return;
+    const trimmed = title.trim();
+    if (!trimmed) {
+      onStatus?.('栏目标题不能为空');
+      return;
+    }
+    void onCreateCustomSection?.(trimmed);
+  };
 
   return (
     <main className="canvas">
@@ -206,6 +236,7 @@ export function ResumeCanvas({
           sectionId="projects"
           title={SECTION_LABELS.projects}
           resume={resume}
+          customSectionIds={customSectionIds}
           onDropModule={onDropModule}
           onDeletePlacement={onDeletePlacement}
           onMovePlacement={onMovePlacement}
@@ -215,6 +246,7 @@ export function ResumeCanvas({
           sectionId="internships"
           title={SECTION_LABELS.internships}
           resume={resume}
+          customSectionIds={customSectionIds}
           onDropModule={onDropModule}
           onDeletePlacement={onDeletePlacement}
           onMovePlacement={onMovePlacement}
@@ -224,11 +256,44 @@ export function ResumeCanvas({
           sectionId="awards"
           title={SECTION_LABELS.awards}
           resume={resume}
+          customSectionIds={customSectionIds}
           onDropModule={onDropModule}
           onDeletePlacement={onDeletePlacement}
           onMovePlacement={onMovePlacement}
           onStatus={onStatus}
         />
+
+        {customSections.map((sec) => (
+          <PlaceableSection
+            key={sec.id}
+            sectionId={sec.id}
+            title={sec.title}
+            resume={resume}
+            customSectionIds={customSectionIds}
+            allowAnyPlaceable
+            onDropModule={onDropModule}
+            onDeletePlacement={onDeletePlacement}
+            onMovePlacement={onMovePlacement}
+            onStatus={onStatus}
+            onDeleteSection={
+              onDeleteCustomSection
+                ? () => void onDeleteCustomSection(sec.id)
+                : undefined
+            }
+          />
+        ))}
+
+        {onCreateCustomSection && (
+          <div className="canvas__section-toolbar">
+            <button
+              type="button"
+              className="canvas__new-section"
+              onClick={askNewCustomSection}
+            >
+              新建栏目
+            </button>
+          </div>
+        )}
       </div>
     </main>
   );
@@ -253,35 +318,65 @@ function PlaceableSection({
   sectionId,
   title,
   resume,
+  customSectionIds,
+  allowAnyPlaceable = false,
   onDropModule,
   onDeletePlacement,
   onMovePlacement,
   onStatus,
+  onDeleteSection,
 }: {
-  sectionId: SectionId;
+  sectionId: string;
   title: string;
   resume: ResumeDocument;
-  onDropModule: (section: SectionId, moduleId: string) => Promise<void>;
+  customSectionIds: readonly string[];
+  allowAnyPlaceable?: boolean;
+  onDropModule: (section: string, moduleId: string) => Promise<void>;
   onDeletePlacement: (placementId: string) => Promise<void>;
   onMovePlacement: (
-    section: SectionId,
+    section: string,
     placementId: string,
     direction: 'up' | 'down',
   ) => Promise<void>;
   onStatus?: (message: string) => void;
+  onDeleteSection?: () => void;
 }) {
-  const zone = useDropZone<HTMLDivElement>(sectionId, {
-    onAccept: (moduleId) => void onDropModule(sectionId, moduleId),
-    onReject: (message) => onStatus?.(message),
-  });
+  const zone = useDropZone<HTMLDivElement>(
+    sectionId,
+    {
+      onAccept: (moduleId) => void onDropModule(sectionId, moduleId),
+      onReject: (message) => onStatus?.(message),
+    },
+    customSectionIds,
+  );
   const items = placementsForSection(resume, sectionId);
   const orderedIds = items.map((p) => p.id);
 
-  if (!isPlaceableSection(sectionId)) return null;
+  if (!allowAnyPlaceable && !isBuiltinPlaceableSection(sectionId)) return null;
 
   return (
     <section className="canvas__section" data-section={sectionId}>
-      <h2>{title}</h2>
+      <div className="canvas__section-head">
+        <h2>{title}</h2>
+        {onDeleteSection && (
+          <button
+            type="button"
+            className="canvas__section-delete"
+            title="删除栏目"
+            onClick={() => {
+              if (
+                window.confirm(
+                  `删除栏目「${title}」？其中的条目也会一并移除。`,
+                )
+              ) {
+                onDeleteSection();
+              }
+            }}
+          >
+            删栏
+          </button>
+        )}
+      </div>
       <div
         ref={zone.ref}
         className={dropZoneClassName('canvas__drop', zone)}

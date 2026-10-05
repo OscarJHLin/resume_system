@@ -3,8 +3,8 @@ import type {
   ContentModule,
   EducationItem,
   Profile,
+  ResumeCustomSection,
   ResumeDocument,
-  SectionId,
   SectionPlacement,
   SkillBlock,
   TemplateId,
@@ -86,6 +86,9 @@ export type ProfilePayload = {
   qq?: string;
   location?: string;
   summary?: string;
+  expectedSalary?: string;
+  targetCity?: string;
+  hobbies?: string;
   statement?: string;
   education?: EducationItem[];
   skills?: SkillBlock[];
@@ -214,7 +217,34 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  addPlacement: (resumeId: string, section: SectionId, moduleId: string) =>
+  listCustomSections: (resumeId: string) =>
+    request<ResumeCustomSection[]>(
+      `/api/resumes/${resumeId}/custom-sections`,
+    ),
+
+  createCustomSection: (resumeId: string, title: string) =>
+    request<ResumeCustomSection>(`/api/resumes/${resumeId}/custom-sections`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title }),
+    }),
+
+  patchCustomSection: (resumeId: string, sectionId: string, title: string) =>
+    request<ResumeCustomSection>(
+      `/api/resumes/${resumeId}/custom-sections/${sectionId}`,
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title }),
+      },
+    ),
+
+  deleteCustomSection: (resumeId: string, sectionId: string) =>
+    request<void>(`/api/resumes/${resumeId}/custom-sections/${sectionId}`, {
+      method: 'DELETE',
+    }),
+
+  addPlacement: (resumeId: string, section: string, moduleId: string) =>
     request<SectionPlacement>(`/api/resumes/${resumeId}/placements`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -228,7 +258,7 @@ export const api = {
 
   reorderPlacements: (
     resumeId: string,
-    section: SectionId,
+    section: string,
     orderedPlacementIds: string[],
   ) =>
     request<ResumeDocument>(`/api/resumes/${resumeId}/placements/reorder`, {

@@ -7,7 +7,7 @@ use serde_json::Value;
 
 use crate::core::domain::display_module_time_range;
 use crate::core::error::ApiError;
-use crate::core::models::{Profile, SectionPlacement};
+use crate::core::models::{Profile, ResumeCustomSection, SectionPlacement};
 use crate::core::templates::{
   get_template, TemplateDefinition, TemplateLayoutSpec, TemplateStyles, TextStyle,
   DEFAULT_TEMPLATE_ID,
@@ -128,6 +128,9 @@ pub fn placeholder_profile() -> Profile {
     qq: None,
     location: None,
     summary: None,
+    expected_salary: None,
+    target_city: None,
+    hobbies: None,
     statement: None,
     education: serde_json::json!([]),
     skills: serde_json::json!([]),
@@ -144,18 +147,26 @@ pub fn render_to_ir(
   template_id: &str,
   profile: &Profile,
   placements: &[SectionPlacement],
+  custom_sections: &[ResumeCustomSection],
   clock: impl FnOnce() -> String,
 ) -> Result<ResumeIR, ApiError> {
   let def = get_template(templates_dir, template_id).ok_or_else(|| {
     ApiError::bad_request(format!("Unknown template: {template_id}"))
   })?;
-  Ok(render_with_def(&def, profile, placements, clock()))
+  Ok(render_with_def(
+    &def,
+    profile,
+    placements,
+    custom_sections,
+    clock(),
+  ))
 }
 
 fn render_with_def(
   def: &TemplateDefinition,
   profile: &Profile,
   placements: &[SectionPlacement],
+  custom_sections: &[ResumeCustomSection],
   generated_at: String,
 ) -> ResumeIR {
   let style = &def.styles;
@@ -201,6 +212,24 @@ fn render_with_def(
     ));
   }
 
+  let expected_salary_line = profile
+    .expected_salary
+    .as_ref()
+    .map(|s| s.trim())
+    .filter(|s| !s.is_empty())
+    .map(|s| format!("期望薪资: {s}"));
+  let target_city_line = profile
+    .target_city
+    .as_ref()
+    .map(|s| s.trim())
+    .filter(|s| !s.is_empty())
+    .map(|s| format!("目标城市: {s}"));
+  let hobbies_line = profile
+    .hobbies
+    .as_ref()
+    .map(|s| s.trim())
+    .filter(|s| !s.is_empty())
+    .map(|s| format!("爱好: {s}"));
   let wechat_line = profile
     .wechat
     .as_ref()
@@ -212,6 +241,9 @@ fn render_with_def(
     profile.phone.as_deref(),
     profile.email.as_deref(),
     wechat_line.as_deref(),
+    expected_salary_line.as_deref(),
+    target_city_line.as_deref(),
+    hobbies_line.as_deref(),
   ]
   .into_iter()
   .flatten()
@@ -383,6 +415,26 @@ fn render_with_def(
     blocks.push(section_heading(&section_label(section), style));
     for item in items {
       blocks.extend(render_snapshot(style, layout, item, section));
+    }
+  }
+
+  let mut customs: Vec<&ResumeCustomSection> = custom_sections.iter().collect();
+  customs.sort_by_key(|s| s.sort_order);
+  for custom in customs {
+    let mut items: Vec<&SectionPlacement> = placements
+      .iter()
+      .filter(|p| p.section == custom.id)
+      .collect();
+    items.sort_by_key(|p| p.sort_order);
+    // Always emit heading so empty custom sections still appear when exporting
+    // from a canvas that shows them; skip only if no items (parity with builtins).
+    if items.is_empty() {
+      continue;
+    }
+    // Custom section titles use styles.sectionHeading (same as other section titles).
+    blocks.push(section_heading(&custom.title, style));
+    for item in items {
+      blocks.extend(render_snapshot(style, layout, item, "projects"));
     }
   }
 
@@ -668,6 +720,9 @@ mod tests {
       qq: None,
       location: Some("上海".into()),
       summary: Some("后端开发".into()),
+      expected_salary: Some("15-20k".into()),
+      target_city: Some("上海".into()),
+      hobbies: Some("篮球".into()),
       statement: Some("热爱编程\n持续学习".into()),
       education: serde_json::json!([{
         "id": "e1",
@@ -721,6 +776,7 @@ mod tests {
       DEFAULT_TEMPLATE_ID,
       &profile,
       &placements,
+      &[],
       || "2026-09-23T00:00:00.000Z".into(),
     )
     .unwrap();

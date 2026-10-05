@@ -125,6 +125,49 @@ describe('S2 tag filter + DnD placement pipeline', () => {
     assert.equal(buf.subarray(0, 2).toString('utf8'), 'PK');
   });
 
+  it('creates custom section and places custom module', async () => {
+    const resume = await json<{
+      id: string;
+      customSections: Array<{ id: string; title: string }>;
+    }>('POST', '/api/resumes', { title: '自定义栏测试' });
+    assert.deepEqual(resume.customSections, []);
+
+    const section = await json<{ id: string; title: string; sortOrder: number }>(
+      'POST',
+      `/api/resumes/${resume.id}/custom-sections`,
+      { title: '自我评价' },
+    );
+    assert.equal(section.title, '自我评价');
+    assert.equal(section.sortOrder, 0);
+
+    const mod = await json<{ id: string }>('POST', '/api/modules', {
+      category: 'custom',
+      title: '开朗认真',
+      body: '善于沟通',
+      timeRange: '2024',
+    });
+
+    assert.equal(
+      decideModuleDrop('custom', section.id, [section.id]),
+      'accept',
+    );
+    assert.equal(decideModuleDrop('custom', 'projects'), 'reject-section');
+
+    const placement = await json<{ section: string }>(
+      'POST',
+      `/api/resumes/${resume.id}/placements`,
+      { section: section.id, moduleId: mod.id },
+    );
+    assert.equal(placement.section, section.id);
+
+    const after = await json<{
+      customSections: Array<{ title: string }>;
+      placements: Array<{ section: string }>;
+    }>('GET', `/api/resumes/${resume.id}`);
+    assert.equal(after.customSections[0]?.title, '自我评价');
+    assert.equal(after.placements[0]?.section, section.id);
+  });
+
   async function json<T>(
     method: string,
     urlPath: string,

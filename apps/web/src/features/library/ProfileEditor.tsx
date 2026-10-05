@@ -202,6 +202,30 @@ export function ProfileEditor({
             />
           </label>
           <label>
+            期望薪资（选填）
+            <input
+              value={values.expectedSalary}
+              placeholder="如：15-20k"
+              onChange={(e) => set('expectedSalary', e.target.value)}
+            />
+          </label>
+          <label>
+            目标城市（选填）
+            <input
+              value={values.targetCity}
+              placeholder="如：上海 / 北京"
+              onChange={(e) => set('targetCity', e.target.value)}
+            />
+          </label>
+          <label>
+            爱好（选填）
+            <input
+              value={values.hobbies}
+              placeholder="如：篮球、摄影"
+              onChange={(e) => set('hobbies', e.target.value)}
+            />
+          </label>
+          <label>
             个人陈述（选填）
             <textarea
               rows={4}

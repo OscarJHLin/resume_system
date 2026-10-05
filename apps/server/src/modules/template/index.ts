@@ -80,6 +80,13 @@ export function renderToIR(
     profile.phone,
     profile.email,
     profile.wechat ? `微信: ${profile.wechat}` : undefined,
+    profile.expectedSalary?.trim()
+      ? `期望薪资: ${profile.expectedSalary.trim()}`
+      : undefined,
+    profile.targetCity?.trim()
+      ? `目标城市: ${profile.targetCity.trim()}`
+      : undefined,
+    profile.hobbies?.trim() ? `爱好: ${profile.hobbies.trim()}` : undefined,
   ]
     .filter(Boolean)
     .join(' | ');
@@ -179,6 +186,21 @@ export function renderToIR(
     }
   }
 
+  const customSections = [...(input.customSections ?? [])].sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
+  for (const custom of customSections) {
+    const items = placements
+      .filter((p) => p.section === custom.id)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+    if (items.length === 0) continue;
+    // Custom section titles use styles.sectionHeading (same as other section titles).
+    blocks.push(sectionHeading(custom.title, STYLE));
+    for (const item of items) {
+      blocks.push(...renderSnapshot(STYLE, layout, item, 'projects'));
+    }
+  }
+
   return {
     templateId: def.id,
     templateVersion: def.version,
@@ -205,7 +227,7 @@ function renderSnapshot(
   STYLE: TemplateStyles,
   layout: TemplateDefinition['layout'],
   placement: SectionPlacement,
-  section: SectionId,
+  section: string,
 ): IrBlock[] {
   const s: ModuleSnapshot = placement.snapshot;
   const out: IrBlock[] = [];

@@ -57,9 +57,18 @@ CREATE TABLE IF NOT EXISTS section_placement (
   FOREIGN KEY (resume_id) REFERENCES resume(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS resume_custom_section (
+  id TEXT PRIMARY KEY,
+  resume_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  sort_order INTEGER NOT NULL,
+  FOREIGN KEY (resume_id) REFERENCES resume(id) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_module_category ON content_module(category);
 CREATE INDEX IF NOT EXISTS idx_placement_resume ON section_placement(resume_id);
 CREATE INDEX IF NOT EXISTS idx_profile_updated ON profile(updated_at);
+CREATE INDEX IF NOT EXISTS idx_custom_section_resume ON resume_custom_section(resume_id);
 "#;
 
 /// Photos live next to the SQLite file: `<dbDir>/photos/`.
@@ -120,6 +129,9 @@ fn migrate_profile_columns(conn: &Connection) -> Result<(), String> {
   add("notes", "notes TEXT")?;
   add("created_at", "created_at TEXT")?;
   add("statement", "statement TEXT")?;
+  add("expected_salary", "expected_salary TEXT")?;
+  add("target_city", "target_city TEXT")?;
+  add("hobbies", "hobbies TEXT")?;
 
   conn
     .execute_batch(

@@ -24,9 +24,10 @@ templates/
 | `photoInTemplate` | yes | Whether this pack shows a portrait when the applied profile has a photo. |
 | `photo` | no | `{ placement, widthPx, heightPx }`. Blue-black-simple uses `above-name-center` + 98×131. |
 | `layout` | no | Tab stops / bullet indent in twips: `entryTabCenter` (4933), `internshipTabCenter` (6520), `entryTabRight` (9866), `bulletIndent`. |
-| `sectionOrder` | yes | Module sections after education/skills header: `skills` \| `projects` \| `internships` \| `awards`. Skills in this list are skipped for placements (rendered from `Profile.skills`). |
+| `sectionOrder` | yes | Module sections after education/skills header: `skills` \| `projects` \| `internships` \| `awards`. Skills in this list are skipped for placements (rendered from `Profile.skills`). User-created custom sections are appended after this list (by `sortOrder`). |
+| `customSectionTitleStyle` | no | Style key for custom section titles. Default / recommended: `sectionHeading` (same visual as 项目经历 etc.). No separate font pack required. |
 | `page` | yes | DOCX page size/margins in twips (`width`, `height`, `margin`). |
-| `styles` | yes | Text styles for IR runs: `name`, `tagline`, `contact`, `sectionHeading`, `entryTitle`, `entryTech` (tech stack: smaller + italic), `entryMeta`, `skillLine`, `body`. Each may set `bold`, `italic`, `fontSizePt`, `fontEastAsia`. |
+| `styles` | yes | Text styles for IR runs: `name`, `tagline`, `contact`, `sectionHeading`, `entryTitle`, `entryTech` (tech stack: smaller + italic), `entryMeta`, `skillLine`, `body`. Each may set `bold`, `italic`, `fontSizePt`, `fontEastAsia`. Custom section titles use `styles.sectionHeading`. |
 
 ## How the runtime uses it
 

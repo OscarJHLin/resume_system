@@ -34,4 +34,16 @@ describe('domain drag/drop contracts', () => {
     assert.equal(decideModuleDrop('skill', 'skills'), 'reject-section');
     assert.equal(decideModuleDrop('award', 'awards'), 'accept');
   });
+
+  it('allows custom modules only on custom section ids', () => {
+    const customId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+    assert.equal(decideModuleDrop('custom', customId), 'accept');
+    assert.equal(decideModuleDrop('custom', 'projects'), 'reject-section');
+    assert.equal(
+      decideModuleDrop('custom', customId, ['ffffffff-0000-1111-2222-333333333333']),
+      'reject-section',
+    );
+    assert.equal(decideModuleDrop('custom', customId, [customId]), 'accept');
+    assert.equal(decideModuleDrop('project', customId), 'reject-section');
+  });
 });

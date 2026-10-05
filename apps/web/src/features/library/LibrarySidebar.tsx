@@ -18,6 +18,7 @@ const CATEGORY_LABEL: Record<Category, string> = {
   project: '项目经历',
   internship: '实习经历',
   award: '获奖证书',
+  custom: '自定义',
 };
 
 /**

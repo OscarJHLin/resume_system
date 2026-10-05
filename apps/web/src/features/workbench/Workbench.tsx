@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
   Profile,
   ResumeDocument,
-  SectionId,
   TemplateMeta,
 } from '@resume/domain';
 import { DEFAULT_TEMPLATE_ID } from '@resume/domain';
@@ -138,7 +137,7 @@ export function Workbench() {
   );
 
   const onDropModule = useCallback(
-    async (section: SectionId, moduleId: string) => {
+    async (section: string, moduleId: string) => {
       if (!resume) {
         setStatus('请先选择简历模板');
         return;
@@ -150,6 +149,47 @@ export function Workbench() {
         setStatus(`已落入 ${section}`);
       } catch (e) {
         setStatus(`落入失败: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [resume, refreshResume],
+  );
+
+  const onCreateCustomSection = useCallback(
+    async (title: string) => {
+      if (!resume) {
+        setStatus('请先选择简历模板');
+        return;
+      }
+      setBusy(true);
+      try {
+        const section = await api.createCustomSection(resume.id, title);
+        await refreshResume(resume.id);
+        setStatus(`已新建栏目：${section.title}`);
+      } catch (e) {
+        setStatus(
+          `新建栏目失败: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      } finally {
+        setBusy(false);
+      }
+    },
+    [resume, refreshResume],
+  );
+
+  const onDeleteCustomSection = useCallback(
+    async (sectionId: string) => {
+      if (!resume) return;
+      setBusy(true);
+      try {
+        await api.deleteCustomSection(resume.id, sectionId);
+        await refreshResume(resume.id);
+        setStatus('已删除栏目');
+      } catch (e) {
+        setStatus(
+          `删除栏目失败: ${e instanceof Error ? e.message : String(e)}`,
+        );
       } finally {
         setBusy(false);
       }
@@ -176,7 +216,7 @@ export function Workbench() {
 
   const onMovePlacement = useCallback(
     async (
-      section: SectionId,
+      section: string,
       placementId: string,
       direction: 'up' | 'down',
     ) => {
@@ -314,6 +354,8 @@ export function Workbench() {
           onDropModule={onDropModule}
           onDeletePlacement={onDeletePlacement}
           onMovePlacement={onMovePlacement}
+          onCreateCustomSection={onCreateCustomSection}
+          onDeleteCustomSection={onDeleteCustomSection}
           onStatus={setStatus}
         />
         <ContentDatabase

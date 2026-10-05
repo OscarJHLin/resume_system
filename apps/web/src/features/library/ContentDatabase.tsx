@@ -42,11 +42,12 @@ const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'project', label: '项目' },
   { id: 'internship', label: '实习' },
   { id: 'award', label: '获奖与证书' },
+  { id: 'custom', label: '自定义' },
   { id: 'profile', label: '基本信息' },
 ];
 
 /**
- * Right column: 4 tabs — 项目 / 实习 / 获奖与证书 / 基本信息.
+ * Right column: 项目 / 实习 / 获奖与证书 / 自定义 / 基本信息.
  * Active tab drives + create type.
  */
 export function ContentDatabase({
@@ -401,23 +402,28 @@ export function ContentDatabase({
                 <div className="cdb__card-row">
                   <span className="cdb__field cdb__title">{m.title}</span>
                   <span className="cdb__field cdb__time">
-                    {displayModuleTimeRange(m.timeRange) || '时间'}
+                    {displayModuleTimeRange(m.timeRange) ||
+                      (m.category === 'custom' ? '' : '时间')}
                   </span>
                 </div>
-                <div className="cdb__field cdb__stack">
-                  {[m.projectType, m.subtitle].filter(Boolean).join(' · ') ||
-                    '技术栈 / 职责'}
-                </div>
+                {m.category !== 'custom' && (
+                  <div className="cdb__field cdb__stack">
+                    {[m.projectType, m.subtitle].filter(Boolean).join(' · ') ||
+                      '技术栈 / 职责'}
+                  </div>
+                )}
                 <div className="cdb__field cdb__body">
                   {m.body.trim() || '正文'}
                 </div>
-                <div className="cdb__tags">
-                  {(m.tags.length ? m.tags : ['标签']).map((t) => (
-                    <span key={t} className="cdb__tag">
-                      {t}
-                    </span>
-                  ))}
-                </div>
+                {m.category !== 'custom' && (
+                  <div className="cdb__tags">
+                    {(m.tags.length ? m.tags : ['标签']).map((t) => (
+                      <span key={t} className="cdb__tag">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div
                   className="cdb__card-actions"
                   onPointerDown={stopCardActionPointer}

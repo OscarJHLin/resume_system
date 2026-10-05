@@ -92,6 +92,18 @@ export function labelsForCategory(category: Category): ModuleFormLabels {
         showProjectType: true,
         showTime: true,
       };
+    case 'custom':
+      return {
+        title: '标题',
+        workstation: '',
+        projectType: '',
+        time: '时间（可留空）',
+        body: '正文',
+        tags: '标签',
+        showWorkstation: false,
+        showProjectType: false,
+        showTime: true,
+      };
   }
 }
 

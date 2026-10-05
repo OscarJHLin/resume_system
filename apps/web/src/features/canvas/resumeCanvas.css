@@ -100,6 +100,14 @@
   margin-top: 0.55rem;
 }
 
+.canvas__section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.canvas__section-head h2,
 .canvas__section h2 {
   margin: 0.55rem 0 0.35rem;
   padding-bottom: 0.2rem;
@@ -107,6 +115,41 @@
   font-size: 14pt;
   font-weight: 700;
   border-bottom: 0.75pt solid #000;
+  flex: 1;
+}
+
+.canvas__section-delete {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: #8a959e;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0.2rem 0.35rem;
+}
+
+.canvas__section-delete:hover {
+  color: #b33;
+}
+
+.canvas__section-toolbar {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.canvas__new-section {
+  border: 1px dashed #9aa7b2;
+  background: #f7fafc;
+  color: #3a4650;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+}
+
+.canvas__new-section:hover {
+  border-color: #5a8bb0;
+  color: #1a4a6e;
 }
 
 .canvas__hint {

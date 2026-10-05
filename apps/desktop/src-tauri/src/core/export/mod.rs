@@ -363,6 +363,9 @@ mod tests {
       qq: None,
       location: None,
       summary: None,
+      expected_salary: None,
+      target_city: None,
+      hobbies: None,
       statement: None,
       education: serde_json::json!([]),
       skills: serde_json::json!([]),
@@ -384,9 +387,14 @@ mod tests {
         "body": "line1"
       }),
     }];
-    let ir = render_to_ir(&root, DEFAULT_TEMPLATE_ID, &profile, &placements, || {
-      "t".into()
-    })
+    let ir = render_to_ir(
+      &root,
+      DEFAULT_TEMPLATE_ID,
+      &profile,
+      &placements,
+      &[],
+      || "t".into(),
+    )
     .unwrap();
     let bytes = export_docx(&root, &ir, None).unwrap();
     assert!(bytes.len() > 100);

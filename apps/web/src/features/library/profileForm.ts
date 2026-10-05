@@ -20,6 +20,9 @@ export interface ProfileFormValues {
   qq: string;
   location: string;
   summary: string;
+  expectedSalary: string;
+  targetCity: string;
+  hobbies: string;
   statement: string;
   education: EducationItem[];
   skills: SkillBlock[];
@@ -37,6 +40,9 @@ export function emptyProfileForm(): ProfileFormValues {
     qq: '',
     location: '',
     summary: '',
+    expectedSalary: '',
+    targetCity: '',
+    hobbies: '',
     statement: '',
     education: [emptyEducationItem()],
     skills: [emptySkillBlock()],
@@ -55,6 +61,9 @@ export function profileToForm(p: Profile): ProfileFormValues {
     qq: p.qq ?? '',
     location: p.location ?? '',
     summary: p.summary ?? '',
+    expectedSalary: p.expectedSalary ?? '',
+    targetCity: p.targetCity ?? '',
+    hobbies: p.hobbies ?? '',
     statement: p.statement ?? '',
     education: p.education.length
       ? p.education.map((e) => ({
@@ -125,6 +134,9 @@ export function validateProfileForm(
       qq: values.qq.trim() || undefined,
       location: values.location.trim() || undefined,
       summary: values.summary.trim() || undefined,
+      expectedSalary: values.expectedSalary.trim() || undefined,
+      targetCity: values.targetCity.trim() || undefined,
+      hobbies: values.hobbies.trim() || undefined,
       statement: values.statement.trim() || undefined,
       education,
       skills,

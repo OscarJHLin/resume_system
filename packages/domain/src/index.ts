@@ -1,11 +1,16 @@
 /** Domain enums, entities, compatibility matrix, and ResumeIR — no IO. */
 
 /** Experience modules in the content library (not 基本信息). */
-export type Category = 'skill' | 'project' | 'internship' | 'award';
+export type Category = 'skill' | 'project' | 'internship' | 'award' | 'custom';
 
 /** Library tabs that create modules (技能已并入基本信息卡). */
-export type LibraryModuleCategory = 'project' | 'internship' | 'award';
+export type LibraryModuleCategory =
+  | 'project'
+  | 'internship'
+  | 'award'
+  | 'custom';
 
+/** Builtin resume sections (profile-driven + placeable). */
 export type SectionId =
   | 'basic'
   | 'education'
@@ -14,6 +19,14 @@ export type SectionId =
   | 'internships'
   | 'awards';
 
+/** Builtin sections that accept drag-drop placements. */
+export type BuiltinPlaceableSection = 'projects' | 'internships' | 'awards';
+
+/**
+ * Placement target: builtin placeable section id, or a resume-owned custom
+ * section uuid (`resume_custom_section.id`).
+ */
+export type PlacementSectionId = string;
 export const DEFAULT_TEMPLATE_ID = 'default-v1' as const;
 
 /** Template ids are stable strings (see templates/<slug>/manifest.json). */
@@ -64,21 +77,27 @@ export const DEGREE_OPTIONS: readonly DegreeOption[] = [
   '其他',
 ];
 
-/** category → allowed resume sections (技能由 Profile.skills 渲染，不可拖放) */
-export const CATEGORY_SECTION_MATRIX: Record<Category, readonly SectionId[]> = {
+/** category → allowed builtin resume sections (技能/自定义不进此矩阵) */
+export const CATEGORY_SECTION_MATRIX: Record<
+  Category,
+  readonly BuiltinPlaceableSection[]
+> = {
   skill: [],
   project: ['projects'],
   internship: ['internships'],
   award: ['awards'],
+  custom: [],
 };
 
 export function categoryAllowedInSection(
   category: Category,
-  section: SectionId,
+  section: string,
 ): boolean {
-  return CATEGORY_SECTION_MATRIX[category].includes(section);
+  if (category === 'custom') return false;
+  return (CATEGORY_SECTION_MATRIX[category] as readonly string[]).includes(
+    section,
+  );
 }
-
 export interface EducationItem {
   id: string;
   school: string;
@@ -118,6 +137,12 @@ export interface Profile {
   location?: string;
   /** 应聘岗位 — short target role under the name (stored as summary). */
   summary?: string;
+  /** 期望薪资 */
+  expectedSalary?: string;
+  /** 目标城市 */
+  targetCity?: string;
+  /** 爱好 */
+  hobbies?: string;
   /** 个人陈述 — plain-text advantage statement shown as its own section. */
   statement?: string;
   education: EducationItem[];
@@ -130,6 +155,12 @@ export interface Profile {
   updatedAt: string;
 }
 
+/** User-defined resume section (title + drop zone for `custom` modules). */
+export interface ResumeCustomSection {
+  id: string;
+  title: string;
+  sortOrder: number;
+}
 export interface ContentModule {
   id: string;
   category: Category;
@@ -165,7 +196,8 @@ export interface ModuleSnapshot {
 
 export interface SectionPlacement {
   id: string;
-  section: SectionId;
+  /** Builtin placeable section or custom section uuid. */
+  section: PlacementSectionId;
   sortOrder: number;
   snapshot: ModuleSnapshot;
 }
@@ -177,9 +209,10 @@ export interface ResumeDocument {
   /** Applied 基本信息 card id; empty string = none (placeholders on canvas). */
   profileId: string;
   placements: SectionPlacement[];
+  /** User-created custom sections on this resume (ordered). */
+  customSections: ResumeCustomSection[];
   updatedAt: string;
 }
-
 export interface TextStyle {
   bold?: boolean;
   fontSizePt?: number;
@@ -236,8 +269,8 @@ export interface RenderInput {
   templateId: TemplateId;
   profile: Profile;
   placements: SectionPlacement[];
+  customSections?: ResumeCustomSection[];
 }
-
 /** Drag payload MIME for library → editor */
 export const MODULE_DRAG_MIME = 'application/x-resume-module';
 
@@ -269,16 +302,27 @@ export function parseModuleDragPayload(raw: string): ModuleDragPayload | null {
 
 export type DropDecision = 'accept' | 'reject-section' | 'reject-category';
 
-/** Client-side drop gate before calling POST /placements. */
+/**
+ * Client-side drop gate before calling POST /placements.
+ * Custom modules only land on custom section uuids; builtins keep the matrix.
+ * When `customSectionIds` is provided, custom targets must be in that set.
+ */
 export function decideModuleDrop(
   category: Category,
-  section: SectionId,
+  section: string,
+  customSectionIds?: readonly string[],
 ): DropDecision {
-  if (!isPlaceableSection(section)) return 'reject-section';
+  if (category === 'custom') {
+    if (!isCustomSectionId(section)) return 'reject-section';
+    if (customSectionIds && !customSectionIds.includes(section)) {
+      return 'reject-section';
+    }
+    return 'accept';
+  }
+  if (!isBuiltinPlaceableSection(section)) return 'reject-section';
   if (!categoryAllowedInSection(category, section)) return 'reject-category';
   return 'accept';
 }
-
 /** Deep-copy ContentModule fields into a placement snapshot (D1). */
 export function snapshotFromModule(
   mod: ContentModule,
@@ -312,15 +356,30 @@ export const PERSONAL_STATEMENT_LABEL = '个人陈述';
 /** Header line prefix for Profile.summary (stored field; UI label 应聘岗位). */
 export const TARGET_ROLE_PREFIX = '应聘岗位：';
 
-/** Experience sections that accept drag-drop placements. */
-export const PLACEABLE_SECTIONS: readonly SectionId[] = [
+/** Builtin experience sections that accept drag-drop placements. */
+export const PLACEABLE_SECTIONS: readonly BuiltinPlaceableSection[] = [
   'projects',
   'internships',
   'awards',
 ];
 
-export function isPlaceableSection(section: SectionId): boolean {
+/** @deprecated Use `isBuiltinPlaceableSection`. */
+export function isPlaceableSection(section: string): boolean {
+  return isBuiltinPlaceableSection(section);
+}
+
+export function isBuiltinPlaceableSection(
+  section: string,
+): section is BuiltinPlaceableSection {
   return (PLACEABLE_SECTIONS as readonly string[]).includes(section);
+}
+
+/** UUID (any version) — custom section ids are minted as UUIDs. */
+const CUSTOM_SECTION_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isCustomSectionId(value: string): boolean {
+  return CUSTOM_SECTION_ID_RE.test(value);
 }
 
 export const CATEGORIES: readonly Category[] = [
@@ -328,14 +387,15 @@ export const CATEGORIES: readonly Category[] = [
   'project',
   'internship',
   'award',
+  'custom',
 ];
 
 export const LIBRARY_MODULE_CATEGORIES: readonly LibraryModuleCategory[] = [
   'project',
   'internship',
   'award',
+  'custom',
 ];
-
 export function isCategory(value: string): value is Category {
   return (CATEGORIES as readonly string[]).includes(value);
 }

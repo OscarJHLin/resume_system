@@ -3,8 +3,8 @@ import type {
   EducationItem,
   ModuleSnapshot,
   Profile,
+  ResumeCustomSection,
   ResumeDocument,
-  SectionId,
   SectionPlacement,
   SkillBlock,
   TemplateId,
@@ -41,6 +41,9 @@ type ProfileRow = {
   qq: string | null;
   location: string | null;
   summary: string | null;
+  expected_salary?: string | null;
+  target_city?: string | null;
+  hobbies?: string | null;
   statement: string | null;
   education_json: string;
   skills_json: string | null;
@@ -60,13 +63,15 @@ export type ProfileInput = {
   qq?: string;
   location?: string;
   summary?: string;
+  expectedSalary?: string;
+  targetCity?: string;
+  hobbies?: string;
   statement?: string;
   education?: EducationItem[];
   skills?: SkillBlock[];
   tags?: string[];
   notes?: string;
 };
-
 export class Store {
   constructor(
     private readonly db: Db,
@@ -99,6 +104,9 @@ export class Store {
             p.phone,
             p.wechat,
             p.summary,
+            p.expectedSalary,
+            p.targetCity,
+            p.hobbies,
             p.statement,
             p.notes,
             ...p.tags,
@@ -148,6 +156,9 @@ export class Store {
       qq: input.qq?.trim() || undefined,
       location: input.location?.trim() || undefined,
       summary: input.summary?.trim() || undefined,
+      expectedSalary: input.expectedSalary?.trim() || undefined,
+      targetCity: input.targetCity?.trim() || undefined,
+      hobbies: input.hobbies?.trim() || undefined,
       statement: input.statement?.trim() || undefined,
       education,
       skills,
@@ -160,9 +171,10 @@ export class Store {
       .prepare(
         `INSERT INTO profile (
           id, name, gender, phone, email, wechat, qq, location, summary,
+          expected_salary, target_city, hobbies,
           statement, education_json, skills_json, tags_json, notes, photo_filename,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         profile.id,
@@ -174,6 +186,9 @@ export class Store {
         profile.qq ?? null,
         profile.location ?? null,
         profile.summary ?? null,
+        profile.expectedSalary ?? null,
+        profile.targetCity ?? null,
+        profile.hobbies ?? null,
         profile.statement ?? null,
         JSON.stringify(profile.education),
         JSON.stringify(profile.skills),
@@ -198,7 +213,8 @@ export class Store {
       .prepare(
         `UPDATE profile SET
           name = ?, gender = ?, phone = ?, email = ?, wechat = ?, qq = ?,
-          location = ?, summary = ?, statement = ?, education_json = ?, skills_json = ?,
+          location = ?, summary = ?, expected_salary = ?, target_city = ?, hobbies = ?,
+          statement = ?, education_json = ?, skills_json = ?,
           tags_json = ?, notes = ?, updated_at = ?
          WHERE id = ?`,
       )
@@ -211,6 +227,9 @@ export class Store {
         input.qq?.trim() || null,
         input.location?.trim() || null,
         input.summary?.trim() || null,
+        input.expectedSalary?.trim() || null,
+        input.targetCity?.trim() || null,
+        input.hobbies?.trim() || null,
         input.statement?.trim() || null,
         JSON.stringify(education),
         JSON.stringify(skills),
@@ -252,6 +271,9 @@ export class Store {
       qq: src.qq,
       location: src.location,
       summary: src.summary,
+      expectedSalary: src.expectedSalary,
+      targetCity: src.targetCity,
+      hobbies: src.hobbies,
       statement: src.statement,
       education,
       skills,
@@ -264,9 +286,10 @@ export class Store {
       .prepare(
         `INSERT INTO profile (
           id, name, gender, phone, email, wechat, qq, location, summary,
+          expected_salary, target_city, hobbies,
           statement, education_json, skills_json, tags_json, notes, photo_filename,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         profile.id,
@@ -278,6 +301,9 @@ export class Store {
         profile.qq ?? null,
         profile.location ?? null,
         profile.summary ?? null,
+        profile.expectedSalary ?? null,
+        profile.targetCity ?? null,
+        profile.hobbies ?? null,
         profile.statement ?? null,
         JSON.stringify(profile.education),
         JSON.stringify(profile.skills),
@@ -399,6 +425,9 @@ export class Store {
       qq: row.qq ?? undefined,
       location: row.location ?? undefined,
       summary: row.summary ?? undefined,
+      expectedSalary: row.expected_salary ?? undefined,
+      targetCity: row.target_city ?? undefined,
+      hobbies: row.hobbies ?? undefined,
       statement: row.statement ?? undefined,
       education: parseJson<EducationItem[]>(row.education_json, []),
       skills: parseJson<SkillBlock[]>(row.skills_json, []),
@@ -627,7 +656,7 @@ export class Store {
 
     const placements: SectionPlacement[] = placementRows.map((p) => ({
       id: p.id,
-      section: p.section as SectionId,
+      section: p.section,
       sortOrder: p.sort_order,
       snapshot: parseJson<ModuleSnapshot>(p.snapshot_json, {
         sourceModuleId: '',
@@ -639,12 +668,25 @@ export class Store {
       }),
     }));
 
+    const customRows = this.db
+      .prepare(
+        `SELECT id, title, sort_order FROM resume_custom_section
+         WHERE resume_id = ? ORDER BY sort_order, id`,
+      )
+      .all(id) as Array<{ id: string; title: string; sort_order: number }>;
+    const customSections: ResumeCustomSection[] = customRows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      sortOrder: r.sort_order,
+    }));
+
     return {
       id: row.id,
       title: row.title,
       templateId: row.template_id as TemplateId,
       profileId: row.profile_id ?? '',
       placements,
+      customSections,
       updatedAt: row.updated_at,
     };
   }
@@ -678,9 +720,88 @@ export class Store {
     return this.getResume(id);
   }
 
+  listCustomSections(resumeId: string): ResumeCustomSection[] {
+    return this.getResume(resumeId).customSections;
+  }
+
+  createCustomSection(resumeId: string, title: string): ResumeCustomSection {
+    const trimmed = title.trim();
+    if (!trimmed) throw badRequest('title is required');
+    const resume = this.getResume(resumeId);
+    const maxOrder = resume.customSections.reduce(
+      (m, s) => Math.max(m, s.sortOrder),
+      -1,
+    );
+    const section: ResumeCustomSection = {
+      id: newId(),
+      title: trimmed,
+      sortOrder: maxOrder + 1,
+    };
+    this.db
+      .prepare(
+        `INSERT INTO resume_custom_section (id, resume_id, title, sort_order)
+         VALUES (?, ?, ?, ?)`,
+      )
+      .run(section.id, resumeId, section.title, section.sortOrder);
+    this.db
+      .prepare('UPDATE resume SET updated_at = ? WHERE id = ?')
+      .run(nowIso(), resumeId);
+    return section;
+  }
+
+  patchCustomSection(
+    resumeId: string,
+    sectionId: string,
+    title: string,
+  ): ResumeCustomSection {
+    const trimmed = title.trim();
+    if (!trimmed) throw badRequest('title is required');
+    const resume = this.getResume(resumeId);
+    if (!resume.customSections.some((s) => s.id === sectionId)) {
+      throw notFound(`Custom section ${sectionId} not found`);
+    }
+    this.db
+      .prepare(
+        'UPDATE resume_custom_section SET title = ? WHERE id = ? AND resume_id = ?',
+      )
+      .run(trimmed, sectionId, resumeId);
+    this.db
+      .prepare('UPDATE resume SET updated_at = ? WHERE id = ?')
+      .run(nowIso(), resumeId);
+    const updated = this.getResume(resumeId).customSections.find(
+      (s) => s.id === sectionId,
+    );
+    if (!updated) throw notFound(`Custom section ${sectionId} not found`);
+    return updated;
+  }
+
+  deleteCustomSection(resumeId: string, sectionId: string): void {
+    const resume = this.getResume(resumeId);
+    if (!resume.customSections.some((s) => s.id === sectionId)) {
+      throw notFound(`Custom section ${sectionId} not found`);
+    }
+    this.db
+      .prepare(
+        'DELETE FROM section_placement WHERE resume_id = ? AND section = ?',
+      )
+      .run(resumeId, sectionId);
+    this.db
+      .prepare(
+        'DELETE FROM resume_custom_section WHERE id = ? AND resume_id = ?',
+      )
+      .run(sectionId, resumeId);
+    this.db
+      .prepare('UPDATE resume SET updated_at = ? WHERE id = ?')
+      .run(nowIso(), resumeId);
+  }
+
+  customSectionIds(resumeId: string): string[] {
+    return this.getResume(resumeId).customSections.map((s) => s.id);
+  }
+
   addPlacement(
     resumeId: string,
-    section: SectionId,
+    section: string,
     snapshot: ModuleSnapshot,
   ): SectionPlacement {
     const resume = this.getResume(resumeId);
@@ -713,7 +834,7 @@ export class Store {
 
   reorderPlacements(
     resumeId: string,
-    section: SectionId,
+    section: string,
     orderedPlacementIds: string[],
   ): ResumeDocument {
     const resume = this.getResume(resumeId);

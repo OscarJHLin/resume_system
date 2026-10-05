@@ -1,9 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import {
-  categoryAllowedInSection,
+  decideModuleDrop,
   DEFAULT_TEMPLATE_ID,
   isCategory,
-  isPlaceableSection,
+  isCustomSectionId,
   isSectionId,
   snapshotFromModule,
   validateProfileRequired,
@@ -26,6 +26,9 @@ type ProfileBody = {
   qq?: string;
   location?: string;
   summary?: string;
+  expectedSalary?: string;
+  targetCity?: string;
+  hobbies?: string;
   statement?: string;
   education?: Array<{
     id?: string;
@@ -56,6 +59,9 @@ function mapProfileBody(body: ProfileBody) {
     qq: body.qq,
     location: body.location,
     summary: body.summary,
+    expectedSalary: body.expectedSalary,
+    targetCity: body.targetCity,
+    hobbies: body.hobbies,
     statement: body.statement,
     education: body.education?.map((e) => ({
       id: e.id ?? '',
@@ -312,21 +318,58 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
     }),
   );
 
+  app.get<{ Params: { id: string } }>(
+    '/api/resumes/:id/custom-sections',
+    async (req) => store.listCustomSections(req.params.id),
+  );
+
+  app.post<{
+    Params: { id: string };
+    Body: { title?: string };
+  }>('/api/resumes/:id/custom-sections', async (req, reply) => {
+    const title = req.body?.title;
+    if (typeof title !== 'string') throw badRequest('title is required');
+    const section = store.createCustomSection(req.params.id, title);
+    return reply.code(201).send(section);
+  });
+
+  app.patch<{
+    Params: { id: string; sectionId: string };
+    Body: { title?: string };
+  }>('/api/resumes/:id/custom-sections/:sectionId', async (req) => {
+    const title = req.body?.title;
+    if (typeof title !== 'string') throw badRequest('title is required');
+    return store.patchCustomSection(
+      req.params.id,
+      req.params.sectionId,
+      title,
+    );
+  });
+
+  app.delete<{
+    Params: { id: string; sectionId: string };
+  }>('/api/resumes/:id/custom-sections/:sectionId', async (req, reply) => {
+    store.deleteCustomSection(req.params.id, req.params.sectionId);
+    return reply.code(204).send();
+  });
+
   app.post<{
     Params: { id: string };
     Body: { section: string; moduleId: string };
   }>('/api/resumes/:id/placements', async (req, reply) => {
     const { section, moduleId } = req.body ?? {};
-    if (!section || !isSectionId(section)) {
+    if (!section || typeof section !== 'string') {
       throw badRequest('valid section is required');
-    }
-    if (!isPlaceableSection(section)) {
-      throw badRequest(`section ${section} does not accept placements`);
     }
     if (!moduleId) throw badRequest('moduleId is required');
 
     const mod = store.getModule(moduleId);
-    if (!categoryAllowedInSection(mod.category, section)) {
+    const customIds = store.customSectionIds(req.params.id);
+    const decision = decideModuleDrop(mod.category, section, customIds);
+    if (decision === 'reject-section') {
+      throw badRequest(`section ${section} does not accept placements`);
+    }
+    if (decision === 'reject-category') {
       throw badRequest(
         `category ${mod.category} cannot be placed in section ${section}`,
       );
@@ -342,8 +385,17 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
     Body: { section: string; orderedPlacementIds: string[] };
   }>('/api/resumes/:id/placements/reorder', async (req) => {
     const { section, orderedPlacementIds } = req.body ?? {};
-    if (!section || !isSectionId(section)) {
+    if (
+      !section ||
+      (!isSectionId(section) && !isCustomSectionId(section))
+    ) {
       throw badRequest('valid section is required');
+    }
+    if (isCustomSectionId(section)) {
+      const ids = store.customSectionIds(req.params.id);
+      if (!ids.includes(section)) {
+        throw badRequest(`section ${section} does not accept placements`);
+      }
     }
     if (!Array.isArray(orderedPlacementIds)) {
       throw badRequest('orderedPlacementIds must be an array');
@@ -373,6 +425,7 @@ export async function registerApiRoutes(app: FastifyInstance, store: Store) {
         templateId: resume.templateId,
         profile,
         placements: resume.placements,
+        customSections: resume.customSections,
       });
       const photo = resume.profileId
         ? store.getProfilePhoto(resume.profileId)

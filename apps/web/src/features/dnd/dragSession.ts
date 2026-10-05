@@ -1,4 +1,4 @@
-import type { ModuleDragPayload, SectionId } from '@resume/domain';
+import type { ModuleDragPayload } from '@resume/domain';
 import {
   exceedsDragThreshold,
   hitTestZones,
@@ -19,7 +19,7 @@ import {
  */
 
 export interface DropZone {
-  section: SectionId;
+  section: string;
   getRect(): RectLike | null;
   onDrop(payload: ModuleDragPayload): void;
 }
@@ -28,11 +28,10 @@ export interface PlaceSnapshot {
   /** Module being dragged (past the threshold), else null. */
   dragging: ModuleDragPayload | null;
   dragLabel: string;
-  hoverSection: SectionId | null;
+  hoverSection: string | null;
   /** Module armed via 「放入」. */
   picked: ModuleDragPayload | null;
 }
-
 export type ReleaseOutcome = 'click' | 'dropped' | 'missed';
 
 interface DragState {
