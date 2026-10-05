@@ -10,8 +10,10 @@ use crate::core::error::ApiError;
 use crate::core::models::{Profile, ResumeCustomSection, SectionPlacement};
 use crate::core::templates::{
   get_template, TemplateDefinition, TemplateLayoutSpec, TemplateStyles, TextStyle,
-  DEFAULT_TEMPLATE_ID,
 };
+
+#[cfg(test)]
+use crate::core::templates::DEFAULT_TEMPLATE_ID;
 
 pub const PERSONAL_STATEMENT_LABEL: &str = "个人陈述";
 pub const TARGET_ROLE_PREFIX: &str = "应聘岗位：";
