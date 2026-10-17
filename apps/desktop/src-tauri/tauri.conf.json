@@ -1,0 +1,72 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Pinlu",
+  "version": "1.6.1",
+  "identifier": "com.pinlu.desktop",
+  "build": {
+    "frontendDist": "../../web/dist",
+    "devUrl": "http://127.0.0.1:8787",
+    "beforeDevCommand": "npm run desktop:prepare --prefix ../..",
+    "beforeBuildCommand": "npm run desktop:prepare --prefix ../.."
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "拼履",
+        "width": 1280,
+        "height": 840,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "createUpdaterArtifacts": true,
+    "targets": [
+      "app",
+      "dmg",
+      "nsis"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../../web/dist": "web-dist",
+      "desktop-resources/templates": "templates"
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "bundleName": "拼履",
+      "infoPlist": "Info.plist"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": [
+          "SimpChinese",
+          "English"
+        ]
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY5MDM0RDVFQzIyNzJDNzYKUldSMkxDZkNYazBEYWIyRWJWeU5MUzJ4VFV5R1Rwb2xCTWJlbWczZ1VaQkJFUEh4aVM3SWVrRFcK",
+      "endpoints": [
+        "https://github.com/OscarJHLin/resume_system/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

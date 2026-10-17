@@ -1,0 +1,37 @@
+{
+  "id": "default-v1",
+  "slug": "blue-black-simple",
+  "displayName": "蓝黑简洁简历",
+  "version": "1.3.0",
+  "description": "蓝黑简洁版式：居中证件照→姓名→应聘岗位→联系；节标题 14pt；条目标题加粗；技术栈小一号斜体；正文宋体常规",
+  "photoInTemplate": true,
+  "customSectionTitleStyle": "sectionHeading",
+  "photo": {
+    "placement": "above-name-center",
+    "widthPx": 98,
+    "heightPx": 131
+  },
+  "sectionOrder": ["skills", "projects", "internships", "campuses", "awards"],
+  "page": {
+    "width": 11906,
+    "height": 16838,
+    "margin": { "top": 680, "right": 1020, "bottom": 680, "left": 1020 }
+  },
+  "layout": {
+    "entryTabCenter": 4933,
+    "internshipTabCenter": 6520,
+    "entryTabRight": 9866,
+    "bulletIndent": { "left": 340, "hanging": 228 }
+  },
+  "styles": {
+    "name": { "bold": true, "fontSizePt": 22, "fontEastAsia": "黑体" },
+    "tagline": { "bold": true, "fontSizePt": 11, "fontEastAsia": "黑体" },
+    "contact": { "bold": true, "fontSizePt": 9.5, "fontEastAsia": "宋体" },
+    "sectionHeading": { "bold": true, "fontSizePt": 14, "fontEastAsia": "黑体" },
+    "entryTitle": { "bold": true, "fontSizePt": 10.5, "fontEastAsia": "黑体" },
+    "entryTech": { "bold": false, "italic": true, "fontSizePt": 9.5, "fontEastAsia": "宋体" },
+    "entryMeta": { "bold": true, "fontSizePt": 10.5, "fontEastAsia": "宋体" },
+    "skillLine": { "bold": true, "fontSizePt": 10.5, "fontEastAsia": "宋体" },
+    "body": { "bold": false, "fontSizePt": 10.5, "fontEastAsia": "宋体" }
+  }
+}

@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-app-updater"
+description = "Check for a signed release and, on user confirmation, download + install it."
+commands.allow = ["check_update", "install_update"]

@@ -1,0 +1,173 @@
+.editor {
+  padding: 1.5rem;
+  overflow: auto;
+}
+
+.editor__prose {
+  outline: none;
+}
+
+.editor__prose .ProseMirror {
+  outline: none;
+}
+
+.editor__meta {
+  margin-bottom: 0.25rem;
+}
+
+.editor__section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.editor__drop-hint-wrap {
+  margin: 0;
+}
+
+.editor__page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 2.25rem 3rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: 0 18px 40px rgba(40, 32, 18, 0.08);
+  min-height: 70vh;
+}
+
+.editor__template {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.editor__doc-title {
+  margin: 0.35rem 0 1.5rem;
+  font-size: 1.75rem;
+}
+
+.editor__section {
+  margin-top: 1.35rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.editor__section h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.editor__profile {
+  margin-bottom: 0.25rem;
+}
+
+.editor__name {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.editor__muted {
+  margin: 0.2rem 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.editor__edu {
+  margin: 0 0 0.25rem;
+  padding-left: 1.1rem;
+}
+
+.editor__drop {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  font-size: 0.9rem;
+  background: #eef5f7;
+  min-height: 3.5rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.editor__drop--active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, #fff);
+}
+
+.editor__drop--invalid {
+  border-color: #a33;
+  background: #f8ecec;
+}
+
+.editor__drop-hint {
+  margin: 0;
+}
+
+.editor__placement {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.editor__placement:last-of-type {
+  border-bottom: none;
+}
+
+.editor__placement-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.editor__body {
+  margin: 0.35rem 0 0;
+  font: inherit;
+  white-space: pre-wrap;
+  color: var(--ink);
+}
+
+.editor__placement-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.editor__icon-btn {
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  padding: 0.2rem 0.4rem;
+  cursor: pointer;
+}
+
+.editor__icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.editor__icon-btn--danger {
+  color: #7a2e2e;
+  border-color: #d4a8a8;
+}
+
+.editor__empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.editor__empty h2 {
+  margin: 0 0 0.5rem;
+  color: var(--ink);
+  font-size: 1.25rem;
+}
+
+.editor__empty code {
+  font-size: 0.85em;
+}

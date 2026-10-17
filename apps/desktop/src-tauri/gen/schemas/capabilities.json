@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Default capabilities for 拼履","remote":{"urls":["http://127.0.0.1:*/*","http://localhost:*/*"]},"local":true,"windows":["main"],"permissions":["core:default","core:webview:allow-set-webview-focus","core:window:default","updater:default","process:default","allow-save-docx","allow-app-updater"]}}

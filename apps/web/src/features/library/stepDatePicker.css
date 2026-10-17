@@ -1,0 +1,134 @@
+.sdp {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font: inherit;
+}
+
+.sdp--disabled {
+  opacity: 0.55;
+}
+
+.sdp__label {
+  font-size: 0.82rem;
+}
+
+.sdp__row {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.sdp__trigger {
+  flex: 1;
+  text-align: left;
+  font: inherit;
+  font-size: 0.88rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid #c5d0d7;
+  background: #fff;
+  cursor: pointer;
+}
+
+.sdp__trigger--empty {
+  color: #6a757e;
+}
+
+.sdp__clear,
+.sdp__back {
+  font: inherit;
+  font-size: 0.78rem;
+  border: none;
+  background: transparent;
+  color: #0b6e6e;
+  cursor: pointer;
+  padding: 0.2rem 0.35rem;
+  white-space: nowrap;
+}
+
+.sdp__panel {
+  /* Default absolute for non-portal use; portal sets position:fixed inline */
+  position: absolute;
+  z-index: 80;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.25rem);
+  background: #fff;
+  border: 1px solid #b8c4cc;
+  box-shadow: 0 12px 28px rgba(20, 30, 40, 0.14);
+  padding: 0.55rem;
+  max-height: 260px;
+  overflow: auto;
+  /* Avoid WebView2 treating the panel as a drag source */
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.sdp__steps {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 0.45rem;
+}
+
+.sdp__chip {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid #d5dce1;
+  color: #6a757e;
+}
+
+.sdp__chip--on {
+  border-color: #0b6e6e;
+  color: #0b6e6e;
+  font-weight: 600;
+}
+
+.sdp__context {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  color: #3d4a54;
+  grid-column: 1 / -1;
+}
+
+.sdp__grid {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.sdp__grid--years {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.sdp__grid--months {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.sdp__grid--days {
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.sdp__opt {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.2rem;
+  border: 1px solid transparent;
+  background: #f4f7f9;
+  cursor: pointer;
+}
+
+.sdp__opt:hover {
+  border-color: #9ec9c9;
+}
+
+.sdp__opt--active {
+  border-color: #0b6e6e;
+  background: #e7f4f4;
+  font-weight: 600;
+}
+
+.sdp__back {
+  grid-column: 1 / -1;
+  text-align: left;
+  margin-top: 0.25rem;
+}

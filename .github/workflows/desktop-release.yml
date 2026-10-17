@@ -1,0 +1,133 @@
+name: Desktop release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            label: macOS
+          - platform: windows-latest
+            label: Windows
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Prepare desktop bundle (web + templates)
+        run: npm run desktop:prepare
+
+      - name: Build Tauri + upload Release assets
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: apps/desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: 拼履 ${{ github.ref_name }}
+          releaseBody: |
+            ## 拼履 ${{ github.ref_name }}（1.6.1）
+
+            照片上传体验修复；隐藏侧栏「放入」按钮（请直接拖拽）。
+
+            ### 下载安装
+            | 平台 | 文件 | 安装 |
+            |---|---|---|
+            | **macOS**（Apple Silicon） | `Pinlu_1.6.1_aarch64.dmg` | 打开 DMG，拖到「应用程序」（Finder / 菜单栏显示 **拼履**） |
+            | **Windows**（x64） | `Pinlu_1.6.1_x64-setup.exe` | 双击运行 NSIS 安装程序 |
+
+            `.sig` / `.app.tar.gz` / `-setup.zip` / `latest.json` 为自动更新所用，无需手动下载。
+
+            ### 本版更新
+            - **照片**：新建/编辑基本信息可先选照片再保存；提高上传体积上限，修复 `length limit exceeded`
+            - **界面**：侧栏模块卡片去掉「放入」按钮，请直接拖到左侧对应区块
+
+            ### 升级说明
+            - 已安装 **1.6.0** 的用户：应用内会提示新版本，点「立即更新」即可
+            - 用户数据在 App Data，升级不覆盖
+
+            ### 运行要求
+            - **无需安装 Node.js**（进程内 Rust API）
+            - 数据在系统 App Data，**不**携带开发者数据库；升级不会覆盖用户数据
+
+            ### 数据路径
+            - macOS: `~/Library/Application Support/com.pinlu.desktop/resume.db`
+            - Windows: `%APPDATA%\com.pinlu.desktop\resume.db`
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: true
+
+      # Belt-and-suspenders: tauri-action sometimes reports Win .exe upload success
+      # but the asset never sticks on the Release. Keep CI artifacts + re-upload via gh.
+      - name: Preserve Windows NSIS artifacts
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pinlu-windows-nsis
+          path: |
+            apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
+            apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe.sig
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Re-upload Windows NSIS via gh
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          NSIS_DIR="apps/desktop/src-tauri/target/release/bundle/nsis"
+          EXE=$(ls "$NSIS_DIR"/*-setup.exe | head -1)
+          SIG="${EXE}.sig"
+          test -f "$EXE"
+          test -f "$SIG"
+          ls -lh "$EXE" "$SIG"
+          ZIP="${EXE%.exe}.zip"
+          powershell.exe -NoProfile -Command "Compress-Archive -Path '$EXE' -DestinationPath '$ZIP' -Force"
+          # tauri-action may already have uploaded; delete by asset id then upload
+          # (name-based delete-asset is flaky on Windows runners → 422 already exists).
+          REPO="${{ github.repository }}"
+          TAG="${{ github.ref_name }}"
+          for f in "$EXE" "$SIG" "$ZIP"; do
+            name=$(basename "$f")
+            asset_id=$(gh api "repos/${REPO}/releases/tags/${TAG}" \
+              --jq ".assets[] | select(.name==\"${name}\") | .id" | head -1 || true)
+            if [ -n "${asset_id}" ]; then
+              gh api -X DELETE "repos/${REPO}/releases/assets/${asset_id}" || true
+            fi
+            gh release upload "$TAG" "$f" --clobber || {
+              sleep 10
+              gh release upload "$TAG" "$f" --clobber || \
+                gh api "repos/${REPO}/releases/tags/${TAG}" --jq ".assets[].name" | grep -qx "${name}"
+            }
+          done
+          echo "Uploaded:"
+          gh release view "$TAG" --json assets --jq '.assets[].name'
