@@ -1,0 +1,12 @@
+--- a/apps/desktop/src-tauri/src/lib.rs
++++ b/apps/desktop/src-tauri/src/lib.rs
+@@ -398,7 +398,8 @@
+ 
+       if let Some(win) = app.get_webview_window("main") {
+         let url = format!("http://127.0.0.1:{port}/");
+-        let _ = win.eval(&format!("window.location.replace('{url}')"));
++        // Native navigation also works before the initial document is loaded.
++        win.navigate(url.parse().map_err(|e| format!("bad startup URL: {e}"))?)?;
+       }
+ 
+       // Notify-only: the UI shows the banner; install happens on user click.

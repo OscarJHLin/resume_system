@@ -1,0 +1,22 @@
+ M apps/desktop/src-tauri/src/core/domain.rs
+ M apps/desktop/src-tauri/src/core/render.rs
+ M apps/server/src/modules/template/index.ts
+ M apps/web/src/features/canvas/placementDisplay.ts
+ M apps/web/src/placementDisplay.test.ts
+ M packages/domain/src/index.ts
+?? .aoci/.gitignore
+?? .aoci/baseline.json
+?? .aoci/config.json
+?? .gitattributes
+?? AGENTS.md
+?? aoci.code.txt
+?? aoci.meta.txt
+?? aoci.txt
+?? apps/autofill-extension/README.md
+?? apps/autofill-extension/background/service-worker.js
+?? apps/autofill-extension/content/fill.js
+?? apps/autofill-extension/content/mapping.js
+?? apps/autofill-extension/manifest.json
+?? apps/autofill-extension/popup/popup.html
+?? apps/autofill-extension/popup/popup.js
+?? packages/domain/src/bodyLines.test.ts

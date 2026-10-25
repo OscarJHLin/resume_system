@@ -1,0 +1,23 @@
+{
+  "format": "concatenated gzip-tar parts",
+  "archive_name": "archive-20261025.tar.gz",
+  "archive_sha256": "c38d2712d2b781eaafd27d0236af1a431b27e0ae334fd9b9d7057325327d284e",
+  "archive_bytes": 114457579,
+  "parts": [
+    {
+      "name": "archive-20261025.tar.gz.part000",
+      "bytes": 41943040,
+      "sha256": "f7db7d44bd08261b2e24bffb9d7cf644fe088cc30f7aa5de9f529868ee5d185a"
+    },
+    {
+      "name": "archive-20261025.tar.gz.part001",
+      "bytes": 41943040,
+      "sha256": "a428cbd6923875209cc2a17ddeed48d2603de8137f62f9f4964bce5445e906b8"
+    },
+    {
+      "name": "archive-20261025.tar.gz.part002",
+      "bytes": 30571499,
+      "sha256": "05787390f3e27a3eb571f8b076ad7817a2474b5f2b563deecd726d00c5875dd1"
+    }
+  ]
+}
