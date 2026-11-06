@@ -6,7 +6,7 @@
 ## 前置
 
 ```bash
-cd /Users/linyunhe/ai_project/resume_system
+cd <repo-root>
 npm install
 npm run typecheck
 npm test

@@ -2,7 +2,7 @@
 
 - as_of: 2026-09-23
 - product: **拼履**（模块拖放组装履历；技术包名仍为 `@resume/*`）
-- repository: `/Users/linyunhe/ai_project/resume_system`
+- repository: `<repo-root>`
 - pre-Rust snapshot: tag **`snapshot/pre-rust-node-sidecar`** @ `a9fc8f0422bc4f05646f3feabf2e19d97889f24d`
 - worktree: **可验收**：蓝黑简洁模板、内容库四标签、`npm run app` / Tauri 壳（**Rust 进程内 API**，无需 Node）
 - 环境目标: 近端本地 Web + API + SQLite；桌面壳 **Plan C Phase 4**：零用户 Node（[08-plan-c-rust-core.md](./08-plan-c-rust-core.md)）
