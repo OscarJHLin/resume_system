@@ -1,10 +1,57 @@
-# 拼履
+# 拼履｜秋招投 100 家，我不想再手填 100 遍教育经历
 
-本地优先的模块化简历工具：**内容库拼进模板 → 画布预览 → DOCX 导出**。
+> **本地优先的模块化简历工具。** 内容库拼进模板 → 画布预览 → DOCX 导出。简历数据只存在你自己的电脑里，不上传云端，一个字都不用交给在线简历平台。
 
-产品名取「拼履」——「拼」对应模块拖放组装，「履」指履历；短、好记，区别于泛称「简历组装系统」。
+## 秋招最折磨人的几件事，拼履想管
 
-> 当前状态：**正式版（GA）v1.6.0**（指针拖拽修复 + 应用内更新提示）。清单 [docs/05-acceptance.md](docs/05-acceptance.md)；模板说明 [docs/06-template-lin-v1.md](docs/06-template-lin-v1.md) / [docs/07-template-packs.md](docs/07-template-packs.md)。
+| 你的痛 | 拼履怎么办 |
+|---|---|
+| 同一份项目经历，投产品、开发、数据要改 N 个版本，文件名叫“终版-真终版-最终2” | **模块化内容库**：项目 / 实习 / 获奖与证书 / 基本信息各存一份，投递时像拼积木一样**拖进模板**，导出 DOCX |
+| 每改一次排版就牵一发动全身 | **模板与内容分离**：内容是结构化字段 + 纯文本，模板只管排版；拖进简历的是**快照**，改库不会悄悄改掉你已经定稿的版本 |
+| 不想把简历交给陌生网站 | **本地优先**：数据在本机 SQLite；桌面安装包双击即用，**不需要装 Node** |
+| 想要照片又怕 DOCX 乱 | 照片只做存档，导出的 DOCX 不含照片，ATS 友好 |
+| 想换个风格 | `templates/` 是模板包格式，加第二套模板不用改核心代码 |
+
+## 亮点
+
+- **拖放组装**：右侧四个标签（项目 / 实习 / 获奖与证书 / 基本信息），一键新建，拖到左侧画布即成简历；基本信息卡“应用到简历”自动填姓名、教育、技术能力。
+- **桌面端 Rust 核心**：Tauri 2 + Rust 进程内 API，macOS / Windows 安装包开箱即用；浏览器开发模式用 Fastify。
+- **应用内更新**：发现新版本时给出横幅提示、带进度下载并重启，用户数据保留在系统 App Data。
+- **文档诚实**：需求、架构、模块边界、路线图、验收清单、ADR 决策都在 `docs/` 里，行为改动先看合同再动手；不拿“测试通过”冒充“已验收”。
+- **可读的工程样本**：TypeScript monorepo（Vite/React · TipTap · Fastify）+ Rust 桌面核心，适合想看一个完整本地优先产品怎么落地的开发者。
+
+## 适合谁
+
+- 2027 届 / 2026 届秋招、春招，要海投几十家的同学
+- 一份简历要拆成多个岗位版本的人
+- 不想把简历数据放在线上的人
+- 想参考 Tauri + Rust + React 完整项目结构的开发者
+
+## 下载使用
+
+到 [Releases](https://github.com/OscarJHLin/resume_system/releases) 下载最新版：
+
+| 平台 | 文件 | 安装 |
+|---|---|---|
+| macOS（Apple Silicon） | `Pinlu_*_aarch64.dmg` | 打开 DMG，拖到“应用程序” |
+| Windows | `Pinlu_*_x64-setup.exe` | 双击安装 |
+
+请使用 **v1.6.0 及以上**；早期 v1.0（Node sidecar）在没有本机 Node 时会启动即崩。
+
+## 从源码运行
+
+```bash
+git clone https://github.com/OscarJHLin/resume_system.git
+cd resume_system
+npm install
+npm run app          # 构建 Web → 启动本地 API → 打开浏览器
+```
+
+---
+
+# 以下为项目技术文档
+
+> 当前状态：**正式版（GA）v1.6.1**。清单 [docs/05-acceptance.md](docs/05-acceptance.md)；模板说明 [docs/06-template-lin-v1.md](docs/06-template-lin-v1.md) / [docs/07-template-packs.md](docs/07-template-packs.md)。
 
 ## 文档入口
 
@@ -35,7 +82,7 @@ TypeScript monorepo · Vite/React · TipTap · Fastify（浏览器开发）· **
 ## 一键验收（推荐，无需双终端）
 
 ```bash
-cd /Users/linyunhe/ai_project/resume_system
+cd <repo-root>
 npm install
 npm run app
 ```
