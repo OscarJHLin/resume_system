@@ -27,6 +27,10 @@
 - 不想把简历数据放在线上的人
 - 想参考 Tauri + Rust + React 完整项目结构的开发者
 
+## 许可
+
+本项目采用 [PolyForm Noncommercial License 1.0.0](LICENSE)：个人学习、研究、求职自用等**非商业用途**可自由使用与修改；**未经作者书面许可，不得用于商业目的**。Copyright © 2026 OscarJHLin。
+
 ## 下载使用
 
 到 [Releases](https://github.com/OscarJHLin/resume_system/releases) 下载最新版：
